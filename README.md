@@ -8,6 +8,7 @@ Burst is a browser command palette for every webpage. It is inspired by Omni-sty
 - Shadow DOM content-script palette so webpage CSS does not pollute the UI.
 - `Mod+K` launcher with command search, keyboard navigation, pinned commands, site-aware discovery, publisher metadata, permissions, risk, audit state, and source links.
 - Popup surface for sign-in direction, local registry posture, publishing entry points, and seed registry metrics.
+- Registry website scaffold in `apps/registry` for command discovery, audit review, and publishing entry points.
 - Typed seed command registry in `src/lib/commands.ts` to shape the early product contract.
 
 ## Development
@@ -21,7 +22,13 @@ bun install
 Run Chrome extension dev mode:
 
 ```sh
-bun run dev
+bun run dev:extension
+```
+
+Run registry website dev mode:
+
+```sh
+bun run dev:registry
 ```
 
 Run type checking:
@@ -35,6 +42,18 @@ Build the extension:
 ```sh
 bun run build
 ```
+
+Build only one surface:
+
+```sh
+bun run build:extension
+bun run build:registry
+```
+
+## Docs
+
+- [Project status](docs/project-status.md)
+- [Roadmap](docs/roadmap.md)
 
 ## Product Direction
 
