@@ -1,6 +1,6 @@
 {
-  "name": "wxt-react-starter",
-  "description": "manifest.json description",
+  "name": "burst",
+  "description": "A command palette and audited extension registry for every webpage.",
   "private": true,
   "version": "0.0.0",
   "type": "module",

@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { createShadowRootUi } from 'wxt/utils/content-script-ui/shadow-root';
 import { BurstPalette } from '@/src/ui/BurstPalette';
-import './content.css';
+import '@/src/ui/BurstPalette.css';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
