@@ -24,7 +24,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Command icon metadata for website favicons, initials, emoji, URLs, and packaged assets.
 - Command details for publisher, trust level, risk, permissions, installs, rating, and source URL.
 - Popup status panel for account/registry posture.
-- Extension dashboard page for local script editing/testing/management.
+- Extension dashboard page with CodeMirror-based local script editing/testing/management.
 - Registry website scaffold with marketplace search, command rows, audit labels, and a selected-command inspector.
 - Root scripts for separate extension and registry development/build flows.
 
@@ -41,6 +41,10 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Persisted user settings beyond Chrome-managed shortcut assignment.
 - Browser extension icons and brand assets.
 - Stable public command API.
+
+## Known Tradeoffs
+
+- The dashboard bundle is larger after adding CodeMirror 6. It is isolated to the dashboard page, not the content script.
 
 ## Verification Baseline
 

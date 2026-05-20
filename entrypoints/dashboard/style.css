@@ -20,7 +20,7 @@ body {
 button,
 input,
 select,
-textarea {
+.cm-editor {
   font: inherit;
 }
 
@@ -233,7 +233,6 @@ label {
 
 input,
 select,
-textarea,
 .test-console {
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 12px;
@@ -289,16 +288,13 @@ select {
   min-height: 0;
 }
 
-textarea {
+.code-editor .cm-editor {
   width: 100%;
-  height: auto;
+  height: 100%;
   min-height: 0;
-  resize: none;
-  padding: 14px;
-  color: #dbeafe;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 13px;
-  line-height: 1.55;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
 }
 
 .test-console {

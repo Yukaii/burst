@@ -1,5 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import ReactDOM from 'react-dom/client';
+import CodeMirror from '@uiw/react-codemirror';
+import { javascript } from '@codemirror/lang-javascript';
+import { EditorView } from '@codemirror/view';
 import { LocalScript, seedLocalScripts } from '@/src/lib/localScripts';
 import './style.css';
 
@@ -11,6 +14,50 @@ const iconOptions = [
   { value: 'AI', label: 'AI' },
   { value: '+', label: 'Create' },
 ];
+
+const editorTheme = EditorView.theme({
+  '&': {
+    height: '100%',
+    backgroundColor: '#111827',
+    color: '#dbeafe',
+    fontSize: '13px',
+  },
+  '.cm-scroller': {
+    fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
+    lineHeight: '1.55',
+  },
+  '.cm-content': {
+    padding: '14px 0',
+  },
+  '.cm-line': {
+    color: '#dbeafe',
+    textTransform: 'none',
+    padding: '0 14px',
+  },
+  '.cm-gutters': {
+    backgroundColor: '#111827',
+    borderRight: '1px solid rgba(148, 163, 184, 0.14)',
+    color: '#64748b',
+  },
+  '.cm-activeLine': {
+    backgroundColor: 'rgba(30, 41, 59, 0.55)',
+  },
+  '.cm-activeLineGutter': {
+    backgroundColor: 'rgba(30, 41, 59, 0.55)',
+  },
+  '.cm-cursor': {
+    borderLeftColor: '#7dd3fc',
+  },
+  '&.cm-focused': {
+    outline: 'none',
+  },
+  '.tok-keyword': { color: '#7dd3fc' },
+  '.tok-variableName': { color: '#dbeafe' },
+  '.tok-propertyName': { color: '#bfdbfe' },
+  '.tok-string': { color: '#86efac' },
+  '.tok-comment': { color: '#64748b' },
+  '.tok-punctuation': { color: '#94a3b8' },
+});
 
 function DashboardApp() {
   const initialScripts = useMemo(() => {
@@ -124,10 +171,21 @@ function DashboardApp() {
 
         <label className="code-editor">
           Source
-          <textarea
+          <CodeMirror
             value={selectedScript.code}
-            spellCheck={false}
-            onChange={(event) => updateSelectedScript({ code: event.target.value })}
+            basicSetup={{
+              bracketMatching: true,
+              closeBrackets: true,
+              defaultKeymap: true,
+              foldGutter: false,
+              highlightActiveLine: true,
+              highlightActiveLineGutter: true,
+              lineNumbers: true,
+            }}
+            extensions={[javascript({ jsx: true, typescript: true }), editorTheme]}
+            height="100%"
+            theme="dark"
+            onChange={(code) => updateSelectedScript({ code })}
           />
         </label>
 
