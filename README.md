@@ -11,7 +11,7 @@ Burst is a browser command palette for every webpage. It is inspired by Omni-sty
 - Chrome extension command shortcut for opening the palette. The default is `Command+Shift+K` on macOS and `Ctrl+Shift+K` elsewhere.
 - Popup surface for sign-in direction, local registry posture, publishing entry points, and seed registry metrics.
 - Options page explaining keyboard shortcut configuration.
-- Extension dashboard page for local script creation, testing, and management with CodeMirror 6 editing.
+- Extension dashboard page for local script creation, testing, and management with CodeMirror 6 editing and font controls.
 - Command icon metadata for favicon, initials, emoji, URL, or packaged assets.
 - Registry website scaffold in `apps/registry` for command discovery, audit review, and publishing entry points.
 - Typed seed command registry in `src/lib/commands.ts` to shape the early product contract.

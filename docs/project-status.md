@@ -24,7 +24,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Command icon metadata for website favicons, initials, emoji, URLs, and packaged assets.
 - Command details for publisher, trust level, risk, permissions, installs, rating, and source URL.
 - Popup status panel for account/registry posture.
-- Extension dashboard page with CodeMirror-based local script editing/testing/management.
+- Extension dashboard page with CodeMirror-based local script editing/testing/management and editor font controls.
 - Registry website scaffold with marketplace search, command rows, audit labels, and a selected-command inspector.
 - Root scripts for separate extension and registry development/build flows.
 

@@ -15,49 +15,72 @@ const iconOptions = [
   { value: '+', label: 'Create' },
 ];
 
-const editorTheme = EditorView.theme({
-  '&': {
-    height: '100%',
-    backgroundColor: '#111827',
-    color: '#dbeafe',
-    fontSize: '13px',
+const fontFamilyOptions = [
+  {
+    value: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
+    label: 'Monospace',
   },
-  '.cm-scroller': {
-    fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
-    lineHeight: '1.55',
+  {
+    value: '"JetBrains Mono", "SFMono-Regular", Consolas, monospace',
+    label: 'JetBrains',
   },
-  '.cm-content': {
-    padding: '14px 0',
+  {
+    value: '"Fira Code", "SFMono-Regular", Consolas, monospace',
+    label: 'Fira Code',
   },
-  '.cm-line': {
-    color: '#dbeafe',
-    textTransform: 'none',
-    padding: '0 14px',
+  {
+    value: 'ui-monospace, "SFMono-Regular", Consolas, monospace',
+    label: 'System Mono',
   },
-  '.cm-gutters': {
-    backgroundColor: '#111827',
-    borderRight: '1px solid rgba(148, 163, 184, 0.14)',
-    color: '#64748b',
-  },
-  '.cm-activeLine': {
-    backgroundColor: 'rgba(30, 41, 59, 0.55)',
-  },
-  '.cm-activeLineGutter': {
-    backgroundColor: 'rgba(30, 41, 59, 0.55)',
-  },
-  '.cm-cursor': {
-    borderLeftColor: '#7dd3fc',
-  },
-  '&.cm-focused': {
-    outline: 'none',
-  },
-  '.tok-keyword': { color: '#7dd3fc' },
-  '.tok-variableName': { color: '#dbeafe' },
-  '.tok-propertyName': { color: '#bfdbfe' },
-  '.tok-string': { color: '#86efac' },
-  '.tok-comment': { color: '#64748b' },
-  '.tok-punctuation': { color: '#94a3b8' },
-});
+];
+
+const fontSizeOptions = [12, 13, 14, 15, 16, 18];
+
+function createEditorTheme(fontFamily: string, fontSize: number) {
+  return EditorView.theme({
+    '&': {
+      height: '100%',
+      backgroundColor: '#111827',
+      color: '#dbeafe',
+      fontSize: `${fontSize}px`,
+    },
+    '.cm-scroller': {
+      fontFamily,
+      lineHeight: '1.55',
+    },
+    '.cm-content': {
+      padding: '14px 0',
+    },
+    '.cm-line': {
+      color: '#dbeafe',
+      textTransform: 'none',
+      padding: '0 14px',
+    },
+    '.cm-gutters': {
+      backgroundColor: '#111827',
+      borderRight: '1px solid rgba(148, 163, 184, 0.14)',
+      color: '#64748b',
+    },
+    '.cm-activeLine': {
+      backgroundColor: 'rgba(30, 41, 59, 0.55)',
+    },
+    '.cm-activeLineGutter': {
+      backgroundColor: 'rgba(30, 41, 59, 0.55)',
+    },
+    '.cm-cursor': {
+      borderLeftColor: '#7dd3fc',
+    },
+    '&.cm-focused': {
+      outline: 'none',
+    },
+    '.tok-keyword': { color: '#7dd3fc' },
+    '.tok-variableName': { color: '#dbeafe' },
+    '.tok-propertyName': { color: '#bfdbfe' },
+    '.tok-string': { color: '#86efac' },
+    '.tok-comment': { color: '#64748b' },
+    '.tok-punctuation': { color: '#94a3b8' },
+  });
+}
 
 function DashboardApp() {
   const initialScripts = useMemo(() => {
@@ -80,7 +103,13 @@ function DashboardApp() {
 
   const [scripts, setScripts] = useState<LocalScript[]>(initialScripts);
   const [selectedId, setSelectedId] = useState(initialScripts[0].id);
+  const [editorFontFamily, setEditorFontFamily] = useState(fontFamilyOptions[0].value);
+  const [editorFontSize, setEditorFontSize] = useState(13);
   const selectedScript = scripts.find((script) => script.id === selectedId) ?? scripts[0];
+  const editorTheme = useMemo(
+    () => createEditorTheme(editorFontFamily, editorFontSize),
+    [editorFontFamily, editorFontSize],
+  );
 
   function createDraft() {
     const draft = {
@@ -168,6 +197,29 @@ function DashboardApp() {
             onChange={(icon) => updateSelectedScript({ icon })}
           />
         </div>
+
+        <section className="editor-settings" aria-label="Editor settings">
+          <label>
+            Font
+            <select value={editorFontFamily} onChange={(event) => setEditorFontFamily(event.target.value)}>
+              {fontFamilyOptions.map((option) => (
+                <option key={option.label} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Size
+            <select value={editorFontSize} onChange={(event) => setEditorFontSize(Number(event.target.value))}>
+              {fontSizeOptions.map((size) => (
+                <option key={size} value={size}>
+                  {size}px
+                </option>
+              ))}
+            </select>
+          </label>
+        </section>
 
         <label className="code-editor">
           Source
