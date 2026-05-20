@@ -47,6 +47,8 @@ Recommended defaults:
 - Local management commands can use `emoji` or `initials`.
 - User-created local scripts should let the user choose initials first; custom uploaded assets can come later.
 
+The current dashboard uses a small dropdown with preview for local script icons. That keeps editor layout stable and avoids freeform icon parsing until packaged assets exist.
+
 ## Management Commands
 
 Burst reserves local commands for extension management:

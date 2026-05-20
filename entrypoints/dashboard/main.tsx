@@ -1,7 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { seedLocalScripts } from '@/src/lib/localScripts';
+import { LocalScript, seedLocalScripts } from '@/src/lib/localScripts';
 import './style.css';
+
+const iconOptions = [
+  { value: 'GH', label: 'GitHub' },
+  { value: 'CS', label: 'Capture' },
+  { value: 'UL', label: 'Default' },
+  { value: 'JS', label: 'Script' },
+  { value: 'AI', label: 'AI' },
+  { value: '+', label: 'Create' },
+];
 
 function DashboardApp() {
   const initialScripts = useMemo(() => {
@@ -22,7 +31,7 @@ function DashboardApp() {
     ];
   }, []);
 
-  const [scripts, setScripts] = useState(initialScripts);
+  const [scripts, setScripts] = useState<LocalScript[]>(initialScripts);
   const [selectedId, setSelectedId] = useState(initialScripts[0].id);
   const selectedScript = scripts.find((script) => script.id === selectedId) ?? scripts[0];
 
@@ -39,6 +48,12 @@ function DashboardApp() {
 
     setScripts((current) => [draft, ...current]);
     setSelectedId(draft.id);
+  }
+
+  function updateSelectedScript(patch: Partial<LocalScript>) {
+    setScripts((current) =>
+      current.map((script) => script.id === selectedScript.id ? { ...script, ...patch } : script),
+    );
   }
 
   return (
@@ -74,7 +89,7 @@ function DashboardApp() {
         </div>
       </aside>
 
-      <section className="editor-panel" key={selectedScript.id} aria-label="Script editor">
+      <section className="editor-panel" aria-label="Script editor">
         <header className="editor-header">
           <div>
             <span>{selectedScript.status}</span>
@@ -89,21 +104,31 @@ function DashboardApp() {
         <div className="meta-grid">
           <label>
             Name
-            <input defaultValue={selectedScript.name} />
+            <input
+              value={selectedScript.name}
+              onChange={(event) => updateSelectedScript({ name: event.target.value })}
+            />
           </label>
           <label>
             Match
-            <input defaultValue={selectedScript.matchPattern} />
+            <input
+              value={selectedScript.matchPattern}
+              onChange={(event) => updateSelectedScript({ matchPattern: event.target.value })}
+            />
           </label>
-          <label>
-            Icon
-            <input defaultValue={selectedScript.icon} />
-          </label>
+          <IconSelect
+            value={selectedScript.icon}
+            onChange={(icon) => updateSelectedScript({ icon })}
+          />
         </div>
 
         <label className="code-editor">
           Source
-          <textarea defaultValue={selectedScript.code} spellCheck={false} />
+          <textarea
+            value={selectedScript.code}
+            spellCheck={false}
+            onChange={(event) => updateSelectedScript({ code: event.target.value })}
+          />
         </label>
 
         <section className="test-console" aria-label="Test output">
@@ -112,6 +137,24 @@ function DashboardApp() {
         </section>
       </section>
     </main>
+  );
+}
+
+function IconSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="icon-select">
+      Icon
+      <span className="icon-control">
+        <span className="icon-preview">{value}</span>
+        <select value={value} onChange={(event) => onChange(event.target.value)}>
+          {iconOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </span>
+    </label>
   );
 }
 
