@@ -72,7 +72,7 @@
 
 .burst-command {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
   align-items: center;
   width: 100%;
   gap: 12px;
@@ -84,6 +84,25 @@
   cursor: pointer;
   padding: 10px;
   text-align: left;
+}
+
+.burst-command-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 9px;
+  background: #111827;
+  color: #7dd3fc;
+  font-size: 13px;
+  font-weight: 860;
+}
+
+.burst-command-icon img {
+  width: 18px;
+  height: 18px;
 }
 
 .burst-command.is-active,

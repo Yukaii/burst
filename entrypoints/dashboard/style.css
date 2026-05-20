@@ -106,7 +106,9 @@ p {
 
 .script-row {
   display: grid;
-  gap: 5px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
   width: 100%;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -117,18 +119,49 @@ p {
   text-align: left;
 }
 
+.script-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 9px;
+  background: #111827;
+  color: #7dd3fc;
+  font-size: 12px;
+  font-weight: 860;
+}
+
+.script-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
 .script-row.is-active,
 .script-row:hover {
   border-color: rgba(125, 211, 252, 0.22);
   background: rgba(30, 41, 59, 0.82);
 }
 
-.script-row strong {
+.script-row strong,
+.script-row em {
   overflow: hidden;
-  font-size: 13px;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.script-row strong {
+  font-size: 13px;
+}
+
+.script-row em {
+  color: #64748b;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 780;
+  text-transform: uppercase;
 }
 
 .script-row span,
@@ -170,7 +203,7 @@ label,
 
 .meta-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 100px;
   gap: 12px;
 }
 

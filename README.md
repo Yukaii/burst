@@ -12,6 +12,7 @@ Burst is a browser command palette for every webpage. It is inspired by Omni-sty
 - Popup surface for sign-in direction, local registry posture, publishing entry points, and seed registry metrics.
 - Options page explaining keyboard shortcut configuration.
 - Extension dashboard page for local script creation, testing, and management.
+- Command icon metadata for favicon, initials, emoji, URL, or packaged assets.
 - Registry website scaffold in `apps/registry` for command discovery, audit review, and publishing entry points.
 - Typed seed command registry in `src/lib/commands.ts` to shape the early product contract.
 
@@ -68,6 +69,7 @@ The options page can explain this, but Chrome owns the actual shortcut assignmen
 
 - [Project status](docs/project-status.md)
 - [Roadmap](docs/roadmap.md)
+- [API guide](docs/api-guide.md)
 
 ## Product Direction
 

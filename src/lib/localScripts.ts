@@ -4,6 +4,7 @@ export type LocalScript = {
   id: string;
   name: string;
   matchPattern: string;
+  icon: string;
   status: LocalScriptStatus;
   updatedAt: string;
   code: string;
@@ -14,6 +15,7 @@ export const seedLocalScripts: LocalScript[] = [
     id: 'local-github-copy-branch',
     name: 'Copy GitHub branch name',
     matchPattern: 'github.com/*',
+    icon: 'GH',
     status: 'enabled',
     updatedAt: '2026-05-20',
     code: `export default async function run({ page }) {
@@ -25,6 +27,7 @@ export const seedLocalScripts: LocalScript[] = [
     id: 'local-highlight-capture',
     name: 'Capture selection',
     matchPattern: '<all_urls>',
+    icon: 'CS',
     status: 'draft',
     updatedAt: '2026-05-20',
     code: `export default async function run() {

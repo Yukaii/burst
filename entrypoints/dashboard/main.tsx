@@ -13,6 +13,7 @@ function DashboardApp() {
           id: 'new-script',
           name: 'Untitled local command',
           matchPattern: '<all_urls>',
+          icon: 'UL',
           status: 'draft' as const,
           updatedAt: new Date().toISOString().slice(0, 10),
           code: `export default async function run() {\n  // Write a local command here.\n}`,
@@ -30,6 +31,7 @@ function DashboardApp() {
       id: `draft-${Date.now()}`,
       name: 'Untitled local command',
       matchPattern: '<all_urls>',
+      icon: 'UL',
       status: 'draft' as const,
       updatedAt: new Date().toISOString().slice(0, 10),
       code: `export default async function run() {\n  // Write a local command here.\n}`,
@@ -62,8 +64,11 @@ function DashboardApp() {
               type="button"
               onClick={() => setSelectedId(script.id)}
             >
-              <strong>{script.name}</strong>
-              <span>{script.matchPattern} · {script.status}</span>
+              <span className="script-icon">{script.icon}</span>
+              <span className="script-copy">
+                <strong>{script.name}</strong>
+                <em>{script.matchPattern} · {script.status}</em>
+              </span>
             </button>
           ))}
         </div>
@@ -89,6 +94,10 @@ function DashboardApp() {
           <label>
             Match
             <input defaultValue={selectedScript.matchPattern} />
+          </label>
+          <label>
+            Icon
+            <input defaultValue={selectedScript.icon} />
           </label>
         </div>
 

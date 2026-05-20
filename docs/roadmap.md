@@ -10,7 +10,7 @@
 ## Phase 1: Registry Contract
 
 - Define `burst.command.json` manifest schema.
-- Model command metadata: title, description, website match patterns, permissions, risk hints, package source, publisher, version, and integrity hash.
+- Model command metadata: title, description, website match patterns, icon, permissions, risk hints, package source, publisher, version, and integrity hash.
 - Add installable package format and versioning rules.
 - Decide how commands declare runtime capabilities.
 - Add registry API read endpoints for search, command detail, audit report, and publisher profile.

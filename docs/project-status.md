@@ -21,6 +21,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Minimal dark command palette with no injected floating launcher button.
 - Site-aware command discovery using typed seed registry data.
 - Local management commands in the palette for opening the dashboard, creating scripts, and listing installed scripts.
+- Command icon metadata for website favicons, initials, emoji, URLs, and packaged assets.
 - Command details for publisher, trust level, risk, permissions, installs, rating, and source URL.
 - Popup status panel for account/registry posture.
 - Extension dashboard page for local script editing/testing/management.
@@ -39,6 +40,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Runtime sandbox/permission execution model.
 - Persisted user settings beyond Chrome-managed shortcut assignment.
 - Browser extension icons and brand assets.
+- Stable public command API.
 
 ## Verification Baseline
 

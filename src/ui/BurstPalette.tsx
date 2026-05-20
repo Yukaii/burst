@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   BurstCommand,
   commandMatchesHost,
+  getCommandIconLabel,
+  getCommandIconUrl,
   getHostFromUrl,
   managementCommands,
   searchCommands,
@@ -123,6 +125,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => runCommand(command)}
               >
+                <CommandIcon command={command} />
                 <span className="burst-command-copy">
                   <strong>{command.title}</strong>
                   <span>
@@ -139,6 +142,20 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
       </section>
     </div>
   );
+}
+
+function CommandIcon({ command }: { command: BurstCommand }) {
+  const iconUrl = getCommandIconUrl(command);
+
+  if (iconUrl) {
+    return (
+      <span className="burst-command-icon">
+        <img src={iconUrl} alt="" />
+      </span>
+    );
+  }
+
+  return <span className="burst-command-icon">{getCommandIconLabel(command)}</span>;
 }
 
 function isToggleMessage(message: unknown): message is { type: 'burst:toggle-palette' } {

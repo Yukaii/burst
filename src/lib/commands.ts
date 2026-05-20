@@ -2,6 +2,13 @@ export type CommandTrustLevel = 'verified' | 'reviewed' | 'community' | 'local';
 
 export type CommandRisk = 'low' | 'medium' | 'high';
 
+export type CommandIcon =
+  | { type: 'favicon'; host?: string }
+  | { type: 'initials'; value: string }
+  | { type: 'emoji'; value: string }
+  | { type: 'url'; src: string }
+  | { type: 'asset'; src: string };
+
 export type BurstCommand = {
   id: string;
   title: string;
@@ -19,6 +26,7 @@ export type BurstCommand = {
   sourceUrl: string;
   installs: number;
   rating: number;
+  icon: CommandIcon;
   pinned?: boolean;
   shortcut?: string;
   action?: 'open-dashboard' | 'open-installed' | 'create-local-script';
@@ -42,6 +50,7 @@ export const seedCommands: BurstCommand[] = [
     sourceUrl: 'https://github.com/burst-registry/github-pr-summary',
     installs: 18420,
     rating: 4.9,
+    icon: { type: 'favicon', host: 'github.com' },
     pinned: true,
     shortcut: 'G P',
   },
@@ -62,6 +71,7 @@ export const seedCommands: BurstCommand[] = [
     sourceUrl: 'https://github.com/minapark/linear-page-capture',
     installs: 6210,
     rating: 4.7,
+    icon: { type: 'favicon', host: 'linear.app' },
     pinned: true,
     shortcut: 'L I',
   },
@@ -82,6 +92,7 @@ export const seedCommands: BurstCommand[] = [
     sourceUrl: 'https://github.com/openuse/notion-highlight',
     installs: 9820,
     rating: 4.5,
+    icon: { type: 'initials', value: 'NS' },
     shortcut: 'N S',
   },
   {
@@ -101,6 +112,7 @@ export const seedCommands: BurstCommand[] = [
     sourceUrl: 'https://github.com/retailops/shopify-sku-bundle',
     installs: 3380,
     rating: 4.8,
+    icon: { type: 'favicon', host: 'admin.shopify.com' },
   },
   {
     id: 'gmail-clean-thread',
@@ -119,6 +131,7 @@ export const seedCommands: BurstCommand[] = [
     sourceUrl: 'https://github.com/arichen/gmail-clean-thread',
     installs: 1420,
     rating: 4.2,
+    icon: { type: 'favicon', host: 'mail.google.com' },
   },
 ];
 
@@ -140,6 +153,7 @@ export const managementCommands: BurstCommand[] = [
     sourceUrl: 'burst://dashboard/install',
     installs: 0,
     rating: 0,
+    icon: { type: 'emoji', value: '↓' },
     shortcut: 'B I',
     action: 'open-dashboard',
   },
@@ -160,6 +174,7 @@ export const managementCommands: BurstCommand[] = [
     sourceUrl: 'burst://dashboard',
     installs: 0,
     rating: 0,
+    icon: { type: 'initials', value: 'B' },
     shortcut: 'B M',
     action: 'open-dashboard',
   },
@@ -180,6 +195,7 @@ export const managementCommands: BurstCommand[] = [
     sourceUrl: 'burst://dashboard/new',
     installs: 0,
     rating: 0,
+    icon: { type: 'emoji', value: '+' },
     shortcut: 'B N',
     action: 'create-local-script',
   },
@@ -200,10 +216,27 @@ export const managementCommands: BurstCommand[] = [
     sourceUrl: 'burst://dashboard/installed',
     installs: 0,
     rating: 0,
+    icon: { type: 'emoji', value: '≡' },
     shortcut: 'B L',
     action: 'open-installed',
   },
 ];
+
+export function getCommandIconLabel(command: BurstCommand): string {
+  if (command.icon.type === 'initials' || command.icon.type === 'emoji') return command.icon.value;
+  return command.publisher.avatarInitials;
+}
+
+export function getCommandIconUrl(command: BurstCommand): string | undefined {
+  if (command.icon.type === 'url' || command.icon.type === 'asset') return command.icon.src;
+  if (command.icon.type === 'favicon') {
+    const host = command.icon.host ?? command.website;
+    if (host === 'all sites' || host === 'Burst') return undefined;
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
+  }
+
+  return undefined;
+}
 
 export function getHostFromUrl(url: string): string {
   try {
