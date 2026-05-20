@@ -19,12 +19,6 @@ const trustLabels: Record<BurstCommand['trustLevel'], string> = {
   local: 'Local',
 };
 
-const riskLabels: Record<BurstCommand['risk'], string> = {
-  low: 'Low risk',
-  medium: 'Review permissions',
-  high: 'Sensitive access',
-};
-
 export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -41,24 +35,23 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     return searchCommands(ordered, query);
   }, [query, siteCommands]);
 
-  const pinnedCommands = useMemo(
-    () => seedCommands.filter((command) => command.pinned),
-    [],
-  );
-
   const activeCommand = filteredCommands[activeIndex] ?? filteredCommands[0];
 
   useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      const isLauncher = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k';
-      if (isLauncher) {
-        event.preventDefault();
+    function handleMessage(message: unknown) {
+      if (isToggleMessage(message)) {
         setIsOpen((current) => !current);
-        return;
       }
+    }
 
-      if (!isOpen) return;
+    browser.runtime.onMessage.addListener(handleMessage);
+    return () => browser.runtime.onMessage.removeListener(handleMessage);
+  }, []);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault();
         setIsOpen(false);
@@ -91,127 +84,52 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     setActiveIndex(0);
   }, [query]);
 
-  if (!isOpen) {
-    return (
-      <button className="burst-launcher" type="button" onClick={() => setIsOpen(true)} aria-label="Open Burst">
-        <span className="burst-mark">B</span>
-        <span>⌘K</span>
-      </button>
-    );
-  }
+  if (!isOpen) return null;
 
   return (
     <div className="burst-overlay" role="presentation">
       <section className="burst-shell" aria-label="Burst command palette">
-        <aside className="burst-pins" aria-label="Pinned commands">
-          <div className="burst-mark burst-mark-large">B</div>
-          {pinnedCommands.map((command) => (
-            <button
-              className="burst-pin"
-              key={command.id}
-              type="button"
-              title={command.title}
-              onClick={() => {
-                setQuery(command.title);
-                setActiveIndex(0);
-              }}
-            >
-              {command.publisher.avatarInitials}
-            </button>
-          ))}
-        </aside>
+        <label className="burst-search">
+          <span>{host}</span>
+          <input
+            autoFocus
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={`Search ${pageTitle || host}`}
+          />
+        </label>
 
-        <main className="burst-main">
-          <header className="burst-header">
-            <div>
-              <h1>Run a command</h1>
-              <p>{host} · {pageTitle || 'Current page'}</p>
-            </div>
-            <button className="burst-close" type="button" onClick={() => setIsOpen(false)} aria-label="Close Burst">
-              Esc
-            </button>
-          </header>
-
-          <label className="burst-search">
-            <span>Search registry and site actions</span>
-            <input
-              autoFocus
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Try “summarize”, “notion”, or “reviewed”"
-            />
-          </label>
-
-          <div className="burst-content">
-            <div className="burst-results" role="listbox" aria-label="Available commands">
-              <div className="burst-section-label">Available here</div>
-              {filteredCommands.length > 0 ? (
-                filteredCommands.map((command, index) => (
-                  <button
-                    className={`burst-command ${index === activeIndex ? 'is-active' : ''}`}
-                    key={command.id}
-                    type="button"
-                    role="option"
-                    aria-selected={index === activeIndex}
-                    onMouseEnter={() => setActiveIndex(index)}
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <span className="burst-command-icon">{command.publisher.avatarInitials}</span>
-                    <span className="burst-command-copy">
-                      <strong>{command.title}</strong>
-                      <span>{command.description}</span>
-                    </span>
-                    <span className="burst-command-meta">
-                      {command.pinned ? <span className="burst-pill">Pinned</span> : null}
-                      <kbd>{command.shortcut ?? '↵'}</kbd>
-                    </span>
-                  </button>
-                ))
-              ) : (
-                <div className="burst-empty">
-                  <strong>No command matches that search.</strong>
-                  <span>Try a publisher, permission, use case, or audit level.</span>
-                </div>
-              )}
-            </div>
-
-            <aside className="burst-detail" aria-label="Command details">
-              {activeCommand ? (
-                <>
-                  <div className={`burst-trust burst-trust-${activeCommand.trustLevel}`}>
-                    {trustLabels[activeCommand.trustLevel]}
-                  </div>
-                  <h2>{activeCommand.title}</h2>
-                  <p>{activeCommand.description}</p>
-                  <dl>
-                    <div>
-                      <dt>Publisher</dt>
-                      <dd>{activeCommand.publisher.name} <span>{activeCommand.publisher.handle}</span></dd>
-                    </div>
-                    <div>
-                      <dt>Risk</dt>
-                      <dd>{riskLabels[activeCommand.risk]}</dd>
-                    </div>
-                    <div>
-                      <dt>Usage</dt>
-                      <dd>{activeCommand.installs.toLocaleString()} installs · {activeCommand.rating.toFixed(1)} rating</dd>
-                    </div>
-                  </dl>
-                  <div className="burst-permissions">
-                    <span>Permissions</span>
-                    {activeCommand.permissions.map((permission) => (
-                      <em key={permission}>{permission}</em>
-                    ))}
-                  </div>
-                  <a href={activeCommand.sourceUrl} target="_blank" rel="noreferrer">
-                    Review source
-                  </a>
-                </>
-              ) : null}
-            </aside>
-          </div>
-        </main>
+        <div className="burst-results" role="listbox" aria-label="Available commands">
+          {filteredCommands.length > 0 ? (
+            filteredCommands.map((command, index) => (
+              <button
+                className={`burst-command ${index === activeIndex ? 'is-active' : ''}`}
+                key={command.id}
+                type="button"
+                role="option"
+                aria-selected={index === activeIndex}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="burst-command-copy">
+                  <strong>{command.title}</strong>
+                  <span>
+                    {command.website} · {trustLabels[command.trustLevel]} · {command.publisher.handle}
+                  </span>
+                </span>
+                <kbd>{command.shortcut ?? '↵'}</kbd>
+              </button>
+            ))
+          ) : (
+            <div className="burst-empty">No commands found.</div>
+          )}
+        </div>
       </section>
     </div>
   );
+}
+
+function isToggleMessage(message: unknown): message is { type: 'burst:toggle-palette' } {
+  return typeof message === 'object' && message !== null && 'type' in message
+    && message.type === 'burst:toggle-palette';
 }

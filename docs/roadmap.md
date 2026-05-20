@@ -34,6 +34,7 @@
 
 - Add install and pin persistence.
 - Sync installed commands between registry website and extension.
+- Add extension settings for palette behavior while leaving global shortcut assignment in Chrome's shortcut UI.
 - Design the command execution boundary.
 - Require explicit user consent before granting sensitive permissions.
 - Add safe runtime APIs for page DOM reads, selected text, clipboard writes, captures, and connector calls.

@@ -6,8 +6,10 @@ Burst is a browser command palette for every webpage. It is inspired by Omni-sty
 
 - WXT + React extension scaffold using Bun.
 - Shadow DOM content-script palette so webpage CSS does not pollute the UI.
-- `Mod+K` launcher with command search, keyboard navigation, pinned commands, site-aware discovery, publisher metadata, permissions, risk, audit state, and source links.
+- Minimal dark command palette with command search, keyboard navigation, and site-aware discovery.
+- Chrome extension command shortcut for opening the palette. The default is `Command+Shift+K` on macOS and `Ctrl+Shift+K` elsewhere.
 - Popup surface for sign-in direction, local registry posture, publishing entry points, and seed registry metrics.
+- Options page explaining keyboard shortcut configuration.
 - Registry website scaffold in `apps/registry` for command discovery, audit review, and publishing entry points.
 - Typed seed command registry in `src/lib/commands.ts` to shape the early product contract.
 
@@ -49,6 +51,16 @@ Build only one surface:
 bun run build:extension
 bun run build:registry
 ```
+
+## Extension Shortcut
+
+Burst uses Chrome's extension `commands` API for the global trigger. The extension provides a default shortcut, but users configure it through the browser at:
+
+```text
+chrome://extensions/shortcuts
+```
+
+The options page can explain this, but Chrome owns the actual shortcut assignment UI.
 
 ## Docs
 

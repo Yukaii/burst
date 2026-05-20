@@ -17,7 +17,8 @@ The registry website should live outside WXT entrypoints because it is a normal 
 ## Implemented
 
 - WXT + React extension scaffold using Bun.
-- Shadow DOM command palette mounted on every webpage with `Mod+K`.
+- Shadow DOM command palette mounted on every webpage and opened through Chrome extension commands.
+- Minimal dark command palette with no injected floating launcher button.
 - Site-aware command discovery using typed seed registry data.
 - Command details for publisher, trust level, risk, permissions, installs, rating, and source URL.
 - Popup status panel for account/registry posture.
@@ -33,6 +34,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Signed command package manifest.
 - Static analysis or audit pipeline.
 - Runtime sandbox/permission execution model.
+- Persisted user settings beyond Chrome-managed shortcut assignment.
 - Browser extension icons and brand assets.
 
 ## Verification Baseline
