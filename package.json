@@ -4,14 +4,21 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "wxt",
+    "dev": "bun run dev:extension",
+    "dev:extension": "wxt",
+    "dev:registry": "bun --filter @burst/registry dev",
     "dev:firefox": "wxt -b firefox",
-    "build": "wxt build",
+    "build": "bun run build:extension && bun run build:registry",
+    "build:extension": "wxt build",
+    "build:registry": "bun --filter @burst/registry build",
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
-    "compile": "tsc --noEmit",
+    "compile": "tsc --noEmit && bun --filter @burst/registry compile",
     "postinstall": "wxt prepare"
   },
   "dependencies": {
@@ -21,8 +28,10 @@
   "devDependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
     "@wxt-dev/module-react": "^1.1.5",
     "typescript": "^5.9.3",
+    "vite": "^8.0.13",
     "wxt": "^0.20.26"
   }
 }
