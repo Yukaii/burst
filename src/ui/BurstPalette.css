@@ -15,9 +15,9 @@
   display: grid;
   place-items: start center;
   padding: 14vh 16px 24px;
-  background: rgba(2, 6, 23, 0.56);
+  background: rgba(2, 6, 23, 0.34);
   color: #f8fafc;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(2px);
 }
 
 .burst-shell {
