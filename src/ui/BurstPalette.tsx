@@ -3,6 +3,7 @@ import {
   BurstCommand,
   commandMatchesHost,
   getHostFromUrl,
+  managementCommands,
   searchCommands,
   seedCommands,
 } from '@/src/lib/commands';
@@ -26,7 +27,10 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const host = useMemo(() => getHostFromUrl(pageUrl), [pageUrl]);
 
   const siteCommands = useMemo(
-    () => seedCommands.filter((command) => commandMatchesHost(command, host)),
+    () => [
+      ...seedCommands.filter((command) => commandMatchesHost(command, host)),
+      ...managementCommands,
+    ],
     [host],
   );
 
@@ -36,6 +40,14 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   }, [query, siteCommands]);
 
   const activeCommand = filteredCommands[activeIndex] ?? filteredCommands[0];
+
+  function runCommand(command: BurstCommand) {
+    if (command.action) {
+      void browser.runtime.sendMessage({ type: 'burst:run-management-command', action: command.action });
+    }
+
+    setIsOpen(false);
+  }
 
   useEffect(() => {
     function handleMessage(message: unknown) {
@@ -72,7 +84,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
 
       if (event.key === 'Enter' && activeCommand) {
         event.preventDefault();
-        setIsOpen(false);
+        runCommand(activeCommand);
       }
     }
 
@@ -109,7 +121,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
                 role="option"
                 aria-selected={index === activeIndex}
                 onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => setIsOpen(false)}
+                onClick={() => runCommand(command)}
               >
                 <span className="burst-command-copy">
                   <strong>{command.title}</strong>

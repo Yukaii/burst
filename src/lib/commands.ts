@@ -21,6 +21,7 @@ export type BurstCommand = {
   rating: number;
   pinned?: boolean;
   shortcut?: string;
+  action?: 'open-dashboard' | 'open-installed' | 'create-local-script';
 };
 
 export const seedCommands: BurstCommand[] = [
@@ -118,6 +119,89 @@ export const seedCommands: BurstCommand[] = [
     sourceUrl: 'https://github.com/arichen/gmail-clean-thread',
     installs: 1420,
     rating: 4.2,
+  },
+];
+
+export const managementCommands: BurstCommand[] = [
+  {
+    id: 'burst-install-script',
+    title: 'Install script from registry',
+    description: 'Open the local install manager.',
+    website: 'Burst',
+    matchPatterns: ['<all_urls>'],
+    publisher: {
+      name: 'Burst',
+      handle: '@local',
+      avatarInitials: 'B',
+    },
+    trustLevel: 'local',
+    risk: 'medium',
+    permissions: ['Extension storage'],
+    sourceUrl: 'burst://dashboard/install',
+    installs: 0,
+    rating: 0,
+    shortcut: 'B I',
+    action: 'open-dashboard',
+  },
+  {
+    id: 'burst-open-dashboard',
+    title: 'Manage installed scripts',
+    description: 'Open the local Burst dashboard.',
+    website: 'Burst',
+    matchPatterns: ['<all_urls>'],
+    publisher: {
+      name: 'Burst',
+      handle: '@local',
+      avatarInitials: 'B',
+    },
+    trustLevel: 'local',
+    risk: 'low',
+    permissions: ['Extension page'],
+    sourceUrl: 'burst://dashboard',
+    installs: 0,
+    rating: 0,
+    shortcut: 'B M',
+    action: 'open-dashboard',
+  },
+  {
+    id: 'burst-create-local-script',
+    title: 'Create local script',
+    description: 'Open the editor with a new local command.',
+    website: 'Burst',
+    matchPatterns: ['<all_urls>'],
+    publisher: {
+      name: 'Burst',
+      handle: '@local',
+      avatarInitials: 'B',
+    },
+    trustLevel: 'local',
+    risk: 'medium',
+    permissions: ['Extension storage', 'Page runtime after install'],
+    sourceUrl: 'burst://dashboard/new',
+    installs: 0,
+    rating: 0,
+    shortcut: 'B N',
+    action: 'create-local-script',
+  },
+  {
+    id: 'burst-list-installed',
+    title: 'List installed scripts',
+    description: 'Review enabled scripts and their website matches.',
+    website: 'Burst',
+    matchPatterns: ['<all_urls>'],
+    publisher: {
+      name: 'Burst',
+      handle: '@local',
+      avatarInitials: 'B',
+    },
+    trustLevel: 'local',
+    risk: 'low',
+    permissions: ['Extension storage'],
+    sourceUrl: 'burst://dashboard/installed',
+    installs: 0,
+    rating: 0,
+    shortcut: 'B L',
+    action: 'open-installed',
   },
 ];
 

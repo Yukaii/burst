@@ -20,8 +20,10 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Shadow DOM command palette mounted on every webpage and opened through Chrome extension commands.
 - Minimal dark command palette with no injected floating launcher button.
 - Site-aware command discovery using typed seed registry data.
+- Local management commands in the palette for opening the dashboard, creating scripts, and listing installed scripts.
 - Command details for publisher, trust level, risk, permissions, installs, rating, and source URL.
 - Popup status panel for account/registry posture.
+- Extension dashboard page for local script editing/testing/management.
 - Registry website scaffold with marketplace search, command rows, audit labels, and a selected-command inspector.
 - Root scripts for separate extension and registry development/build flows.
 
@@ -31,6 +33,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Account sign-in.
 - Command publishing flow.
 - Command install/pin persistence shared between website and extension.
+- Real local script persistence and execution.
 - Signed command package manifest.
 - Static analysis or audit pipeline.
 - Runtime sandbox/permission execution model.
