@@ -1,10 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { EditorView } from '@codemirror/view';
 import type { CommandIcon } from '@/src/lib/commands';
-import { LocalScript, seedLocalScripts } from '@/src/lib/localScripts';
+import {
+  createLocalScriptDraft,
+  loadLocalScripts,
+  LocalScript,
+  prepareLocalScriptForSave,
+  saveLocalScripts,
+} from '@/src/lib/localScripts';
 import './style.css';
 
 const iconOptions: Array<{ icon: CommandIcon; label: string; hint: string }> = [
@@ -84,54 +90,116 @@ function createEditorTheme(fontFamily: string, fontSize: number) {
 }
 
 function DashboardApp() {
-  const initialScripts = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('mode') !== 'new') return seedLocalScripts;
-
-    const draft: LocalScript = {
-      id: 'new-script',
-      name: 'Untitled local command',
-      matchPattern: '<all_urls>',
-      icon: { type: 'initials', value: 'UL' },
-      status: 'draft',
-      updatedAt: new Date().toISOString().slice(0, 10),
-      code: `export default async function run() {\n  // Write a local command here.\n}`,
-    };
-
-    return [
-      draft,
-      ...seedLocalScripts,
-    ];
-  }, []);
-
-  const [scripts, setScripts] = useState<LocalScript[]>(initialScripts);
-  const [selectedId, setSelectedId] = useState(initialScripts[0].id);
+  const [scripts, setScripts] = useState<LocalScript[]>([]);
+  const [selectedId, setSelectedId] = useState<string>();
   const [editorFontFamily, setEditorFontFamily] = useState(fontFamilyOptions[0].value);
   const [editorFontSize, setEditorFontSize] = useState(13);
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [saveState, setSaveState] = useState('Loading scripts');
+  const [testOutput, setTestOutput] = useState('Ready. Test runs will execute against the current editor source.');
   const selectedScript = scripts.find((script) => script.id === selectedId) ?? scripts[0];
   const editorTheme = useMemo(
     () => createEditorTheme(editorFontFamily, editorFontSize),
     [editorFontFamily, editorFontSize],
   );
 
-  function createDraft() {
-    const draft: LocalScript = {
-      id: `draft-${Date.now()}`,
-      name: 'Untitled local command',
-      matchPattern: '<all_urls>',
-      icon: { type: 'initials', value: 'UL' },
-      status: 'draft',
-      updatedAt: new Date().toISOString().slice(0, 10),
-      code: `export default async function run() {\n  // Write a local command here.\n}`,
-    };
+  useEffect(() => {
+    let cancelled = false;
 
-    setScripts((current) => [draft, ...current]);
+    async function hydrateScripts() {
+      try {
+        const storedScripts = await loadLocalScripts();
+        const params = new URLSearchParams(window.location.search);
+        const nextScripts = params.get('mode') === 'new'
+          ? [createLocalScriptDraft(), ...storedScripts]
+          : storedScripts;
+
+        if (params.get('mode') === 'new') {
+          await saveLocalScripts(nextScripts);
+        }
+
+        if (cancelled) return;
+        setScripts(nextScripts);
+        setSelectedId(nextScripts[0]?.id);
+        setLoadState('ready');
+        setSaveState(params.get('mode') === 'new' ? 'Draft saved' : 'Loaded from local storage');
+      } catch (error) {
+        if (cancelled) return;
+        setLoadState('error');
+        setSaveState(error instanceof Error ? error.message : 'Failed to load scripts');
+      }
+    }
+
+    void hydrateScripts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function createDraft() {
+    const draft = createLocalScriptDraft();
+    const nextScripts = [draft, ...scripts];
+
+    setScripts(nextScripts);
     setSelectedId(draft.id);
+    await persistScripts(nextScripts, 'Draft saved');
   }
 
   function updateSelectedScript(patch: Partial<LocalScript>) {
+    if (!selectedScript) return;
+
     setScripts((current) =>
       current.map((script) => script.id === selectedScript.id ? { ...script, ...patch } : script),
+    );
+    setSaveState('Unsaved changes');
+  }
+
+  async function saveSelectedScript() {
+    if (!selectedScript) return;
+
+    const nextScripts = scripts.map((script) =>
+      script.id === selectedScript.id ? prepareLocalScriptForSave(script) : script,
+    );
+
+    setScripts(nextScripts);
+    await persistScripts(nextScripts, 'Saved to local storage');
+  }
+
+  function testSelectedScript() {
+    if (!selectedScript) return;
+
+    try {
+      // Compilation-only test for now. Runtime isolation is tracked separately.
+      compileLocalScript(selectedScript.code);
+      setTestOutput(`Syntax check passed for ${selectedScript.name}.`);
+    } catch (error) {
+      setTestOutput(error instanceof Error ? error.message : 'Syntax check failed.');
+    }
+  }
+
+  async function persistScripts(nextScripts: LocalScript[], successMessage: string) {
+    try {
+      await saveLocalScripts(nextScripts);
+      setSaveState(successMessage);
+    } catch (error) {
+      setSaveState(error instanceof Error ? error.message : 'Failed to save scripts');
+    }
+  }
+
+  if (loadState === 'loading') {
+    return (
+      <main className="dashboard-shell is-loading">
+        <section className="empty-dashboard">Loading local scripts</section>
+      </main>
+    );
+  }
+
+  if (loadState === 'error' || !selectedScript) {
+    return (
+      <main className="dashboard-shell is-loading">
+        <section className="empty-dashboard">{saveState}</section>
+      </main>
     );
   }
 
@@ -175,8 +243,9 @@ function DashboardApp() {
             <h2>{selectedScript.name}</h2>
           </div>
           <div className="editor-actions">
-            <button type="button">Test</button>
-            <button type="button">Save</button>
+            <span className="save-state">{saveState}</span>
+            <button type="button" onClick={testSelectedScript}>Test</button>
+            <button type="button" onClick={saveSelectedScript}>Save</button>
           </div>
         </header>
 
@@ -246,7 +315,7 @@ function DashboardApp() {
 
         <section className="test-console" aria-label="Test output">
           <span>Test output</span>
-          <pre>Ready. Test runs will execute in an isolated preview context.</pre>
+          <pre>{testOutput}</pre>
         </section>
       </section>
     </main>
@@ -300,6 +369,11 @@ function IconSelect({ value, onChange }: { value: CommandIcon; onChange: (value:
       </span>
     </label>
   );
+}
+
+function compileLocalScript(code: string) {
+  const moduleBody = code.replace(/^\s*export\s+default\s+/, '');
+  new Function(`return (${moduleBody});`);
 }
 
 function LocalScriptIcon({ icon }: { icon: CommandIcon }) {

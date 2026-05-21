@@ -35,11 +35,20 @@
 - Add install and pin persistence.
 - Sync installed commands between registry website and extension.
 - Add extension settings for palette behavior while leaving global shortcut assignment in Chrome's shortcut UI.
-- Persist local scripts from the extension dashboard.
+- Persist local scripts from the extension dashboard. Done for extension-local records.
 - Add dashboard test harnesses for page context, selected text, DOM reads, and permission previews.
 - Design the command execution boundary.
 - Require explicit user consent before granting sensitive permissions.
 - Add safe runtime APIs for page DOM reads, selected text, clipboard writes, captures, and connector calls.
+
+## Phase 4.1: Local Script Data Model
+
+- Replace dashboard-only seed state with extension local storage. Done.
+- Add migration/versioning for local script records.
+- Add enable/disable/delete actions.
+- Expose stored local scripts inside the command palette discovery list.
+- Add import/export for local script backup and review.
+- Add runtime execution with an explicit API surface instead of raw page globals.
 
 ## Phase 5: Quality Loop
 
