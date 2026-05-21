@@ -18,6 +18,7 @@ import {
   stripDefaultExport,
 } from '@/src/lib/localScripts';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
+import { ExtensionSettings, DEFAULT_SETTINGS, loadSettings } from '@/src/lib/settings';
 import logoUrl from '@/assets/logo.svg';
 import './style.css';
 
@@ -133,53 +134,100 @@ const fontFamilyOptions = [
 
 const fontSizeOptions = [12, 13, 14, 15, 16, 18];
 
-function createEditorTheme(fontFamily: string, fontSize: number) {
-  return EditorView.theme({
-    '&': {
-      height: '100%',
-      backgroundColor: '#111827',
-      color: '#dbeafe',
-      fontSize: `${fontSize}px`,
-    },
-    '.cm-scroller': {
-      fontFamily,
-      lineHeight: '1.55',
-    },
-    '.cm-content': {
-      padding: '14px 0',
-    },
-    '.cm-line': {
-      color: '#dbeafe',
-      textTransform: 'none',
-      padding: '0 14px',
-    },
-    '.cm-gutters': {
-      backgroundColor: '#111827',
-      borderRight: '1px solid rgba(148, 163, 184, 0.14)',
-      color: '#64748b',
-    },
-    '.cm-activeLine': {
-      backgroundColor: 'rgba(30, 41, 59, 0.55)',
-    },
-    '.cm-activeLineGutter': {
-      backgroundColor: 'rgba(30, 41, 59, 0.55)',
-    },
-    '.cm-cursor': {
-      borderLeftColor: '#7dd3fc',
-    },
-    '&.cm-focused': {
-      outline: 'none',
-    },
-    '.tok-keyword': { color: '#7dd3fc' },
-    '.tok-variableName': { color: '#dbeafe' },
-    '.tok-propertyName': { color: '#bfdbfe' },
-    '.tok-string': { color: '#86efac' },
-    '.tok-comment': { color: '#64748b' },
-    '.tok-punctuation': { color: '#94a3b8' },
-  });
+function createEditorTheme(fontFamily: string, fontSize: number, isDark: boolean) {
+  if (isDark) {
+    return EditorView.theme({
+      '&': {
+        height: '100%',
+        backgroundColor: '#111827',
+        color: '#dbeafe',
+        fontSize: `${fontSize}px`,
+      },
+      '.cm-scroller': {
+        fontFamily,
+        lineHeight: '1.55',
+      },
+      '.cm-content': {
+        padding: '14px 0',
+      },
+      '.cm-line': {
+        color: '#dbeafe',
+        textTransform: 'none',
+        padding: '0 14px',
+      },
+      '.cm-gutters': {
+        backgroundColor: '#111827',
+        borderRight: '1px solid rgba(148, 163, 184, 0.14)',
+        color: '#64748b',
+      },
+      '.cm-activeLine': {
+        backgroundColor: 'rgba(30, 41, 59, 0.55)',
+      },
+      '.cm-activeLineGutter': {
+        backgroundColor: 'rgba(30, 41, 59, 0.55)',
+      },
+      '.cm-cursor': {
+        borderLeftColor: '#7dd3fc',
+      },
+      '&.cm-focused': {
+        outline: 'none',
+      },
+      '.tok-keyword': { color: '#7dd3fc' },
+      '.tok-variableName': { color: '#dbeafe' },
+      '.tok-propertyName': { color: '#bfdbfe' },
+      '.tok-string': { color: '#86efac' },
+      '.tok-comment': { color: '#64748b' },
+      '.tok-punctuation': { color: '#94a3b8' },
+    });
+  } else {
+    return EditorView.theme({
+      '&': {
+        height: '100%',
+        backgroundColor: '#ffffff',
+        color: '#1e293b',
+        fontSize: `${fontSize}px`,
+      },
+      '.cm-scroller': {
+        fontFamily,
+        lineHeight: '1.55',
+      },
+      '.cm-content': {
+        padding: '14px 0',
+      },
+      '.cm-line': {
+        color: '#1e293b',
+        textTransform: 'none',
+        padding: '0 14px',
+      },
+      '.cm-gutters': {
+        backgroundColor: '#f8fafc',
+        borderRight: '1px solid rgba(0, 0, 0, 0.08)',
+        color: '#64748b',
+      },
+      '.cm-activeLine': {
+        backgroundColor: 'rgba(0, 0, 0, 0.03)',
+      },
+      '.cm-activeLineGutter': {
+        backgroundColor: 'rgba(0, 0, 0, 0.03)',
+      },
+      '.cm-cursor': {
+        borderLeftColor: '#0ea5e9',
+      },
+      '&.cm-focused': {
+        outline: 'none',
+      },
+      '.tok-keyword': { color: '#0284c7' },
+      '.tok-variableName': { color: '#1e293b' },
+      '.tok-propertyName': { color: '#0f172a' },
+      '.tok-string': { color: '#15803d' },
+      '.tok-comment': { color: '#94a3b8' },
+      '.tok-punctuation': { color: '#475569' },
+    });
+  }
 }
 
 function DashboardApp() {
+  const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const [scripts, setScripts] = useState<LocalScript[]>([]);
   const [selectedId, setSelectedId] = useState<string>();
   const [editorFontFamily, setEditorFontFamily] = useState(fontFamilyOptions[0].value);
@@ -214,10 +262,54 @@ function DashboardApp() {
       : [];
     return analyzeScriptCode(selectedScript.code, patterns);
   }, [selectedScript?.code, selectedScript?.matchPattern]);
+
+  const activeTheme = useMemo(() => {
+    return settings.theme === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+      : settings.theme;
+  }, [settings.theme]);
+
   const editorTheme = useMemo(
-    () => createEditorTheme(editorFontFamily, editorFontSize),
-    [editorFontFamily, editorFontSize],
+    () => createEditorTheme(editorFontFamily, editorFontSize, activeTheme === 'dark'),
+    [editorFontFamily, editorFontSize, activeTheme],
   );
+
+  useEffect(() => {
+    async function initSettings() {
+      const loaded = await loadSettings();
+      setSettings(loaded);
+    }
+    void initSettings();
+
+    if (typeof browser !== 'undefined' && browser.storage?.onChanged) {
+      const handleStorageChange = (changes: Record<string, any>, areaName: string) => {
+        if (areaName === 'local' && changes['burst.settings.v1']) {
+          const newValue = changes['burst.settings.v1'].newValue;
+          if (newValue) {
+            setSettings(newValue);
+          }
+        }
+      };
+      browser.storage.onChanged.addListener(handleStorageChange);
+      return () => {
+        browser.storage.onChanged.removeListener(handleStorageChange);
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.className = `theme-${activeTheme}`;
+
+    if (settings.theme === 'system') {
+      const media = window.matchMedia('(prefers-color-scheme: light)');
+      const listener = () => {
+        const nextTheme = media.matches ? 'light' : 'dark';
+        document.documentElement.className = `theme-${nextTheme}`;
+      };
+      media.addEventListener('change', listener);
+      return () => media.removeEventListener('change', listener);
+    }
+  }, [activeTheme, settings.theme]);
 
   useEffect(() => {
     let cancelled = false;
@@ -942,7 +1034,7 @@ function DashboardApp() {
               }}
               extensions={[javascript({ jsx: true, typescript: true }), editorTheme]}
               height="100%"
-              theme="dark"
+              theme={activeTheme}
               onChange={(code) => updateSelectedScript({ code })}
             />
           </label>

@@ -25,11 +25,11 @@ select {
 
 .dashboard-shell {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   height: 100vh;
   min-height: 680px;
   overflow: hidden;
-  background: #0b1120;
+  background: #111115;
 }
 
 .dashboard-shell.is-loading {
@@ -40,10 +40,11 @@ select {
   display: grid;
   min-height: 100vh;
   place-items: center;
-  color: #64748b;
+  color: #94a3b8;
   font-size: 13px;
-  font-weight: 780;
+  font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .script-list {
@@ -51,7 +52,8 @@ select {
   flex-direction: column;
   gap: 14px;
   min-height: 0;
-  border-right: 1px solid rgba(148, 163, 184, 0.16);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  background: #16161a;
   padding: 18px;
 }
 
@@ -70,14 +72,15 @@ select {
 
 .brand-mark {
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   place-items: center;
-  border-radius: 10px;
-  background: #7dd3fc;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
   color: #0f172a;
-  font-size: 18px;
-  font-weight: 900;
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.2);
 }
 
 h1,
@@ -87,35 +90,49 @@ p {
 }
 
 h1 {
-  font-size: 18px;
+  font-size: 17px;
+  font-weight: 700;
   line-height: 1.15;
+  color: #ffffff;
 }
 
 h2 {
   margin-top: 4px;
-  color: #f8fafc;
-  font-size: 22px;
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 600;
   line-height: 1.15;
 }
 
 p {
   margin-top: 3px;
-  color: #64748b;
+  color: #94a3b8;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 450;
 }
 
 .new-script-button,
 .script-list-actions button,
 .editor-actions button {
-  height: 38px;
+  height: 32px;
   border: 0;
-  border-radius: 9px;
-  background: #7dd3fc;
-  color: #0f172a;
+  border-radius: 7px;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 820;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.new-script-button {
+  background: linear-gradient(180deg, #38bdf8, #0ea5e9);
+  color: #0f172a;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  box-shadow: 0 1px 3px rgba(14, 165, 233, 0.15);
+}
+
+.new-script-button:hover {
+  background: linear-gradient(180deg, #7dd3fc, #38bdf8);
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.25);
 }
 
 .script-list-actions {
@@ -125,14 +142,15 @@ p {
 }
 
 .script-list-actions button {
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: #111827;
-  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
 }
 
 .script-list-actions button:hover {
-  border-color: rgba(125, 211, 252, 0.24);
-  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
 .script-import-input {
@@ -141,7 +159,7 @@ p {
 
 .script-rows {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   min-height: 0;
   overflow-y: auto;
 }
@@ -153,12 +171,13 @@ p {
   gap: 10px;
   width: 100%;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
-  color: #e2e8f0;
+  color: #cbd5e1;
   cursor: pointer;
-  padding: 11px;
+  padding: 8px 10px;
   text-align: left;
+  transition: all 0.15s ease;
 }
 
 .script-icon {
@@ -166,49 +185,62 @@ p {
   width: 34px;
   height: 34px;
   place-items: center;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 9px;
-  background: #111827;
-  color: #7dd3fc;
-  font-size: 12px;
-  font-weight: 860;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #38bdf8;
+  font-size: 11px;
+  font-weight: 700;
+  transition: all 0.15s ease;
 }
 
 .script-icon img {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .script-copy {
   display: grid;
-  gap: 5px;
+  gap: 2px;
   min-width: 0;
 }
 
-.script-row.is-active,
-.script-row:hover {
-  border-color: rgba(125, 211, 252, 0.22);
-  background: rgba(30, 41, 59, 0.82);
+.script-row:hover:not(.is-active) {
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
 }
 
-.script-row strong,
-.script-row em {
-  overflow: hidden;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.script-row.is-active {
+  background: linear-gradient(180deg, #38bdf8, #0ea5e9);
+  border-color: rgba(56, 189, 248, 0.2);
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
 }
 
 .script-row strong {
   font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.script-row.is-active strong {
+  color: #0f172a;
 }
 
 .script-row em {
   color: #64748b;
   font-size: 11px;
   font-style: normal;
-  font-weight: 780;
-  text-transform: uppercase;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.script-row.is-active em {
+  color: rgba(15, 23, 42, 0.7);
 }
 
 .editor-header span,
@@ -227,6 +259,7 @@ label,
   min-width: 0;
   min-height: 0;
   padding: 22px;
+  overflow-y: auto;
 }
 
 .editor-header {
@@ -462,7 +495,7 @@ select {
 .code-editor {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  min-height: 0;
+  min-height: 320px;
 }
 
 .code-editor .cm-editor {
@@ -785,35 +818,40 @@ select {
 .dashboard-tabs {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  border-radius: 10px;
-  padding: 3px;
-  margin-bottom: 8px;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 2px;
+  margin-bottom: 12px;
 }
 
 .tab-btn {
-  height: 32px;
+  height: 28px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 6px;
   background: transparent;
   color: #94a3b8;
   cursor: pointer;
   font-size: 12px;
-  font-weight: 700;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  font-weight: 500;
+  transition: all 0.15s ease;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tab-btn:hover {
-  color: #f8fafc;
+  color: #ffffff;
 }
 
 .tab-btn.is-active {
-  background: rgba(125, 211, 252, 0.14);
-  color: #7dd3fc;
-  border: 1px solid rgba(125, 211, 252, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* Git Registry add form */
@@ -1168,4 +1206,336 @@ select {
   font-size: 12px;
   color: #64748b;
 }
+
+/* Dashboard Light Theme Overrides */
+.theme-light {
+  color: #1e293b;
+  background: #f4f4f7;
+}
+
+.theme-light .dashboard-shell {
+  background: #f4f4f7;
+}
+
+.theme-light .empty-dashboard {
+  color: #64748b;
+}
+
+.theme-light .script-list {
+  background: rgba(255, 255, 255, 0.45);
+  border-right-color: rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+}
+
+.theme-light h1,
+.theme-light h2,
+.theme-light .script-row.is-active strong,
+.theme-light .editor-header h2,
+.theme-light .registry-detail-info h2,
+.theme-light .update-checker-info h2,
+.theme-light .card-copy h4,
+.theme-light .audit-header h3,
+.theme-light .harness-header h3,
+.theme-light .check-details strong,
+.theme-light .icon-trigger strong,
+.theme-light .icon-options strong,
+.theme-light .no-updates-panel h4 {
+  color: #1e293b;
+}
+
+.theme-light p,
+.theme-light em,
+.theme-light label,
+.theme-light span,
+.theme-light .script-controls span,
+.theme-light .harness-capabilities > span,
+.theme-light .no-updates-panel p,
+.theme-light .save-state {
+  color: #475569;
+}
+
+.theme-light .script-list-actions button {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.04);
+  color: #475569;
+}
+
+.theme-light .script-list-actions button:hover {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.07);
+  color: #1e293b;
+}
+
+.theme-light .script-row {
+  color: #475569;
+}
+
+.theme-light .script-row:hover:not(.is-active) {
+  background: rgba(0, 0, 0, 0.035);
+  color: #1e293b;
+}
+
+.theme-light .script-row.is-active {
+  background: linear-gradient(180deg, #38bdf8, #0ea5e9);
+  border-color: rgba(56, 189, 248, 0.2);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
+}
+
+.theme-light .script-row.is-active strong {
+  color: #ffffff;
+}
+
+.theme-light .script-row.is-active em {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.theme-light .script-icon {
+  border-color: rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.02);
+  color: #0284c7;
+}
+
+.theme-light .script-row.is-active .script-icon {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.theme-light .editor-panel,
+.theme-light .git-registry-detail,
+.theme-light .update-checker-panel {
+  background: #ffffff;
+}
+
+.theme-light .editor-actions button:first-child {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+  color: #1e293b;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.theme-light .editor-actions button:first-child:hover {
+  background: #f1f5f9;
+}
+
+.theme-light input,
+.theme-light select,
+.theme-light .test-harness,
+.theme-light .static-audit-panel,
+.theme-light .icon-trigger {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+  color: #1e293b;
+}
+
+.theme-light select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m7 10 3 3 3-3m-6-4 3-3 3 3'/%3E%3C/svg%3E");
+  background-position: right 8px center;
+  background-repeat: no-repeat;
+  background-size: 14px;
+}
+
+.theme-light .icon-options {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.08);
+}
+
+.theme-light .icon-options button {
+  background: #ffffff;
+  color: #1e293b;
+  border-color: transparent;
+}
+
+.theme-light .icon-options button:hover,
+.theme-light .icon-options button.is-selected {
+  border-color: rgba(14, 165, 233, 0.2);
+  background: rgba(14, 165, 233, 0.05);
+}
+
+.theme-light .status-toggle {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: #f1f5f9;
+}
+
+.theme-light .status-toggle button {
+  border-right-color: rgba(0, 0, 0, 0.06);
+  color: #475569;
+}
+
+.theme-light .status-toggle button.is-active {
+  background: #0ea5e9;
+  color: #ffffff;
+}
+
+.theme-light .danger-button {
+  border-color: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.05);
+  color: #dc2626;
+}
+
+.theme-light .danger-button:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.theme-light .harness-html-label textarea,
+.theme-light .terminal-logs {
+  background: #f8fafc;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.theme-light .harness-html-label textarea {
+  color: #1e293b;
+}
+
+.theme-light .terminal-logs {
+  color: #15803d;
+}
+
+.theme-light .dashboard-tabs {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+.theme-light .tab-btn {
+  color: #64748b;
+}
+
+.theme-light .tab-btn:hover {
+  color: #1e293b;
+}
+
+.theme-light .tab-btn.is-active {
+  background: #ffffff;
+  color: #1e293b;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.theme-light .add-registry-form {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+.theme-light .add-registry-form button {
+  background: #0ea5e9;
+  color: #ffffff;
+}
+
+.theme-light .add-registry-form button:hover {
+  background: #0284c7;
+}
+
+.theme-light .updates-row {
+  background: rgba(245, 158, 11, 0.04);
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.18);
+}
+
+.theme-light .updates-row:hover,
+.theme-light .updates-row.is-active {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.theme-light .updates-badge {
+  background: #fbbf24;
+  color: #1e293b;
+}
+
+.theme-light .registry-detail-header,
+.theme-light .update-checker-header {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+.theme-light .remove-registry-btn {
+  background: rgba(239, 68, 68, 0.05);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.theme-light .remove-registry-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.theme-light .registry-command-card,
+.theme-light .update-card {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+.theme-light .registry-command-card:hover,
+.theme-light .update-card:hover {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: #f8fafc;
+}
+
+.theme-light .card-icon {
+  border-color: rgba(0, 0, 0, 0.06);
+  background: #f1f5f9;
+  color: #0ea5e9;
+}
+
+.theme-light .install-btn,
+.theme-light .update-btn {
+  background: #0ea5e9;
+  color: #ffffff;
+}
+
+.theme-light .install-btn:hover,
+.theme-light .update-btn:hover {
+  background: #0284c7;
+}
+
+.theme-light .install-btn.is-installed {
+  background: rgba(16, 185, 129, 0.06);
+  color: #16a34a;
+  border-color: rgba(16, 185, 129, 0.15);
+}
+
+.theme-light .install-btn.is-installed:hover {
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.theme-light .update-all-btn {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.theme-light .update-all-btn:hover {
+  background: #059669;
+}
+
+.theme-light .check-updates-btn {
+  background: #fbbf24;
+  color: #1e293b;
+}
+
+.theme-light .check-updates-btn:hover:not(:disabled) {
+  background: #f59e0b;
+}
+
+.theme-light .no-updates-panel {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.06);
+  color: #64748b;
+}
+
+.theme-light .no-updates-panel svg {
+  color: #94a3b8;
+}
+
+.theme-light .audit-check-item {
+  background: rgba(0, 0, 0, 0.015);
+  border-color: rgba(0, 0, 0, 0.04);
+}
+
+.theme-light .audit-check-item:hover {
+  background: rgba(0, 0, 0, 0.035);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
 
