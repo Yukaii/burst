@@ -7,7 +7,8 @@ export type CommandIcon =
   | { type: 'initials'; value: string }
   | { type: 'emoji'; value: string }
   | { type: 'url'; src: string }
-  | { type: 'asset'; src: string };
+  | { type: 'asset'; src: string }
+  | { type: 'lucide'; name: string };
 
 export type BurstCommand = {
   id: string;
@@ -57,8 +58,7 @@ export const managementCommands: BurstCommand[] = [
     sourceUrl: 'burst://dashboard/install',
     installs: 0,
     rating: 0,
-    icon: { type: 'emoji', value: '↓' },
-    shortcut: 'B I',
+    icon: { type: 'lucide', name: 'Download' },
     action: 'open-dashboard',
   },
   {
@@ -78,8 +78,7 @@ export const managementCommands: BurstCommand[] = [
     sourceUrl: 'burst://dashboard',
     installs: 0,
     rating: 0,
-    icon: { type: 'initials', value: 'B' },
-    shortcut: 'B M',
+    icon: { type: 'lucide', name: 'SlidersHorizontal' },
     action: 'open-dashboard',
   },
   {
@@ -99,8 +98,7 @@ export const managementCommands: BurstCommand[] = [
     sourceUrl: 'burst://dashboard/new',
     installs: 0,
     rating: 0,
-    icon: { type: 'emoji', value: '+' },
-    shortcut: 'B N',
+    icon: { type: 'lucide', name: 'Plus' },
     action: 'create-local-script',
   },
   {
@@ -120,14 +118,14 @@ export const managementCommands: BurstCommand[] = [
     sourceUrl: 'burst://dashboard/installed',
     installs: 0,
     rating: 0,
-    icon: { type: 'emoji', value: '≡' },
-    shortcut: 'B L',
+    icon: { type: 'lucide', name: 'Folder' },
     action: 'open-installed',
   },
 ];
 
 export function getCommandIconLabel(command: BurstCommand): string {
   if (command.icon.type === 'initials' || command.icon.type === 'emoji') return command.icon.value;
+  if (command.icon.type === 'lucide') return command.icon.name.slice(0, 2).toUpperCase();
   return command.publisher.avatarInitials;
 }
 

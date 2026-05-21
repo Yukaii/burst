@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import * as LucideIcons from 'lucide-react';
 import {
   BurstCommand,
   commandMatchesHost,
@@ -32,6 +33,22 @@ type BurstPaletteProps = {
   pageTitle: string;
 };
 
+type ToastPosition = 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
+type ToastAnimation = 'slide' | 'fade' | 'pop' | 'none';
+type ToastVariant = 'default' | 'info' | 'success' | 'warning' | 'error';
+
+type BurstToast = {
+  id: number;
+  title?: string;
+  message: string;
+  variant: ToastVariant;
+  position: ToastPosition;
+  animation: ToastAnimation;
+  duration: number;
+  dismissible: boolean;
+  showProgress: boolean;
+};
+
 const trustLabels: Record<BurstCommand['trustLevel'], string> = {
   verified: 'Verified',
   reviewed: 'Reviewed',
@@ -45,7 +62,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [localCommands, setLocalCommands] = useState<BurstCommand[]>([]);
   const [statusMessage, setStatusMessage] = useState<string>();
-  const [toastMessage, setToastMessage] = useState<string>();
+  const [toast, setToast] = useState<BurstToast>();
   const [consentPendingCommand, setConsentPendingCommand] = useState<BurstCommand | null>(null);
   const [capturedSelection, setCapturedSelection] = useState('');
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
@@ -83,7 +100,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
 
     if (command.action === 'run-local-script') {
       if (command.localScriptId) {
-        const result = await runLocalScript(command.localScriptId, capturedSelection, setToastMessage);
+        const result = await runLocalScript(command.localScriptId, capturedSelection, setToast);
         if (settings.showConsoleLogs) {
           console.log(`[Burst] Execution outcome for "${command.title}":`, result);
         }
@@ -106,7 +123,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
         }
       }
 
-      const result = await runRegistryScript(command.id, capturedSelection, setToastMessage);
+      const result = await runRegistryScript(command.id, capturedSelection, setToast);
       if (settings.showConsoleLogs) {
         console.log(`[Burst] Execution outcome for "${command.title}":`, result);
       }
@@ -131,7 +148,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     await saveConsentGrant(command.id);
     setConsentPendingCommand(null);
 
-    const result = await runRegistryScript(command.id, capturedSelection, setToastMessage);
+    const result = await runRegistryScript(command.id, capturedSelection, setToast);
     if (!result.ok) {
       setStatusMessage(result.message);
       return;
@@ -275,11 +292,11 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   }, [query]);
 
   useEffect(() => {
-    if (!toastMessage) return;
+    if (!toast || toast.duration <= 0) return;
 
-    const timeout = window.setTimeout(() => setToastMessage(undefined), 2200);
+    const timeout = window.setTimeout(() => setToast(undefined), toast.duration);
     return () => window.clearTimeout(timeout);
-  }, [toastMessage]);
+  }, [toast]);
 
   const activeTheme = settings.theme === 'system'
     ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
@@ -460,9 +477,31 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
           </section>
         </div>
       ) : null}
-      {toastMessage ? (
-        <div className="burst-toast" role="status">
-          {toastMessage}
+      {toast ? (
+        <div
+          className={`burst-toast theme-${activeTheme} position-${toast.position} variant-${toast.variant} animation-${toast.animation}`}
+          role="status"
+          aria-live={toast.variant === 'error' ? 'assertive' : 'polite'}
+          style={{ '--burst-toast-duration': `${toast.duration}ms` } as React.CSSProperties}
+        >
+          <span className="burst-toast-icon" aria-hidden="true">
+            {getToastIcon(toast.variant)}
+          </span>
+          <span className="burst-toast-copy">
+            {toast.title ? <strong>{toast.title}</strong> : null}
+            <span>{toast.message}</span>
+          </span>
+          {toast.dismissible ? (
+            <button
+              className="burst-toast-close"
+              type="button"
+              aria-label="Dismiss notification"
+              onClick={() => setToast(undefined)}
+            >
+              <LucideIcons.X size={14} />
+            </button>
+          ) : null}
+          {toast.showProgress && toast.duration > 0 ? <span className="burst-toast-progress" /> : null}
         </div>
       ) : null}
     </>
@@ -472,7 +511,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
 async function runLocalScript(
   scriptId: string,
   selection: string,
-  onToast: (message: string) => void,
+  onToast: (toast: BurstToast) => void,
 ): Promise<{ ok: boolean; message?: string }> {
   const resultEventName = getLocalScriptResultEventName(scriptId);
 
@@ -486,11 +525,11 @@ async function runLocalScript(
     }, 700);
 
     function handleResult(event: Event) {
-      const detail = event instanceof CustomEvent ? event.detail as { status?: string; message?: string } : {};
+      const detail = event instanceof CustomEvent ? event.detail as { status?: string; message?: unknown; toast?: unknown } : {};
       if (detail.status === 'started') return;
 
-      if (detail.status === 'toast' && detail.message) {
-        onToast(detail.message);
+      if (detail.status === 'toast') {
+        onToast(normalizeToastPayload(detail.toast ?? detail.message));
         return;
       }
 
@@ -498,7 +537,7 @@ async function runLocalScript(
       window.clearTimeout(timeout);
       resolve({
         ok: detail.status === 'complete',
-        message: detail.message ?? 'Local script failed.',
+        message: typeof detail.message === 'string' ? detail.message : 'Local script failed.',
       });
     }
 
@@ -512,7 +551,7 @@ async function runLocalScript(
 async function runRegistryScript(
   commandId: string,
   selection: string,
-  onToast: (message: string) => void,
+  onToast: (toast: BurstToast) => void,
 ): Promise<{ ok: boolean; message?: string }> {
   const resultEventName = getRegistryScriptResultEventName(commandId);
 
@@ -526,11 +565,11 @@ async function runRegistryScript(
     }, 700);
 
     function handleResult(event: Event) {
-      const detail = event instanceof CustomEvent ? event.detail as { status?: string; message?: string } : {};
+      const detail = event instanceof CustomEvent ? event.detail as { status?: string; message?: unknown; toast?: unknown } : {};
       if (detail.status === 'started') return;
 
-      if (detail.status === 'toast' && detail.message) {
-        onToast(detail.message);
+      if (detail.status === 'toast') {
+        onToast(normalizeToastPayload(detail.toast ?? detail.message));
         return;
       }
 
@@ -538,7 +577,7 @@ async function runRegistryScript(
       window.clearTimeout(timeout);
       resolve({
         ok: detail.status === 'complete',
-        message: detail.message ?? 'Registry script failed.',
+        message: typeof detail.message === 'string' ? detail.message : 'Registry script failed.',
       });
     }
 
@@ -549,7 +588,73 @@ async function runRegistryScript(
   return result;
 }
 
+function normalizeToastPayload(payload: unknown): BurstToast {
+  const options = isRecord(payload) ? payload : {};
+  const message = typeof payload === 'string'
+    ? payload
+    : typeof options.message === 'string'
+    ? options.message
+    : typeof options.description === 'string'
+    ? options.description
+    : 'Command finished';
+
+  return {
+    id: Date.now(),
+    title: typeof options.title === 'string' ? truncateText(options.title, 80) : undefined,
+    message: truncateText(message, 240),
+    variant: readOneOf(options.variant, ['default', 'info', 'success', 'warning', 'error'], 'default'),
+    position: readOneOf(options.position, ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'], 'bottom-right'),
+    animation: readOneOf(options.animation, ['slide', 'fade', 'pop', 'none'], 'slide'),
+    duration: readDuration(options.duration),
+    dismissible: typeof options.dismissible === 'boolean'
+      ? options.dismissible
+      : typeof options.closeButton === 'boolean'
+      ? options.closeButton
+      : true,
+    showProgress: typeof options.showProgress === 'boolean'
+      ? options.showProgress
+      : typeof options.progress === 'boolean'
+      ? options.progress
+      : true,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readOneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return typeof value === 'string' && allowed.includes(value as T) ? value as T : fallback;
+}
+
+function readDuration(value: unknown): number {
+  if (value === 0 || value === false) return 0;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 3200;
+  return Math.max(800, Math.min(15000, Math.round(value)));
+}
+
+function truncateText(value: string, maxLength: number): string {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value;
+}
+
+function getToastIcon(variant: ToastVariant): string {
+  if (variant === 'success') return '✓';
+  if (variant === 'warning') return '!';
+  if (variant === 'error') return '×';
+  if (variant === 'info') return 'i';
+  return '•';
+}
+
 function CommandIcon({ command }: { command: BurstCommand }) {
+  if (command.icon.type === 'lucide') {
+    const IconComponent = (LucideIcons as any)[command.icon.name];
+    return (
+      <span className="burst-command-icon">
+        {IconComponent ? <IconComponent size={18} /> : <LucideIcons.Code size={18} />}
+      </span>
+    );
+  }
+
   const iconUrl = getCommandIconUrl(command);
 
   if (iconUrl) {

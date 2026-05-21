@@ -3,6 +3,11 @@ export type ExtensionSettings = {
   position: 'top' | 'center';
   backdropClickClose: boolean;
   showConsoleLogs: boolean;
+  editorFontFamily?: string;
+  editorFontSize?: number;
+  editorTheme?: string;
+  editorKeymap?: 'default' | 'vim' | 'emacs';
+  editorWordWrap?: boolean;
 };
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
@@ -10,6 +15,11 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   position: 'top',
   backdropClickClose: true,
   showConsoleLogs: false,
+  editorFontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
+  editorFontSize: 13,
+  editorTheme: 'default',
+  editorKeymap: 'default',
+  editorWordWrap: true,
 };
 
 const SETTINGS_STORAGE_KEY = 'burst.settings.v1';

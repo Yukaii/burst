@@ -79,7 +79,7 @@ Local scripts are stored in extension local storage with this shape:
 type LocalScript = {
   id: string;
   name: string;
-  matchPattern: string;
+  matchPatterns: string[];
   icon: CommandIcon;
   status: 'enabled' | 'disabled' | 'draft';
   updatedAt: string;
@@ -117,7 +117,19 @@ type SandboxedRuntimeContext = {
   clipboard: SandboxedClipboard;
   url: string;
   title: string;
-  toast: (message: string) => void;
+  toast: (message: string | ToastOptions, options?: ToastOptions) => void;
+};
+
+type ToastOptions = {
+  message?: string;
+  title?: string;
+  description?: string;
+  variant?: 'default' | 'info' | 'success' | 'warning' | 'error';
+  position?: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
+  animation?: 'slide' | 'fade' | 'pop' | 'none';
+  duration?: number | false;
+  dismissible?: boolean;
+  showProgress?: boolean;
 };
 ```
 
@@ -155,6 +167,15 @@ type SandboxedRuntimeContext = {
    - Required to trigger command feedback toasts.
    - Methods:
      - `toast(message)`: displays an auto-dismissing toast notification on the page.
+     - `toast(message, options)`: customizes the toast variant, position, animation, duration, and controls.
+     - `toast({ message, title, ...options })`: object form for richer command feedback.
+   - Options:
+     - `variant`: `default`, `info`, `success`, `warning`, or `error`.
+     - `position`: `top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center`, or `bottom-right`.
+     - `animation`: `slide`, `fade`, `pop`, or `none`.
+     - `duration`: milliseconds before auto-dismiss; use `false` or `0` for persistent.
+     - `dismissible`: shows or hides the close button.
+     - `showProgress`: shows or hides the timeout progress bar.
 
 ### Example Sandboxed Script
 

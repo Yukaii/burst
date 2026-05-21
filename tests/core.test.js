@@ -54,7 +54,7 @@ const baseCommand = {
 const localScript = {
   id: 'local-copy-title',
   name: 'Copy title',
-  matchPattern: 'github.com/*',
+  matchPatterns: ['github.com/*'],
   icon: { type: 'initials', value: 'CT' },
   status: 'enabled',
   updatedAt: '2026-05-20',
@@ -72,8 +72,12 @@ describe('command matching', () => {
 
   test('normalizes local script match patterns for userScripts registration', () => {
     expect(getLocalScriptMatchPatterns(localScript)).toEqual(['*://github.com/*']);
-    expect(getLocalScriptMatchPatterns({ ...localScript, matchPattern: '<all_urls>' })).toEqual(['<all_urls>']);
-    expect(getLocalScriptMatchPatterns({ ...localScript, matchPattern: 'https://github.com/*' })).toEqual(['https://github.com/*']);
+    expect(getLocalScriptMatchPatterns({ ...localScript, matchPatterns: ['<all_urls>'] })).toEqual(['<all_urls>']);
+    expect(getLocalScriptMatchPatterns({ ...localScript, matchPatterns: ['https://github.com/*'] })).toEqual(['https://github.com/*']);
+    expect(getLocalScriptMatchPatterns({ ...localScript, matchPatterns: ['github.com/*', 'docs.example.com/*'] })).toEqual([
+      '*://github.com/*',
+      '*://docs.example.com/*',
+    ]);
   });
 });
 
@@ -83,7 +87,9 @@ describe('local script registration', () => {
 
     expect(source).toContain(getLocalScriptEventName(localScript.id));
     expect(source).toContain(getLocalScriptResultEventName(localScript.id));
-    expect(source).toContain('toast = (message) =>');
+    expect(source).toContain('toast = (message, options = {}) =>');
+    expect(source).toContain("status: 'toast'");
+    expect(source).toContain('position: typeof input.position === \'string\' ? input.position : undefined');
     expect(source).toContain('const capturedSelection = (event && event.detail && event.detail.selection) || \'\';');
     expect(source).toContain('selection: selectionText');
     expect(source).not.toContain('export default');
@@ -253,6 +259,9 @@ describe('extension settings storage', () => {
     expect(settings.position).toBe('top');
     expect(settings.backdropClickClose).toBe(true);
     expect(settings.showConsoleLogs).toBe(false);
+    expect(settings.editorTheme).toBe('default');
+    expect(settings.editorKeymap).toBe('default');
+    expect(settings.editorWordWrap).toBe(true);
   });
 
   test('saves and loads settings correctly', async () => {
@@ -261,6 +270,11 @@ describe('extension settings storage', () => {
       position: 'center',
       backdropClickClose: false,
       showConsoleLogs: true,
+      editorFontFamily: 'Monospace',
+      editorFontSize: 14,
+      editorTheme: 'dracula',
+      editorKeymap: 'vim',
+      editorWordWrap: false,
     };
     await saveSettings(customSettings);
     const loaded = await loadSettings();

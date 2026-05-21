@@ -19,7 +19,7 @@ export type LocalScriptStatus = 'enabled' | 'disabled' | 'draft';
 export type LocalScript = {
   id: string;
   name: string;
-  matchPattern: string;
+  matchPatterns: string[];
   icon: CommandIcon;
   status: LocalScriptStatus;
   updatedAt: string;
@@ -39,7 +39,7 @@ export const seedLocalScripts: LocalScript[] = [
   {
     id: 'local-github-copy-branch',
     name: 'Copy GitHub branch name',
-    matchPattern: 'github.com/*',
+    matchPatterns: ['github.com/*'],
     icon: { type: 'favicon', host: 'github.com' },
     status: 'enabled',
     updatedAt: '2026-05-20',
@@ -53,7 +53,7 @@ export const seedLocalScripts: LocalScript[] = [
   {
     id: 'local-highlight-capture',
     name: 'Capture selection',
-    matchPattern: '<all_urls>',
+    matchPatterns: ['<all_urls>'],
     icon: { type: 'initials', value: 'CS' },
     status: 'draft',
     updatedAt: '2026-05-20',
@@ -69,7 +69,7 @@ export function createLocalScriptDraft(): LocalScript {
   return {
     id: `local-${Date.now()}`,
     name: 'Untitled local command',
-    matchPattern: '<all_urls>',
+    matchPatterns: ['<all_urls>'],
     icon: { type: 'initials', value: 'UL' },
     status: 'draft',
     updatedAt: getTodayDate(),
@@ -132,12 +132,15 @@ export function parseLocalScriptBackup(value: unknown): LocalScript[] {
 }
 
 export function localScriptToCommand(script: LocalScript): BurstCommand {
+  const matchPatterns = getLocalScriptMatchPatterns(script);
   return {
     id: `local-script:${script.id}`,
     title: script.name,
     description: 'Local dashboard script stored in this browser.',
-    website: script.matchPattern === '<all_urls>' ? 'all sites' : script.matchPattern.replace(/\/\*$/, ''),
-    matchPatterns: [script.matchPattern],
+    website: matchPatterns.includes('<all_urls>')
+      ? 'all sites'
+      : matchPatterns.map((pattern) => pattern.replace(/^\*:\/\/|\/\*$/g, '')).join(', '),
+    matchPatterns,
     publisher: {
       name: 'Local',
       handle: '@local',
@@ -171,11 +174,15 @@ export function getLocalScriptRegistrationId(scriptId: string): string {
 }
 
 export function getLocalScriptMatchPatterns(script: LocalScript): string[] {
-  const pattern = script.matchPattern.trim();
-  if (pattern === '<all_urls>') return ['<all_urls>'];
-  if (pattern.includes('://')) return [pattern];
-  if (!pattern.includes('/')) return [`*://${pattern}/*`];
-  return [`*://${pattern}`];
+  const patterns = script.matchPatterns.map(normalizeLocalScriptMatchPattern);
+  return patterns.length > 0 ? patterns : ['<all_urls>'];
+}
+
+function normalizeLocalScriptMatchPattern(pattern: string): string {
+  if (pattern === '<all_urls>') return '<all_urls>';
+  if (pattern.includes('://')) return pattern;
+  if (!pattern.includes('/')) return `*://${pattern}/*`;
+  return `*://${pattern}`;
 }
 
 export function createSandboxedUserScriptCode(code: string, eventName: string, resultEventName: string): string {
@@ -256,11 +263,30 @@ export function createSandboxedUserScriptCode(code: string, eventName: string, r
       };
 
       // 4. Toast API
-      const toast = (message) => {
+      const toast = (message, options = {}) => {
         if (!hasCap('toast')) {
           throw new Error("SecurityError: Script lacks 'toast' capability.");
         }
-        emit({ status: 'toast', message: String(message) });
+        const input = message && typeof message === 'object' && !Array.isArray(message)
+          ? message
+          : { ...options, message: String(message) };
+        emit({
+          status: 'toast',
+          message: String(input.message || input.description || ''),
+          toast: {
+            title: typeof input.title === 'string' ? input.title : undefined,
+            message: String(input.message || input.description || ''),
+            description: typeof input.description === 'string' ? input.description : undefined,
+            variant: typeof input.variant === 'string' ? input.variant : undefined,
+            position: typeof input.position === 'string' ? input.position : undefined,
+            animation: typeof input.animation === 'string' ? input.animation : undefined,
+            duration: typeof input.duration === 'number' || input.duration === false ? input.duration : undefined,
+            dismissible: typeof input.dismissible === 'boolean' ? input.dismissible : undefined,
+            closeButton: typeof input.closeButton === 'boolean' ? input.closeButton : undefined,
+            showProgress: typeof input.showProgress === 'boolean' ? input.showProgress : undefined,
+            progress: typeof input.progress === 'boolean' ? input.progress : undefined
+          }
+        });
       };
 
       // Wrapped location & navigator
@@ -372,10 +398,11 @@ function parseLocalScripts(value: unknown): LocalScript[] {
 }
 
 function normalizeLocalScript(script: LocalScript): LocalScript {
+  const matchPatterns = script.matchPatterns.map((pattern) => pattern.trim()).filter(Boolean);
   return {
     ...script,
     name: script.name.trim() || 'Untitled local command',
-    matchPattern: script.matchPattern.trim() || '<all_urls>',
+    matchPatterns: matchPatterns.length > 0 ? matchPatterns : ['<all_urls>'],
     status: script.status,
     icon: normalizeIcon(script.icon),
     originRegistryUrl: script.originRegistryUrl?.trim() || undefined,
@@ -387,6 +414,7 @@ function normalizeLocalScript(script: LocalScript): LocalScript {
 function normalizeIcon(icon: CommandIcon): CommandIcon {
   if (icon.type === 'favicon') return { type: 'favicon', host: icon.host?.trim() || undefined };
   if (icon.type === 'url' || icon.type === 'asset') return { type: icon.type, src: icon.src.trim() };
+  if (icon.type === 'lucide') return { type: 'lucide', name: icon.name.trim() };
   return { type: icon.type, value: icon.value.trim() || 'B' };
 }
 
@@ -396,7 +424,8 @@ function isLocalScript(value: unknown): value is LocalScript {
   const script = value as Partial<LocalScript>;
   return typeof script.id === 'string'
     && typeof script.name === 'string'
-    && typeof script.matchPattern === 'string'
+    && Array.isArray(script.matchPatterns)
+    && script.matchPatterns.every((pattern) => typeof pattern === 'string')
     && typeof script.updatedAt === 'string'
     && typeof script.code === 'string'
     && isLocalScriptStatus(script.status)
@@ -424,6 +453,7 @@ function isCommandIcon(value: unknown): value is CommandIcon {
   if (icon.type === 'favicon') return !('host' in icon) || typeof icon.host === 'string';
   if (icon.type === 'url' || icon.type === 'asset') return typeof icon.src === 'string';
   if (icon.type === 'initials' || icon.type === 'emoji') return typeof icon.value === 'string';
+  if (icon.type === 'lucide') return typeof icon.name === 'string';
   return false;
 }
 
