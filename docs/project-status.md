@@ -26,6 +26,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Popup status panel for account/registry posture.
 - Extension dashboard page with CodeMirror-based local script editing/testing/management and editor font controls.
 - Local script persistence through extension local storage, including first-run seed data, draft creation, and explicit saves.
+- Enabled local scripts are surfaced in the webpage command palette ahead of registry suggestions when their match pattern fits the current host.
 - Dashboard syntax test action for the current script source.
 - Registry website scaffold with marketplace search, command rows, audit labels, and a selected-command inspector.
 - Root scripts for separate extension and registry development/build flows.

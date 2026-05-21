@@ -46,7 +46,7 @@
 - Replace dashboard-only seed state with extension local storage. Done.
 - Add migration/versioning for local script records.
 - Add enable/disable/delete actions.
-- Expose stored local scripts inside the command palette discovery list.
+- Expose stored local scripts inside the command palette discovery list. Done for enabled scripts.
 - Add import/export for local script backup and review.
 - Add runtime execution with an explicit API surface instead of raw page globals.
 

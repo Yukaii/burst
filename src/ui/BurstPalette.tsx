@@ -9,6 +9,7 @@ import {
   searchCommands,
   seedCommands,
 } from '@/src/lib/commands';
+import { loadLocalScripts, localScriptToCommand } from '@/src/lib/localScripts';
 
 type BurstPaletteProps = {
   pageUrl: string;
@@ -26,24 +27,38 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [localCommands, setLocalCommands] = useState<BurstCommand[]>([]);
   const host = useMemo(() => getHostFromUrl(pageUrl), [pageUrl]);
 
   const siteCommands = useMemo(
     () => [
+      ...localCommands.filter((command) => commandMatchesHost(command, host)),
       ...seedCommands.filter((command) => commandMatchesHost(command, host)),
       ...managementCommands,
     ],
-    [host],
+    [host, localCommands],
   );
 
   const filteredCommands = useMemo(() => {
-    const ordered = [...siteCommands].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)));
+    const ordered = [...siteCommands].sort((a, b) => {
+      const localScriptDelta = Number(Boolean(b.localScriptId)) - Number(Boolean(a.localScriptId));
+      if (localScriptDelta !== 0) return localScriptDelta;
+      return Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
+    });
+
     return searchCommands(ordered, query);
   }, [query, siteCommands]);
 
   const activeCommand = filteredCommands[activeIndex] ?? filteredCommands[0];
 
   function runCommand(command: BurstCommand) {
+    if (command.action === 'run-local-script') {
+      // Execution boundary is still being designed; keep source review in the dashboard for now.
+      void browser.runtime.sendMessage({ type: 'burst:run-management-command', action: 'open-dashboard' });
+      setIsOpen(false);
+      return;
+    }
+
     if (command.action) {
       void browser.runtime.sendMessage({ type: 'burst:run-management-command', action: command.action });
     }
@@ -61,6 +76,21 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     browser.runtime.onMessage.addListener(handleMessage);
     return () => browser.runtime.onMessage.removeListener(handleMessage);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    async function refreshLocalCommands() {
+      const scripts = await loadLocalScripts();
+      setLocalCommands(
+        scripts
+          .filter((script) => script.status === 'enabled')
+          .map(localScriptToCommand),
+      );
+    }
+
+    void refreshLocalCommands();
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;

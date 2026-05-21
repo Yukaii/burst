@@ -29,7 +29,8 @@ export type BurstCommand = {
   icon: CommandIcon;
   pinned?: boolean;
   shortcut?: string;
-  action?: 'open-dashboard' | 'open-installed' | 'create-local-script';
+  action?: 'open-dashboard' | 'open-installed' | 'create-local-script' | 'run-local-script';
+  localScriptId?: string;
 };
 
 export const seedCommands: BurstCommand[] = [

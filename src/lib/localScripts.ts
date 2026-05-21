@@ -1,4 +1,4 @@
-import type { CommandIcon } from './commands';
+import type { BurstCommand, CommandIcon } from './commands';
 
 const LOCAL_SCRIPT_STORAGE_KEY = 'burst.localScripts.v1';
 
@@ -96,6 +96,31 @@ export function prepareLocalScriptForSave(script: LocalScript): LocalScript {
     ...script,
     updatedAt: getTodayDate(),
   });
+}
+
+export function localScriptToCommand(script: LocalScript): BurstCommand {
+  return {
+    id: `local-script:${script.id}`,
+    title: script.name,
+    description: 'Local dashboard script stored in this browser.',
+    website: script.matchPattern === '<all_urls>' ? 'all sites' : script.matchPattern.replace(/\/\*$/, ''),
+    matchPatterns: [script.matchPattern],
+    publisher: {
+      name: 'Local',
+      handle: '@local',
+      avatarInitials: 'L',
+    },
+    trustLevel: 'local',
+    risk: 'medium',
+    permissions: ['Page runtime after install'],
+    sourceUrl: `burst://local-script/${script.id}`,
+    installs: 0,
+    rating: 0,
+    icon: script.icon,
+    pinned: true,
+    action: 'run-local-script',
+    localScriptId: script.id,
+  };
 }
 
 async function readStoredScripts(): Promise<LocalScript[]> {
