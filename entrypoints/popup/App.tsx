@@ -35,7 +35,7 @@ function App() {
     async function loadData() {
       try {
         const hasWxt = typeof browser !== 'undefined' && !!browser.userScripts;
-        const hasChrome = typeof chrome !== 'undefined' && !!chrome.userScripts;
+        const hasChrome = typeof window !== 'undefined' && 'chrome' in window && !!(window as any).chrome?.userScripts;
         setHasUserScriptsPermission(hasWxt || hasChrome);
 
         const local = await loadLocalScripts();

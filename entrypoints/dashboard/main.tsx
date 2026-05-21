@@ -255,7 +255,7 @@ function DashboardApp() {
   useEffect(() => {
     function checkPermission() {
       const hasWxt = typeof browser !== 'undefined' && !!browser.userScripts;
-      const hasChrome = typeof chrome !== 'undefined' && !!chrome.userScripts;
+      const hasChrome = typeof window !== 'undefined' && 'chrome' in window && !!(window as any).chrome?.userScripts;
       setHasUserScriptsPermission(hasWxt || hasChrome);
     }
     checkPermission();
