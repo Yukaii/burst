@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { BurstCommand, registryCommands, searchCommands } from '@/src/lib/commands';
+import { sampleManifestValidationResults } from '@/src/lib/manifest';
 
 const navItems = ['Discover', 'Audits', 'Publish', 'Settings'];
 
@@ -22,6 +23,7 @@ export function RegistryApp() {
 
   const commands = useMemo(() => searchCommands(registryCommands, query), [query]);
   const activeCommand = commands.find((command) => command.id === activeCommandId) ?? commands[0];
+  const validManifests = sampleManifestValidationResults.filter((sample) => sample.result.ok).length;
 
   return (
     <div className="registry-shell">
@@ -61,12 +63,12 @@ export function RegistryApp() {
 
         <section className="summary-grid" aria-label="Registry summary">
           <SummaryStat label="Commands" value={registryCommands.length.toString()} />
+          <SummaryStat label="Manifests" value={`${validManifests}/${sampleManifestValidationResults.length}`} />
           <SummaryStat
             label="Audited"
             value={registryCommands.filter((command) => command.trustLevel === 'verified' || command.trustLevel === 'reviewed').length.toString()}
           />
           <SummaryStat label="Sensitive" value={registryCommands.filter((command) => command.risk === 'high').length.toString()} />
-          <SummaryStat label="Installable" value="0" />
         </section>
 
         <section className="workspace">
@@ -141,7 +143,16 @@ function EmptyInspector() {
       </div>
       <div className="audit-report">
         <h3>Next milestone</h3>
-        <p>Define `burst.command.json`, versioned source metadata, permission declarations, and audit report records before adding real marketplace rows.</p>
+        <p>Manifest samples now validate against the first `burst.command.json` contract. Next is package validation, audit records, and registry read APIs.</p>
+      </div>
+      <div className="manifest-report">
+        <h3>Manifest samples</h3>
+        {sampleManifestValidationResults.map((sample) => (
+          <div key={sample.id}>
+            <strong>{sample.id}</strong>
+            <span>{sample.result.ok ? 'Valid' : sample.result.errors.join(', ')}</span>
+          </div>
+        ))}
       </div>
     </aside>
   );

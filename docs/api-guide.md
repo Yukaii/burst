@@ -4,10 +4,11 @@ This guide captures the current intended contracts. Treat this as a working draf
 
 ## Command Manifest
 
-Registry and local commands should converge on a manifest shaped like:
+Registry commands should publish a `burst.command.json` manifest shaped like:
 
 ```json
 {
+  "schemaVersion": 1,
   "id": "example-command",
   "title": "Example command",
   "description": "A narrow website action with declared source and permissions.",
@@ -23,10 +24,20 @@ Registry and local commands should converge on a manifest shaped like:
     "host": "github.com"
   },
   "permissions": ["Read page DOM", "Read selected text"],
-  "sourceUrl": "https://github.com/example/example-command",
+  "source": {
+    "type": "git",
+    "url": "https://github.com/example/example-command"
+  },
+  "runtime": {
+    "entrypoint": "src/index.ts",
+    "capabilities": ["page-dom", "selection", "toast"]
+  },
+  "risk": "medium",
   "version": "0.1.0"
 }
 ```
+
+The first validator lives in `src/lib/manifest.ts`. It checks required metadata, publisher identity shape, icon shape, source URL, runtime entrypoint, runtime capabilities, semantic version format, and declared risk. Sample manifests are validated in the registry website but are not shown as marketplace rows yet.
 
 ## Iconography
 

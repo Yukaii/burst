@@ -9,13 +9,13 @@
 
 ## Next Up
 
-- Add a minimal `burst.command.json` schema and validate sample manifests before building marketplace rows.
 - Add focused tests for local script matching, user script registration code generation, and palette ordering.
 - Add dashboard test harnesses for page context, selected text, DOM reads, and permission previews.
+- Add package validation around manifest source URLs, entrypoints, and integrity metadata.
 
 ## Phase 1: Registry Contract
 
-- Define `burst.command.json` manifest schema.
+- Define `burst.command.json` manifest schema. Minimal v1 contract is in place.
 - Model command metadata: title, description, website match patterns, icon, permissions, risk hints, package source, publisher, version, and integrity hash.
 - Add installable package format and versioning rules.
 - Decide how commands declare runtime capabilities.
