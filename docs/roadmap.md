@@ -59,6 +59,7 @@
 ## Phase 5: Quality Loop
 
 - Add unit tests for registry matching and search. Started with host matching, palette ordering, management discovery, local script match conversion, and user script code generation.
+- Decentralized Git registries and update checking. (Done - custom git repositories, raw manifest fetches, and update checker panel added to dashboard)
 - Add browser tests for the content palette and registry website.
 - Add CI for typecheck, build, lint, and package validation.
 - Add release packaging for Chrome and Firefox.

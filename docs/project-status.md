@@ -57,6 +57,11 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Sandbox-isolated user script runtime execution wrappers shadowing page globals (`document`, `window`, `navigator`, `location`) using parameter-bound IIFE scopes and capability-gated explicit APIs (page, selection, clipboard, toast).
 - Premium extension options settings page and syncing mechanism for Theme (Light/Dark/System), Alignment (Top/Center), Backdrop Close, Developer Logging, and Consent Revocation.
 - Stable public command API documented and capability-gated in sandboxed runtime executions.
+- Real backend registry database and Bun server endpoints using SQLite (`registry.db`) for commands, publishers, and session-based authentication.
+- Account sign-in on registry website (profile switcher calling backend login/logout and session status endpoints).
+- Decentralized custom Git registries list in the Extension Dashboard, stored in Chrome local storage.
+- GitHub Raw manifest parser fetching and installing commands from external git repositories.
+- Unified Update Checker dashboard panel checking versions and providing one-click updates for official and custom Git registry scripts.
 
 ## In Progress
 
@@ -64,8 +69,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 
 ## Not Implemented Yet
 
-- Real backend registry database and server endpoints (simulated by async local mock API).
-- Account sign-in on registry website (simulated via active profile switcher).
+- None.
 
 ## Known Tradeoffs
 
