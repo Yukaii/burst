@@ -295,8 +295,8 @@ export function getMockScriptCode(commandId: string): string {
   }
 }
 
-// Detect CLI environment
-const isCliTest = typeof window === 'undefined' || (typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || process.env.TEST === 'true'));
+const processRef = typeof globalThis !== 'undefined' ? (globalThis as any).process : undefined;
+const isCliTest = typeof window === 'undefined' || (processRef && (processRef.env?.NODE_ENV === 'test' || processRef.env?.TEST === 'true' || processRef.env?.VITEST === 'true'));
 
 // In non-CLI browser contexts (like extension dashboard running at chrome-extension://... or similar),
 // API requests must target the local registry website running on http://localhost:5174.
