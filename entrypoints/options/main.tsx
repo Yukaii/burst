@@ -11,6 +11,20 @@ function OptionsApp() {
   const [statusType, setStatusType] = useState<'success' | 'info'>('info');
 
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [hasUserScriptsPermission, setHasUserScriptsPermission] = useState<boolean>(true);
+
+  useEffect(() => {
+    function checkPermission() {
+      const hasWxt = typeof browser !== 'undefined' && !!browser.userScripts;
+      const hasChrome = typeof chrome !== 'undefined' && !!chrome.userScripts;
+      setHasUserScriptsPermission(hasWxt || hasChrome);
+    }
+    checkPermission();
+    window.addEventListener('focus', checkPermission);
+    return () => {
+      window.removeEventListener('focus', checkPermission);
+    };
+  }, []);
 
   useEffect(() => {
     async function init() {
@@ -85,6 +99,44 @@ function OptionsApp() {
           <div className={`status-banner type-${statusType}`}>
             <span className="status-icon">{statusType === 'success' ? '✓' : 'ℹ'}</span>
             <p>{statusMessage}</p>
+          </div>
+        )}
+
+        {!hasUserScriptsPermission && (
+          <div className="warning-card">
+            <div className="warning-header">
+              <span className="warning-badge-icon">⚠️</span>
+              <div>
+                <h2>Action Required: Enable User Scripts Permission</h2>
+                <p>
+                  Burst requires Chrome's Manifest V3 User Scripts developer feature to be enabled. Without this, custom user scripts and keybind triggers cannot run.
+                </p>
+              </div>
+            </div>
+            <div className="warning-instructions">
+              <div className="instruction-step">
+                <h3>Option 1: Chrome 138+ (Recommended)</h3>
+                <p>Click "Open Extension Settings" below, scroll down, and switch "Allow user scripts" to ON.</p>
+              </div>
+              <div className="instruction-step">
+                <h3>Option 2: Older Chrome</h3>
+                <p>Open <code>chrome://extensions</code> and switch "Developer mode" in the top right to ON.</p>
+              </div>
+            </div>
+            <div className="warning-actions">
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof browser !== 'undefined' && browser.tabs?.create) {
+                    void browser.tabs.create({ url: 'chrome://extensions/?id=' + browser.runtime.id });
+                  }
+                }}
+                className="btn-warning-action"
+              >
+                Open Extension Settings
+              </button>
+              <span className="auto-detect-hint">Will auto-detect on return</span>
+            </div>
           </div>
         )}
 
