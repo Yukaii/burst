@@ -3,7 +3,9 @@ import ReactDOM from 'react-dom/client';
 import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { EditorView } from '@codemirror/view';
-import type { CommandIcon } from '@/src/lib/commands';
+import type { BurstCommand, CommandIcon } from '@/src/lib/commands';
+import { getRegistryCommand } from '@/src/lib/registryApi';
+import { loadInstalledRegistryCommands, saveInstalledRegistryCommands } from '@/src/lib/registryStorage';
 import {
   createLocalScriptBackup,
   createLocalScriptDraft,
@@ -18,6 +20,88 @@ import {
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
 import logoUrl from '@/assets/logo.svg';
 import './style.css';
+
+const GIT_REGISTRIES_STORAGE_KEY = 'burst.gitRegistries.v1';
+
+export type GitRegistry = {
+  id: string;
+  url: string;
+  name: string;
+  owner: string;
+  repo: string;
+  branch: string;
+  commands: BurstCommand[];
+};
+
+export type ScriptUpdate = {
+  type: 'official' | 'git';
+  id: string; // localScript.id (for git) or commandId (for official)
+  name: string;
+  currentVersion: string;
+  latestVersion: string;
+  code: string;
+  manifestCommand?: BurstCommand;
+};
+
+function parseGitUrl(input: string): { owner: string; repo: string; branch: string } | null {
+  try {
+    let clean = input.trim();
+    if (clean.startsWith('http://')) clean = clean.substring(7);
+    if (clean.startsWith('https://')) clean = clean.substring(8);
+    if (clean.endsWith('.git')) clean = clean.slice(0, -4);
+    if (clean.endsWith('/')) clean = clean.slice(0, -1);
+
+    const parts = clean.split('/');
+    let owner = '';
+    let repo = '';
+    let branch = 'main';
+
+    if (parts[0].includes('.')) {
+      if (parts.length < 3) return null;
+      owner = parts[1];
+      repo = parts[2];
+      if (parts[3] === 'tree' && parts[4]) {
+        branch = parts.slice(4).join('/');
+      }
+    } else {
+      if (parts.length < 2) return null;
+      owner = parts[0];
+      repo = parts[1];
+      if (parts[2] === 'tree' && parts[3]) {
+        branch = parts.slice(3).join('/');
+      }
+    }
+
+    if (!owner || !repo) return null;
+    return { owner, repo, branch };
+  } catch {
+    return null;
+  }
+}
+
+async function loadGitRegistries(): Promise<GitRegistry[]> {
+  const extensionStorage = typeof browser !== 'undefined' && browser.storage?.local;
+  if (extensionStorage) {
+    const result = await extensionStorage.get(GIT_REGISTRIES_STORAGE_KEY);
+    return (result[GIT_REGISTRIES_STORAGE_KEY] as GitRegistry[]) || [];
+  }
+  const raw = localStorage.getItem(GIT_REGISTRIES_STORAGE_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw) as GitRegistry[];
+  } catch {
+    return [];
+  }
+}
+
+async function saveGitRegistries(registries: GitRegistry[]): Promise<void> {
+  const extensionStorage = typeof browser !== 'undefined' && browser.storage?.local;
+  if (extensionStorage) {
+    await extensionStorage.set({ [GIT_REGISTRIES_STORAGE_KEY]: registries });
+    return;
+  }
+  localStorage.setItem(GIT_REGISTRIES_STORAGE_KEY, JSON.stringify(registries));
+}
 
 const iconOptions: Array<{ icon: CommandIcon; label: string; hint: string }> = [
   { icon: { type: 'favicon', host: 'github.com' }, label: 'GitHub', hint: 'github.com favicon' },
@@ -108,6 +192,17 @@ function DashboardApp() {
   const [mockSelection, setMockSelection] = useState('v0.1.0-draft');
   const [mockHtml, setMockHtml] = useState('\n<div data-icv-name="Switch branches/tags">v0.1.0-draft</div>\n');
   const importInputRef = useRef<HTMLInputElement>(null);
+
+  // Git Registries & Updates state
+  const [activeTab, setActiveTab] = useState<'editor' | 'git-updates'>('editor');
+  const [gitRegistries, setGitRegistries] = useState<GitRegistry[]>([]);
+  const [selectedGitView, setSelectedGitView] = useState<'updates' | string>('updates');
+  const [newRepoUrl, setNewRepoUrl] = useState('');
+  const [addError, setAddError] = useState('');
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+  const [availableUpdates, setAvailableUpdates] = useState<ScriptUpdate[]>([]);
+  const [updateStatusText, setUpdateStatusText] = useState('Not checked yet.');
+
   const selectedScript = scripts.find((script) => script.id === selectedId) ?? scripts[0];
   const detectedCapabilities = useMemo(() => {
     return selectedScript ? detectRequiredCapabilities(selectedScript.code) : [];
@@ -130,6 +225,7 @@ function DashboardApp() {
     async function hydrateScripts() {
       try {
         const storedScripts = await loadLocalScripts();
+        const storedRegistries = await loadGitRegistries();
         const params = new URLSearchParams(window.location.search);
         const nextScripts = params.get('mode') === 'new'
           ? [createLocalScriptDraft(), ...storedScripts]
@@ -142,6 +238,7 @@ function DashboardApp() {
         if (cancelled) return;
         setScripts(nextScripts);
         setSelectedId(nextScripts[0]?.id);
+        setGitRegistries(storedRegistries);
         setLoadState('ready');
         setSaveState(params.get('mode') === 'new' ? 'Draft saved' : 'Loaded from local storage');
       } catch (error) {
@@ -157,6 +254,242 @@ function DashboardApp() {
       cancelled = true;
     };
   }, []);
+
+  async function handleAddRegistry(e: React.FormEvent) {
+    e.preventDefault();
+    setAddError('');
+    const parsed = parseGitUrl(newRepoUrl);
+    if (!parsed) {
+      setAddError('Invalid URL. Format: github.com/owner/repo or owner/repo');
+      return;
+    }
+
+    const id = `git-${parsed.owner}-${parsed.repo}`;
+    if (gitRegistries.some(r => r.id === id)) {
+      setAddError('This registry is already added.');
+      return;
+    }
+
+    setAddError('Fetching manifest...');
+    try {
+      const manifestUrl = `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/${parsed.branch}/burst.commands.json`;
+      const fallbackUrl = `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/${parsed.branch}/burst.command.json`;
+
+      let res = await fetch(manifestUrl);
+      if (!res.ok) {
+        res = await fetch(fallbackUrl);
+      }
+      if (!res.ok) {
+        throw new Error(`Could not find burst.commands.json or burst.command.json in ${parsed.owner}/${parsed.repo}`);
+      }
+      const json = await res.json();
+      const manifestCommands = Array.isArray(json) ? json : (json.commands || []);
+
+      const newRegistry: GitRegistry = {
+        id,
+        url: `https://github.com/${parsed.owner}/${parsed.repo}`,
+        name: `${parsed.owner}/${parsed.repo}`,
+        owner: parsed.owner,
+        repo: parsed.repo,
+        branch: parsed.branch,
+        commands: manifestCommands,
+      };
+
+      const nextRegistries = [...gitRegistries, newRegistry];
+      setGitRegistries(nextRegistries);
+      await saveGitRegistries(nextRegistries);
+      setNewRepoUrl('');
+      setAddError('');
+      setSelectedGitView(id);
+    } catch (error) {
+      setAddError(error instanceof Error ? error.message : 'Failed to fetch manifest');
+    }
+  }
+
+  async function handleRemoveRegistry(id: string) {
+    if (!window.confirm('Are you sure you want to remove this registry? (Installed scripts from it will remain installed)')) {
+      return;
+    }
+    const nextRegistries = gitRegistries.filter(r => r.id !== id);
+    setGitRegistries(nextRegistries);
+    await saveGitRegistries(nextRegistries);
+    setSelectedGitView('updates');
+  }
+
+  async function installGitCommand(command: BurstCommand, registry: GitRegistry) {
+    const alreadyInstalled = scripts.find(s => s.originRegistryUrl === registry.url && s.originCommandId === command.id);
+    
+    if (alreadyInstalled) {
+      if (!window.confirm(`"${command.title}" is already installed. Do you want to overwrite it with version ${command.version}?`)) {
+        return;
+      }
+      const nextScripts = scripts.map(s => {
+        if (s.id === alreadyInstalled.id) {
+          return {
+            ...s,
+            name: command.title,
+            matchPattern: command.matchPatterns[0] || '<all_urls>',
+            icon: command.icon || { type: 'initials', value: command.title.substring(0, 2).toUpperCase() },
+            code: command.code || '',
+            version: command.version || '1.0.0',
+            updatedAt: new Date().toISOString().slice(0, 10),
+          };
+        }
+        return s;
+      });
+      setScripts(nextScripts);
+      await persistScripts(nextScripts, `Updated local script "${command.title}"`);
+      return;
+    }
+
+    const newScript: LocalScript = {
+      id: `local-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      name: command.title,
+      matchPattern: command.matchPatterns[0] || '<all_urls>',
+      icon: command.icon || { type: 'initials', value: command.title.substring(0, 2).toUpperCase() },
+      status: 'enabled',
+      updatedAt: new Date().toISOString().slice(0, 10),
+      code: command.code || '',
+      originRegistryUrl: registry.url,
+      originCommandId: command.id,
+      version: command.version || '1.0.0',
+    };
+
+    const nextScripts = [newScript, ...scripts];
+    setScripts(nextScripts);
+    await persistScripts(nextScripts, `Installed local script "${command.title}"`);
+  }
+
+  async function checkUpdates() {
+    setIsCheckingUpdates(true);
+    setUpdateStatusText('Checking for updates...');
+    const officialUpdates: ScriptUpdate[] = [];
+    const gitUpdates: ScriptUpdate[] = [];
+
+    try {
+      // 1. Scan official installed registry commands
+      const installedRegistryCmds = await loadInstalledRegistryCommands();
+      for (const cmd of installedRegistryCmds) {
+        try {
+          const officialCmd = await getRegistryCommand(cmd.id);
+          if (officialCmd && officialCmd.version && cmd.version && officialCmd.version !== cmd.version) {
+            officialUpdates.push({
+              type: 'official',
+              id: cmd.id,
+              name: cmd.title,
+              currentVersion: cmd.version,
+              latestVersion: officialCmd.version,
+              code: officialCmd.code || '',
+              manifestCommand: officialCmd,
+            });
+          }
+        } catch (e) {
+          console.error(`Failed to check update for official command ${cmd.id}:`, e);
+        }
+      }
+
+      // 2. Scan git-based local scripts
+      const gitScripts = scripts.filter(s => s.originRegistryUrl && s.originCommandId);
+      const uniqueUrls = Array.from(new Set(gitScripts.map(s => s.originRegistryUrl!)));
+
+      for (const url of uniqueUrls) {
+        try {
+          const parsed = parseGitUrl(url);
+          if (!parsed) continue;
+
+          let manifestData: any[] = [];
+          const manifestUrl = `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/${parsed.branch}/burst.commands.json`;
+          const fallbackUrl = `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/${parsed.branch}/burst.command.json`;
+          
+          let res = await fetch(manifestUrl);
+          if (!res.ok) {
+            res = await fetch(fallbackUrl);
+          }
+          if (res.ok) {
+            const json = await res.json();
+            manifestData = Array.isArray(json) ? json : (json.commands || []);
+          }
+
+          const scriptsForUrl = gitScripts.filter(s => s.originRegistryUrl === url);
+          for (const script of scriptsForUrl) {
+            const remoteCmd = manifestData.find(c => c.id === script.originCommandId);
+            if (remoteCmd && remoteCmd.version && script.version && remoteCmd.version !== script.version) {
+              gitUpdates.push({
+                type: 'git',
+                id: script.id,
+                name: script.name,
+                currentVersion: script.version,
+                latestVersion: remoteCmd.version,
+                code: remoteCmd.code || '',
+              });
+            }
+          }
+        } catch (e) {
+          console.error(`Failed to check updates for Git registry ${url}:`, e);
+        }
+      }
+
+      const allUpdates = [...officialUpdates, ...gitUpdates];
+      setAvailableUpdates(allUpdates);
+      setUpdateStatusText(
+        allUpdates.length > 0
+          ? `Found ${allUpdates.length} update(s).`
+          : 'All scripts are up to date.'
+      );
+    } catch (err) {
+      setUpdateStatusText('Error checking for updates.');
+      console.error(err);
+    } finally {
+      setIsCheckingUpdates(false);
+    }
+  }
+
+  async function handleUpdateScript(update: ScriptUpdate) {
+    try {
+      if (update.type === 'official') {
+        const installed = await loadInstalledRegistryCommands();
+        const updated = installed.map(cmd => {
+          if (cmd.id === update.id && update.manifestCommand) {
+            return update.manifestCommand;
+          }
+          return cmd;
+        });
+        await saveInstalledRegistryCommands(updated);
+      } else {
+        const nextScripts = scripts.map(s => {
+          if (s.id === update.id) {
+            return {
+              ...s,
+              code: update.code,
+              version: update.latestVersion,
+              updatedAt: new Date().toISOString().slice(0, 10),
+            };
+          }
+          return s;
+        });
+        setScripts(nextScripts);
+        await saveLocalScripts(nextScripts);
+      }
+
+      // Notify background to re-sync scripts
+      if (typeof browser !== 'undefined' && browser.runtime?.sendMessage) {
+        await browser.runtime.sendMessage({ type: 'burst:sync-local-scripts' }).catch(() => {});
+      }
+
+      // Remove from the updates list
+      setAvailableUpdates(current => current.filter(u => u.id !== update.id));
+      setSaveState(`Updated ${update.name}`);
+    } catch (error) {
+      console.error(`Failed to update ${update.name}:`, error);
+    }
+  }
+
+  async function handleUpdateAll() {
+    const updatesToProcess = [...availableUpdates];
+    for (const update of updatesToProcess) {
+      await handleUpdateScript(update);
+    }
+  }
 
   async function createDraft() {
     const draft = createLocalScriptDraft();
@@ -410,265 +743,475 @@ function DashboardApp() {
           </div>
         </header>
 
-        <button className="new-script-button" type="button" onClick={createDraft}>
-          New script
-        </button>
-
-        <div className="script-list-actions" aria-label="Script backup actions">
-          <button type="button" onClick={exportScripts}>
-            Export
+        <div className="dashboard-tabs">
+          <button
+            className={`tab-btn ${activeTab === 'editor' ? 'is-active' : ''}`}
+            type="button"
+            onClick={() => setActiveTab('editor')}
+          >
+            Local Editor
           </button>
-          <button type="button" onClick={() => importInputRef.current?.click()}>
-            Import
+          <button
+            className={`tab-btn ${activeTab === 'git-updates' ? 'is-active' : ''}`}
+            type="button"
+            onClick={() => setActiveTab('git-updates')}
+          >
+            Git & Updates
           </button>
-          <input
-            ref={importInputRef}
-            className="script-import-input"
-            type="file"
-            accept="application/json"
-            onChange={(event) => void importScripts(event)}
-          />
         </div>
 
-        <div className="script-rows">
-          {scripts.map((script) => (
-            <button
-              className={`script-row ${script.id === selectedId ? 'is-active' : ''}`}
-              key={script.id}
-              type="button"
-              onClick={() => setSelectedId(script.id)}
-            >
-              <LocalScriptIcon icon={script.icon} />
-              <span className="script-copy">
-                <strong>{script.name}</strong>
-                <em>{script.matchPattern} · {script.status}</em>
-              </span>
+        {activeTab === 'editor' ? (
+          <>
+            <button className="new-script-button" type="button" onClick={createDraft}>
+              New script
             </button>
-          ))}
-        </div>
-      </aside>
 
-      <section className="editor-panel" aria-label="Script editor">
-        <header className="editor-header">
-          <div>
-            <span>{selectedScript.status}</span>
-            <h2>{selectedScript.name}</h2>
-          </div>
-          <div className="editor-actions">
-            <span className="save-state">{saveState}</span>
-            <button type="button" onClick={testSelectedScript}>Test</button>
-            <button type="button" onClick={saveSelectedScript}>Save</button>
-          </div>
-        </header>
+            <div className="script-list-actions" aria-label="Script backup actions">
+              <button type="button" onClick={exportScripts}>
+                Export
+              </button>
+              <button type="button" onClick={() => importInputRef.current?.click()}>
+                Import
+              </button>
+              <input
+                ref={importInputRef}
+                className="script-import-input"
+                type="file"
+                accept="application/json"
+                onChange={(event) => void importScripts(event)}
+              />
+            </div>
 
-        <div className="meta-grid">
-          <label>
-            Name
-            <input
-              value={selectedScript.name}
-              onChange={(event) => updateSelectedScript({ name: event.target.value })}
-            />
-          </label>
-          <label>
-            Match
-            <input
-              value={selectedScript.matchPattern}
-              onChange={(event) => updateSelectedScript({ matchPattern: event.target.value })}
-            />
-          </label>
-          <IconSelect
-            value={selectedScript.icon}
-            onChange={(icon) => updateSelectedScript({ icon })}
-          />
-        </div>
-
-        <section className="script-controls" aria-label="Script controls">
-          <div>
-            <span>Status</span>
-            <div className="status-toggle" role="group" aria-label="Script status">
-              {(['enabled', 'disabled', 'draft'] as const).map((status) => (
+            <div className="script-rows">
+              {scripts.map((script) => (
                 <button
-                  className={selectedScript.status === status ? 'is-active' : ''}
-                  key={status}
+                  className={`script-row ${script.id === selectedId ? 'is-active' : ''}`}
+                  key={script.id}
                   type="button"
-                  onClick={() => void setSelectedScriptStatus(status)}
+                  onClick={() => setSelectedId(script.id)}
                 >
-                  {status}
+                  <LocalScriptIcon icon={script.icon} />
+                  <span className="script-copy">
+                    <strong>{script.name}</strong>
+                    <em>{script.matchPattern} · {script.status}</em>
+                  </span>
                 </button>
               ))}
             </div>
-          </div>
-          <button className="danger-button" type="button" onClick={() => void deleteSelectedScript()}>
-            Delete
-          </button>
-        </section>
+          </>
+        ) : (
+          <>
+            <button
+              className={`updates-row ${selectedGitView === 'updates' ? 'is-active' : ''}`}
+              type="button"
+              onClick={() => setSelectedGitView('updates')}
+            >
+              <strong>Updates Checker</strong>
+              {availableUpdates.length > 0 && (
+                <span className="updates-badge">{availableUpdates.length}</span>
+              )}
+            </button>
 
-        <section className="editor-settings" aria-label="Editor settings">
-          <label>
-            Font
-            <select value={editorFontFamily} onChange={(event) => setEditorFontFamily(event.target.value)}>
-              {fontFamilyOptions.map((option) => (
-                <option key={option.label} value={option.value}>
-                  {option.label}
-                </option>
+            <div className="sidebar-section-title">Git Registries</div>
+
+            <form className="add-registry-form" onSubmit={(e) => void handleAddRegistry(e)}>
+              <label>Add GitHub Repository</label>
+              <div className="input-group">
+                <input
+                  type="text"
+                  placeholder="owner/repo"
+                  value={newRepoUrl}
+                  onChange={(e) => setNewRepoUrl(e.target.value)}
+                />
+                <button type="submit">Add</button>
+              </div>
+              {addError && <span className="add-registry-error">{addError}</span>}
+            </form>
+
+            <div className="script-rows">
+              {gitRegistries.map((reg) => (
+                <button
+                  className={`script-row ${reg.id === selectedGitView ? 'is-active' : ''}`}
+                  key={reg.id}
+                  type="button"
+                  onClick={() => setSelectedGitView(reg.id)}
+                >
+                  <span className="script-icon">G</span>
+                  <span className="script-copy">
+                    <strong>{reg.name}</strong>
+                    <em>{reg.branch} · {reg.commands.length} commands</em>
+                  </span>
+                </button>
               ))}
-            </select>
-          </label>
-          <label>
-            Size
-            <select value={editorFontSize} onChange={(event) => setEditorFontSize(Number(event.target.value))}>
-              {fontSizeOptions.map((size) => (
-                <option key={size} value={size}>
-                  {size}px
-                </option>
-              ))}
-            </select>
-          </label>
-        </section>
-
-        <label className="code-editor">
-          Source
-          <CodeMirror
-            value={selectedScript.code}
-            basicSetup={{
-              bracketMatching: true,
-              closeBrackets: true,
-              defaultKeymap: true,
-              foldGutter: false,
-              highlightActiveLine: true,
-              highlightActiveLineGutter: true,
-              lineNumbers: true,
-            }}
-            extensions={[javascript({ jsx: true, typescript: true }), editorTheme]}
-            height="100%"
-            theme="dark"
-            onChange={(code) => updateSelectedScript({ code })}
-          />
-        </label>
-
-        {staticAuditReport && (
-          <section className="static-audit-panel" aria-label="Static security audit report">
-            <div className="audit-header">
-              <h3>Static Security Audit</h3>
-              <span className={`audit-badge is-${staticAuditReport.status}`}>
-                {staticAuditReport.status}
-              </span>
             </div>
-            <p className="audit-summary">{staticAuditReport.summary}</p>
-            <div className="audit-checks-grid">
-              <div className="audit-check-item">
-                <span className={`check-icon is-${staticAuditReport.checks.hostScope.status}`}>
-                  {staticAuditReport.checks.hostScope.status === 'pass' ? '✓' : staticAuditReport.checks.hostScope.status === 'warning' ? '⚠' : '✗'}
+          </>
+        )}
+      </aside>
+
+      {activeTab === 'editor' ? (
+        <section className="editor-panel" aria-label="Script editor">
+          <header className="editor-header">
+            <div>
+              <span>{selectedScript.status}</span>
+              <h2>{selectedScript.name}</h2>
+            </div>
+            <div className="editor-actions">
+              <span className="save-state">{saveState}</span>
+              <button type="button" onClick={testSelectedScript}>Test</button>
+              <button type="button" onClick={saveSelectedScript}>Save</button>
+            </div>
+          </header>
+
+          <div className="meta-grid">
+            <label>
+              Name
+              <input
+                value={selectedScript.name}
+                onChange={(event) => updateSelectedScript({ name: event.target.value })}
+              />
+            </label>
+            <label>
+              Match
+              <input
+                value={selectedScript.matchPattern}
+                onChange={(event) => updateSelectedScript({ matchPattern: event.target.value })}
+              />
+            </label>
+            <IconSelect
+              value={selectedScript.icon}
+              onChange={(icon) => updateSelectedScript({ icon })}
+            />
+          </div>
+
+          <section className="script-controls" aria-label="Script controls">
+            <div>
+              <span>Status</span>
+              <div className="status-toggle" role="group" aria-label="Script status">
+                {(['enabled', 'disabled', 'draft'] as const).map((status) => (
+                  <button
+                    className={selectedScript.status === status ? 'is-active' : ''}
+                    key={status}
+                    type="button"
+                    onClick={() => void setSelectedScriptStatus(status)}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button className="danger-button" type="button" onClick={() => void deleteSelectedScript()}>
+              Delete
+            </button>
+          </section>
+
+          <section className="editor-settings" aria-label="Editor settings">
+            <label>
+              Font
+              <select value={editorFontFamily} onChange={(event) => setEditorFontFamily(event.target.value)}>
+                {fontFamilyOptions.map((option) => (
+                  <option key={option.label} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Size
+              <select value={editorFontSize} onChange={(event) => setEditorFontSize(Number(event.target.value))}>
+                {fontSizeOptions.map((size) => (
+                  <option key={size} value={size}>
+                    {size}px
+                  </option>
+                ))}
+              </select>
+            </label>
+          </section>
+
+          <label className="code-editor">
+            Source
+            <CodeMirror
+              value={selectedScript.code}
+              basicSetup={{
+                bracketMatching: true,
+                closeBrackets: true,
+                defaultKeymap: true,
+                foldGutter: false,
+                highlightActiveLine: true,
+                highlightActiveLineGutter: true,
+                lineNumbers: true,
+              }}
+              extensions={[javascript({ jsx: true, typescript: true }), editorTheme]}
+              height="100%"
+              theme="dark"
+              onChange={(code) => updateSelectedScript({ code })}
+            />
+          </label>
+
+          {staticAuditReport && (
+            <section className="static-audit-panel" aria-label="Static security audit report">
+              <div className="audit-header">
+                <h3>Static Security Audit</h3>
+                <span className={`audit-badge is-${staticAuditReport.status}`}>
+                  {staticAuditReport.status}
                 </span>
-                <div className="check-details">
-                  <strong>Host Scope & Match Patterns</strong>
-                  <span>{staticAuditReport.checks.hostScope.detail}</span>
+              </div>
+              <p className="audit-summary">{staticAuditReport.summary}</p>
+              <div className="audit-checks-grid">
+                <div className="audit-check-item">
+                  <span className={`check-icon is-${staticAuditReport.checks.hostScope.status}`}>
+                    {staticAuditReport.checks.hostScope.status === 'pass' ? '✓' : staticAuditReport.checks.hostScope.status === 'warning' ? '⚠' : '✗'}
+                  </span>
+                  <div className="check-details">
+                    <strong>Host Scope & Match Patterns</strong>
+                    <span>{staticAuditReport.checks.hostScope.detail}</span>
+                  </div>
+                </div>
+                <div className="audit-check-item">
+                  <span className={`check-icon is-${staticAuditReport.checks.permissions.status}`}>
+                    {staticAuditReport.checks.permissions.status === 'pass' ? '✓' : staticAuditReport.checks.permissions.status === 'warning' ? '⚠' : '✗'}
+                  </span>
+                  <div className="check-details">
+                    <strong>Sensitive APIs & Permissions</strong>
+                    <span>{staticAuditReport.checks.permissions.detail}</span>
+                  </div>
+                </div>
+                <div className="audit-check-item">
+                  <span className={`check-icon is-${staticAuditReport.checks.remoteCode.status}`}>
+                    {staticAuditReport.checks.remoteCode.status === 'pass' ? '✓' : staticAuditReport.checks.remoteCode.status === 'warning' ? '⚠' : '✗'}
+                  </span>
+                  <div className="check-details">
+                    <strong>Remote Code & Injection</strong>
+                    <span>{staticAuditReport.checks.remoteCode.detail}</span>
+                  </div>
+                </div>
+                <div className="audit-check-item">
+                  <span className={`check-icon is-${staticAuditReport.checks.networkAccess.status}`}>
+                    {staticAuditReport.checks.networkAccess.status === 'pass' ? '✓' : staticAuditReport.checks.networkAccess.status === 'warning' ? '⚠' : '✗'}
+                  </span>
+                  <div className="check-details">
+                    <strong>Network Access</strong>
+                    <span>{staticAuditReport.checks.networkAccess.detail}</span>
+                  </div>
+                </div>
+                <div className="audit-check-item">
+                  <span className={`check-icon is-${staticAuditReport.checks.obfuscation.status}`}>
+                    {staticAuditReport.checks.obfuscation.status === 'pass' ? '✓' : staticAuditReport.checks.obfuscation.status === 'warning' ? '⚠' : '✗'}
+                  </span>
+                  <div className="check-details">
+                    <strong>Code Quality & Obfuscation Heuristics</strong>
+                    <span>{staticAuditReport.checks.obfuscation.detail}</span>
+                  </div>
                 </div>
               </div>
-              <div className="audit-check-item">
-                <span className={`check-icon is-${staticAuditReport.checks.permissions.status}`}>
-                  {staticAuditReport.checks.permissions.status === 'pass' ? '✓' : staticAuditReport.checks.permissions.status === 'warning' ? '⚠' : '✗'}
-                </span>
-                <div className="check-details">
-                  <strong>Sensitive APIs & Permissions</strong>
-                  <span>{staticAuditReport.checks.permissions.detail}</span>
+            </section>
+          )}
+
+          <section className="test-harness" aria-label="Test harness">
+            <div className="harness-header">
+              <h3>Test Harness</h3>
+              <div className="harness-capabilities">
+                <span>Capabilities:</span>
+                <div className="capability-list">
+                  {detectedCapabilities.length === 0 ? (
+                    <span className="capability-tag none">none</span>
+                  ) : (
+                    detectedCapabilities.map((cap) => (
+                      <span key={cap} className="capability-tag">{cap}</span>
+                    ))
+                  )}
                 </div>
               </div>
-              <div className="audit-check-item">
-                <span className={`check-icon is-${staticAuditReport.checks.remoteCode.status}`}>
-                  {staticAuditReport.checks.remoteCode.status === 'pass' ? '✓' : staticAuditReport.checks.remoteCode.status === 'warning' ? '⚠' : '✗'}
-                </span>
-                <div className="check-details">
-                  <strong>Remote Code & Injection</strong>
-                  <span>{staticAuditReport.checks.remoteCode.detail}</span>
-                </div>
-              </div>
-              <div className="audit-check-item">
-                <span className={`check-icon is-${staticAuditReport.checks.networkAccess.status}`}>
-                  {staticAuditReport.checks.networkAccess.status === 'pass' ? '✓' : staticAuditReport.checks.networkAccess.status === 'warning' ? '⚠' : '✗'}
-                </span>
-                <div className="check-details">
-                  <strong>Network Access</strong>
-                  <span>{staticAuditReport.checks.networkAccess.detail}</span>
-                </div>
-              </div>
-              <div className="audit-check-item">
-                <span className={`check-icon is-${staticAuditReport.checks.obfuscation.status}`}>
-                  {staticAuditReport.checks.obfuscation.status === 'pass' ? '✓' : staticAuditReport.checks.obfuscation.status === 'warning' ? '⚠' : '✗'}
-                </span>
-                <div className="check-details">
-                  <strong>Code Quality & Obfuscation Heuristics</strong>
-                  <span>{staticAuditReport.checks.obfuscation.detail}</span>
-                </div>
-              </div>
+              <button className="run-harness-button" type="button" onClick={testSelectedScript}>Run Test</button>
+            </div>
+
+            <div className="harness-grid">
+              <label>
+                Mock URL
+                <input
+                  type="text"
+                  value={mockUrl}
+                  onChange={(e) => setMockUrl(e.target.value)}
+                  placeholder="https://example.com"
+                />
+              </label>
+              <label>
+                Mock Title
+                <input
+                  type="text"
+                  value={mockTitle}
+                  onChange={(e) => setMockTitle(e.target.value)}
+                  placeholder="Page Title"
+                />
+              </label>
+              <label>
+                Mock Selection
+                <input
+                  type="text"
+                  value={mockSelection}
+                  onChange={(e) => setMockSelection(e.target.value)}
+                  placeholder="Selected text"
+                />
+              </label>
+            </div>
+
+            <div className="harness-dom-log">
+              <label className="harness-html-label">
+                Mock DOM HTML
+                <textarea
+                  value={mockHtml}
+                  onChange={(e) => setMockHtml(e.target.value)}
+                  placeholder="<div>Mock page content</div>"
+                />
+              </label>
+              <label className="harness-log-label">
+                Console & Execution Logs
+                <pre className="terminal-logs">{testOutput}</pre>
+              </label>
             </div>
           </section>
-        )}
+        </section>
+      ) : selectedGitView === 'updates' ? (
+        <section className="update-checker-panel" aria-label="Update checker">
+          <header className="update-checker-header">
+            <div className="update-checker-info">
+              <h2>Unified Update Checker</h2>
+              <p>{updateStatusText}</p>
+            </div>
+            <div className="update-controls">
+              <button
+                className="check-updates-btn"
+                type="button"
+                disabled={isCheckingUpdates}
+                onClick={() => void checkUpdates()}
+              >
+                {isCheckingUpdates ? 'Checking...' : 'Check for Updates'}
+              </button>
+              {availableUpdates.length > 0 && (
+                <button
+                  className="update-all-btn"
+                  type="button"
+                  onClick={() => void handleUpdateAll()}
+                >
+                  Update All
+                </button>
+              )}
+            </div>
+          </header>
 
-        <section className="test-harness" aria-label="Test harness">
-          <div className="harness-header">
-            <h3>Test Harness</h3>
-            <div className="harness-capabilities">
-              <span>Capabilities:</span>
-              <div className="capability-list">
-                {detectedCapabilities.length === 0 ? (
-                  <span className="capability-tag none">none</span>
+          {availableUpdates.length === 0 ? (
+            <div className="no-updates-panel">
+              <svg
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <h4>All scripts up to date</h4>
+              <p>Click "Check for Updates" to scan official registry and git-based local scripts.</p>
+            </div>
+          ) : (
+            <div className="updates-grid">
+              {availableUpdates.map((update) => (
+                <div className="update-card" key={update.id}>
+                  <div className="card-icon">
+                    {update.type === 'official' ? 'R' : 'G'}
+                  </div>
+                  <div className="card-copy">
+                    <h4>{update.name}</h4>
+                    <div className="card-meta">
+                      <span className="card-badge">
+                        {update.type === 'official' ? 'Official Registry' : 'Git Registry'}
+                      </span>
+                      <span className="card-badge version-badge">
+                        Current: v{update.currentVersion}
+                      </span>
+                      <span className="card-badge update-version-badge">
+                        Latest: v{update.latestVersion}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    className="update-btn"
+                    type="button"
+                    onClick={() => void handleUpdateScript(update)}
+                  >
+                    Update
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : (
+        (() => {
+          const reg = gitRegistries.find(r => r.id === selectedGitView);
+          if (!reg) return null;
+
+          return (
+            <section className="git-registry-detail" aria-label="Git registry detail">
+              <header className="registry-detail-header">
+                <div className="registry-detail-info">
+                  <h2>{reg.name}</h2>
+                  <p>
+                    Git Repository: <a href={reg.url} target="_blank" rel="noopener noreferrer">{reg.url}</a> (branch: {reg.branch})
+                  </p>
+                </div>
+                <button
+                  className="remove-registry-btn"
+                  type="button"
+                  onClick={() => void handleRemoveRegistry(reg.id)}
+                >
+                  Remove Registry
+                </button>
+              </header>
+
+              <div className="registry-command-grid">
+                {reg.commands.length === 0 ? (
+                  <p style={{ color: '#64748b', fontSize: '13px' }}>No commands found in this registry's manifest.</p>
                 ) : (
-                  detectedCapabilities.map((cap) => (
-                    <span key={cap} className="capability-tag">{cap}</span>
-                  ))
+                  reg.commands.map((cmd) => {
+                    const isInstalled = scripts.some(s => s.originRegistryUrl === reg.url && s.originCommandId === cmd.id);
+                    const installedScript = scripts.find(s => s.originRegistryUrl === reg.url && s.originCommandId === cmd.id);
+
+                    return (
+                      <div className="registry-command-card" key={cmd.id}>
+                        <LocalScriptIcon icon={cmd.icon} />
+                        <div className="card-copy">
+                          <h4>{cmd.title}</h4>
+                          <p>{cmd.description}</p>
+                          <div className="card-meta">
+                            <span className="card-badge version-badge">v{cmd.version || '1.0.0'}</span>
+                            <span className="card-badge">{cmd.website}</span>
+                            {isInstalled && (
+                              <span className="card-badge" style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.2)', background: 'rgba(16, 185, 129, 0.05)' }}>
+                                Installed v{installedScript?.version || '1.0.0'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          className={`install-btn ${isInstalled ? 'is-installed' : ''}`}
+                          type="button"
+                          onClick={() => void installGitCommand(cmd, reg)}
+                        >
+                          {isInstalled ? 'Reinstall' : 'Install'}
+                        </button>
+                      </div>
+                    );
+                  })
                 )}
               </div>
-            </div>
-            <button className="run-harness-button" type="button" onClick={testSelectedScript}>Run Test</button>
-          </div>
-
-          <div className="harness-grid">
-            <label>
-              Mock URL
-              <input
-                type="text"
-                value={mockUrl}
-                onChange={(e) => setMockUrl(e.target.value)}
-                placeholder="https://example.com"
-              />
-            </label>
-            <label>
-              Mock Title
-              <input
-                type="text"
-                value={mockTitle}
-                onChange={(e) => setMockTitle(e.target.value)}
-                placeholder="Page Title"
-              />
-            </label>
-            <label>
-              Mock Selection
-              <input
-                type="text"
-                value={mockSelection}
-                onChange={(e) => setMockSelection(e.target.value)}
-                placeholder="Selected text"
-              />
-            </label>
-          </div>
-
-          <div className="harness-dom-log">
-            <label className="harness-html-label">
-              Mock DOM HTML
-              <textarea
-                value={mockHtml}
-                onChange={(e) => setMockHtml(e.target.value)}
-                placeholder="<div>Mock page content</div>"
-              />
-            </label>
-            <label className="harness-log-label">
-              Console & Execution Logs
-              <pre className="terminal-logs">{testOutput}</pre>
-            </label>
-          </div>
-        </section>
-      </section>
+            </section>
+          );
+        })()
+      )}
     </main>
   );
 }
