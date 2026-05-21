@@ -7,9 +7,12 @@
 - Make discovery, source review, risk, permissions, and publisher identity visible before execution.
 - Keep the extension palette focused on local scripts and management commands until registry install data is real.
 
-## Next Up
+## In Progress
 
 - Build static checks for host scope, dangerous permissions, obfuscation, remote code loading, and network access (Phase 3: Trust and Audit).
+
+## Next Up
+
 - Model verified publisher credentials registration and publishing workflow (Phase 2: Identity and Publishing).
 - Design sandbox-isolated API primitives (e.g. wrapped page DOM reads, secure selection/clipboard/toast APIs) instead of exposing raw document structures (Phase 4: Install and Runtime).
 

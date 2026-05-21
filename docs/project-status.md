@@ -47,13 +47,16 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Command execution consent boundary warning modal overlay in the shadow DOM palette gating medium/high risk script execution.
 - Persistent security permission grants storage avoiding repetitive prompts.
 
+## In Progress
+
+- Static analysis or audit pipeline (Phase 3: Trust and Audit) - implementing client-side regex heuristics checks for hosts, APIs, dynamic code evaluation, network access, and obfuscation signatures.
+
 ## Not Implemented Yet
 
 - Real backend registry database and server endpoints (currently simulated by async local mock API).
 - Account sign-in on registry website (simulated profile switcher implemented).
 - Command publishing flow UI.
 - Signed command package manifest and package fetching.
-- Static analysis or audit pipeline.
 - Sandbox-isolated user script runtime execution contexts.
 - Persisted user settings beyond Chrome-managed shortcut assignment.
 - Browser extension icons and brand assets.
