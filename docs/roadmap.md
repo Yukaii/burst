@@ -63,3 +63,10 @@
 - Add browser tests for the content palette and registry website.
 - Add CI for typecheck, build, lint, and package validation.
 - Add release packaging for Chrome and Firefox.
+
+## Phase 6: Sleek macOS Visual Redesign (Done)
+
+- Unify all user-facing extension and web panels under a modern macOS design system. (Done)
+- Enforce full Light/Dark/System theme support across the dashboard, options settings, command palette, and popup. (Done)
+- Synchronize editor theme context within CodeMirror based on selected setting preferences. (Done)
+

@@ -62,6 +62,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Decentralized custom Git registries list in the Extension Dashboard, stored in Chrome local storage.
 - GitHub Raw manifest parser fetching and installing commands from external git repositories.
 - Unified Update Checker dashboard panel checking versions and providing one-click updates for official and custom Git registry scripts.
+- Sleek macOS-inspired visual redesign across all user-facing pages (Popup, Options, Dashboard, Shadow DOM Command Palette, and Registry Web App) featuring dynamic light/dark/system theme propagation, CodeMirror theme synchronization, glassmorphism, and keycap badges.
 
 ## In Progress
 
