@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress';
 
 export default defineConfig({
+  base: '/burst/',
   title: 'Burst Docs',
   description: 'API guides, architecture, registry structures, and maintainer toolchains for Burst.',
   head: [['link', { rel: 'icon', href: '/logo.svg' }]],
