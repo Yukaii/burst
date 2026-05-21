@@ -34,6 +34,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Dashboard source check confirms the required `export default function run(context) { ... }` shape without using `eval`.
 - Registry website scaffold with marketplace layout and empty states while the real registry API is pending.
 - Minimal `burst.command.json` v1 manifest contract with sample manifest validation.
+- Manifest package checks for HTTPS source URLs, safe relative entrypoints, archive integrity metadata, and semantic versions.
 - Bun test coverage for host matching, local script match conversion, user script code generation, palette ordering, and management command discovery.
 - Root scripts for separate extension and registry development/build flows.
 
@@ -45,7 +46,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Command publishing flow.
 - Command install/pin persistence shared between website and extension.
 - Sandboxed local script execution with explicit permission grants.
-- Signed command package manifest and package integrity validation.
+- Signed command package manifest and package fetching.
 - Static analysis or audit pipeline.
 - Runtime sandbox/permission execution model.
 - Persisted user settings beyond Chrome-managed shortcut assignment.

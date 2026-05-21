@@ -10,13 +10,13 @@
 ## Next Up
 
 - Add dashboard test harnesses for page context, selected text, DOM reads, and permission previews.
-- Add package validation around manifest source URLs, entrypoints, and integrity metadata.
+- Add registry read API shape for search, command detail, audit report, and publisher profile.
 
 ## Phase 1: Registry Contract
 
 - Define `burst.command.json` manifest schema. Minimal v1 contract is in place.
 - Model command metadata: title, description, website match patterns, icon, permissions, risk hints, package source, publisher, version, and integrity hash.
-- Add installable package format and versioning rules.
+- Add installable package format and versioning rules. Initial source URL, entrypoint, archive integrity, and version checks are in place.
 - Decide how commands declare runtime capabilities.
 - Add registry API read endpoints for search, command detail, audit report, and publisher profile.
 

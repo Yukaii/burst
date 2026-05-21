@@ -37,7 +37,7 @@ Registry commands should publish a `burst.command.json` manifest shaped like:
 }
 ```
 
-The first validator lives in `src/lib/manifest.ts`. It checks required metadata, publisher identity shape, icon shape, source URL, runtime entrypoint, runtime capabilities, semantic version format, and declared risk. Sample manifests are validated in the registry website but are not shown as marketplace rows yet.
+The first validator lives in `src/lib/manifest.ts`. It checks required metadata, publisher identity shape, icon shape, HTTPS source URL, safe relative runtime entrypoint, runtime capabilities, semantic version format, and declared risk. Archive packages must include `source.integrity` in `sha256-<base64>` form. Sample manifests are validated in the registry website but are not shown as marketplace rows yet.
 
 ## Iconography
 

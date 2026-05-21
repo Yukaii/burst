@@ -12,6 +12,7 @@ import {
   getLocalScriptResultEventName,
   localScriptToCommand,
 } from '../src/lib/localScripts.ts';
+import { sampleCommandManifests, validateCommandManifest } from '../src/lib/manifest.ts';
 
 const baseCommand = {
   id: 'base-command',
@@ -89,5 +90,33 @@ describe('palette ordering and search', () => {
   test('keeps management commands discoverable by use case text', () => {
     expect(searchCommands(managementCommands, 'dashboard').map((command) => command.id)).toContain('burst-open-dashboard');
     expect(searchCommands(managementCommands, 'create').map((command) => command.id)).toContain('burst-create-local-script');
+  });
+});
+
+describe('command manifest validation', () => {
+  test('accepts sample command manifests', () => {
+    expect(sampleCommandManifests.map((manifest) => validateCommandManifest(manifest).ok)).toEqual([true]);
+  });
+
+  test('requires safe package source and entrypoint metadata', () => {
+    const manifest = {
+      ...sampleCommandManifests[0],
+      source: {
+        type: 'archive',
+        url: 'http://example.com/command.zip',
+      },
+      runtime: {
+        ...sampleCommandManifests[0].runtime,
+        entrypoint: '../src/index.css',
+      },
+    };
+
+    const result = validateCommandManifest(manifest);
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain('source.url must use https.');
+    expect(result.errors).toContain('source.integrity is required for archive packages.');
+    expect(result.errors).toContain('runtime.entrypoint must be a relative package path without parent traversal.');
+    expect(result.errors).toContain('runtime.entrypoint must point to a JavaScript or TypeScript module.');
   });
 });

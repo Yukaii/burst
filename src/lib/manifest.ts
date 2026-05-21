@@ -181,6 +181,7 @@ export function validateCommandManifest(value: unknown): ManifestValidationResul
   validateRuntime(value.runtime, errors);
   expectSemver(value.version, 'version', errors);
   expectOneOf(value.risk, ['low', 'medium', 'high'], 'risk', errors);
+  validatePackageFields(value, errors);
 
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, manifest: value as BurstCommandManifest, errors: [] };
@@ -229,7 +230,7 @@ function validateSource(value: unknown, errors: string[]) {
 
   expectOneOf(value.type, ['git', 'archive'], 'source.type', errors);
   expectUrl(value.url, 'source.url', errors);
-  if ('integrity' in value && typeof value.integrity !== 'string') errors.push('source.integrity must be a string.');
+  if ('integrity' in value) expectIntegrity(value.integrity, 'source.integrity', errors);
 }
 
 function validateRuntime(value: unknown, errors: string[]) {
@@ -239,11 +240,20 @@ function validateRuntime(value: unknown, errors: string[]) {
   }
 
   expectText(value.entrypoint, 'runtime.entrypoint', errors, 1);
+  if (typeof value.entrypoint === 'string') expectEntrypoint(value.entrypoint, 'runtime.entrypoint', errors);
   expectStringArray(value.capabilities, 'runtime.capabilities', errors);
   if (Array.isArray(value.capabilities)) {
     value.capabilities.forEach((capability, index) => {
       expectOneOf(capability, ['page-dom', 'selection', 'clipboard-write', 'toast'], `runtime.capabilities[${index}]`, errors);
     });
+  }
+}
+
+function validatePackageFields(value: Record<string, unknown>, errors: string[]) {
+  if (!isRecord(value.source)) return;
+
+  if (value.source.type === 'archive' && typeof value.source.integrity === 'undefined') {
+    errors.push('source.integrity is required for archive packages.');
   }
 }
 
@@ -312,11 +322,27 @@ function expectUrl(value: unknown, field: string, errors: string[]) {
 
   try {
     const url = new URL(value);
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-      errors.push(`${field} must use http or https.`);
+    if (url.protocol !== 'https:') {
+      errors.push(`${field} must use https.`);
     }
   } catch {
     errors.push(`${field} must be a valid URL.`);
+  }
+}
+
+function expectIntegrity(value: unknown, field: string, errors: string[]) {
+  if (typeof value !== 'string' || !/^sha256-[A-Za-z0-9+/=]+$/.test(value)) {
+    errors.push(`${field} must use sha256-<base64>.`);
+  }
+}
+
+function expectEntrypoint(value: string, field: string, errors: string[]) {
+  if (value.startsWith('/') || value.split('/').includes('..')) {
+    errors.push(`${field} must be a relative package path without parent traversal.`);
+  }
+
+  if (!/\.(mjs|js|ts|tsx)$/.test(value)) {
+    errors.push(`${field} must point to a JavaScript or TypeScript module.`);
   }
 }
 
