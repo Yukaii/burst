@@ -9,8 +9,9 @@
 
 ## Next Up
 
-- Add dashboard test harnesses for page context, selected text, DOM reads, and permission previews.
-- Add registry read API shape for search, command detail, audit report, and publisher profile.
+- Build publisher profile authentication / sign-in scaffold on the registry website.
+- Implement registry command installation and pinning flow (syncing installed commands to the extension's local storage).
+- Define command execution boundary and consent popup UI when executing commands requesting high-risk permissions.
 
 ## Phase 1: Registry Contract
 

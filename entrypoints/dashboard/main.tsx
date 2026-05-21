@@ -7,11 +7,13 @@ import type { CommandIcon } from '@/src/lib/commands';
 import {
   createLocalScriptBackup,
   createLocalScriptDraft,
+  detectRequiredCapabilities,
   loadLocalScripts,
   LocalScript,
   parseLocalScriptBackup,
   prepareLocalScriptForSave,
   saveLocalScripts,
+  stripDefaultExport,
 } from '@/src/lib/localScripts';
 import './style.css';
 
@@ -99,8 +101,15 @@ function DashboardApp() {
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [saveState, setSaveState] = useState('Loading scripts');
   const [testOutput, setTestOutput] = useState('Ready. Test runs will execute against the current editor source.');
+  const [mockUrl, setMockUrl] = useState('https://github.com/burst/examples');
+  const [mockTitle, setMockTitle] = useState('burst/examples: GitHub');
+  const [mockSelection, setMockSelection] = useState('v0.1.0-draft');
+  const [mockHtml, setMockHtml] = useState('\n<div data-icv-name="Switch branches/tags">v0.1.0-draft</div>\n');
   const importInputRef = useRef<HTMLInputElement>(null);
   const selectedScript = scripts.find((script) => script.id === selectedId) ?? scripts[0];
+  const detectedCapabilities = useMemo(() => {
+    return selectedScript ? detectRequiredCapabilities(selectedScript.code) : [];
+  }, [selectedScript?.code]);
   const editorTheme = useMemo(
     () => createEditorTheme(editorFontFamily, editorFontSize),
     [editorFontFamily, editorFontSize],
@@ -235,14 +244,119 @@ function DashboardApp() {
     }
   }
 
-  function testSelectedScript() {
+  async function testSelectedScript() {
     if (!selectedScript) return;
+
+    setTestOutput('Running...');
 
     try {
       compileLocalScript(selectedScript.code);
-      setTestOutput(`${selectedScript.name} is ready to register as a user script.`);
     } catch (error) {
-      setTestOutput(error instanceof Error ? error.message : 'Syntax check failed.');
+      setTestOutput(`Syntax Check Failed:\n${error instanceof Error ? error.message : String(error)}`);
+      return;
+    }
+
+    const logs: string[] = [];
+    const log = (msg: string) => {
+      logs.push(`[LOG] ${msg}`);
+      setTestOutput(logs.join('\n'));
+    };
+    const logError = (msg: string) => {
+      logs.push(`[ERROR] ${msg}`);
+      setTestOutput(logs.join('\n'));
+    };
+
+    try {
+      const parser = new DOMParser();
+      const mockDoc = parser.parseFromString(mockHtml, 'text/html');
+
+      const mockPage = {
+        querySelector: (selector: string) => {
+          log(`page.querySelector('${selector}')`);
+          const result = mockDoc.querySelector(selector);
+          log(`  => ${result ? `<${result.tagName.toLowerCase()}> with text "${result.textContent?.trim()}"` : 'null'}`);
+          return result;
+        },
+        querySelectorAll: (selector: string) => {
+          log(`page.querySelectorAll('${selector}')`);
+          const results = mockDoc.querySelectorAll(selector);
+          log(`  => Found ${results.length} element(s)`);
+          return results;
+        },
+      };
+
+      let clipboardContent = '';
+      const mockNavigator = {
+        ...navigator,
+        clipboard: {
+          writeText: async (text: string) => {
+            clipboardContent = text;
+            log(`navigator.clipboard.writeText("${text}")`);
+          },
+        },
+      };
+
+      const mockConsole = {
+        log: (...args: any[]) => {
+          const str = args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+          log(`console.log: ${str}`);
+        },
+        error: (...args: any[]) => {
+          const str = args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+          logError(`console.error: ${str}`);
+        },
+        warn: (...args: any[]) => {
+          const str = args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+          log(`console.warn: ${str}`);
+        },
+      };
+
+      const mockWindow = {
+        ...window,
+        console: mockConsole,
+        getSelection: () => ({
+          toString: () => mockSelection,
+        }),
+      };
+
+      const mockToast = (message: any) => {
+        log(`toast("${message}")`);
+      };
+
+      const context = {
+        page: mockPage,
+        window: mockWindow,
+        location: new URL(mockUrl),
+        navigator: mockNavigator,
+        selection: mockSelection,
+        url: mockUrl,
+        title: mockTitle,
+        toast: mockToast,
+      };
+
+      const functionSource = stripDefaultExport(selectedScript.code);
+      const runnerSource = `
+        return async function(context) {
+          const { page, window, location, navigator, selection, url, title, toast } = context;
+          const document = page;
+          const console = window.console;
+
+          const run = ${functionSource};
+          return await run(context);
+        }
+      `;
+      const runner = new Function(runnerSource)();
+
+      log('Starting execution...');
+      await runner(context);
+      log('Execution completed successfully.');
+
+      if (clipboardContent) {
+        logs.push(`\n[Clipboard Output] "${clipboardContent}"`);
+        setTestOutput(logs.join('\n'));
+      }
+    } catch (error) {
+      logError(`Runtime Exception: ${error instanceof Error ? error.stack || error.message : String(error)}`);
     }
   }
 
@@ -423,9 +537,68 @@ function DashboardApp() {
           />
         </label>
 
-        <section className="test-console" aria-label="Test output">
-          <span>Test output</span>
-          <pre>{testOutput}</pre>
+        <section className="test-harness" aria-label="Test harness">
+          <div className="harness-header">
+            <h3>Test Harness</h3>
+            <div className="harness-capabilities">
+              <span>Capabilities:</span>
+              <div className="capability-list">
+                {detectedCapabilities.length === 0 ? (
+                  <span className="capability-tag none">none</span>
+                ) : (
+                  detectedCapabilities.map((cap) => (
+                    <span key={cap} className="capability-tag">{cap}</span>
+                  ))
+                )}
+              </div>
+            </div>
+            <button className="run-harness-button" type="button" onClick={testSelectedScript}>Run Test</button>
+          </div>
+
+          <div className="harness-grid">
+            <label>
+              Mock URL
+              <input
+                type="text"
+                value={mockUrl}
+                onChange={(e) => setMockUrl(e.target.value)}
+                placeholder="https://example.com"
+              />
+            </label>
+            <label>
+              Mock Title
+              <input
+                type="text"
+                value={mockTitle}
+                onChange={(e) => setMockTitle(e.target.value)}
+                placeholder="Page Title"
+              />
+            </label>
+            <label>
+              Mock Selection
+              <input
+                type="text"
+                value={mockSelection}
+                onChange={(e) => setMockSelection(e.target.value)}
+                placeholder="Selected text"
+              />
+            </label>
+          </div>
+
+          <div className="harness-dom-log">
+            <label className="harness-html-label">
+              Mock DOM HTML
+              <textarea
+                value={mockHtml}
+                onChange={(e) => setMockHtml(e.target.value)}
+                placeholder="<div>Mock page content</div>"
+              />
+            </label>
+            <label className="harness-log-label">
+              Console & Execution Logs
+              <pre className="terminal-logs">{testOutput}</pre>
+            </label>
+          </div>
         </section>
       </section>
     </main>

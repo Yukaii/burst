@@ -32,18 +32,20 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Enabled local scripts execute through Chrome's `userScripts` API and are triggered from the command palette without runtime string evaluation.
 - Palette-triggered local scripts report started/complete/error status back to the palette; pages loaded before registration now show a reload instruction instead of failing silently.
 - Dashboard source check confirms the required `export default function run(context) { ... }` shape without using `eval`.
-- Registry website scaffold with marketplace layout and empty states while the real registry API is pending.
+- Interactive Dashboard Test Harness with Mock URL, Mock Title, Mock Selection, Mock DOM HTML, real-time capability badges, and scrollable console/execution log terminal.
+- Registry website scaffold with marketplace layout, dynamic mock command listings, and query-based search.
+- Async Registry API Client layer in `src/lib/registryApi.ts` simulating network latency with mock commands, audit reports, and publisher profiles.
+- Tabbed Command Inspector in Registry Web App showing Details, Audit Report verification checklists, and verified Publisher profiles.
 - Minimal `burst.command.json` v1 manifest contract with sample manifest validation.
 - Manifest package checks for HTTPS source URLs, safe relative entrypoints, archive integrity metadata, and semantic versions.
-- Bun test coverage for host matching, local script match conversion, user script code generation, palette ordering, and management command discovery.
+- Bun test coverage for host matching, local script match conversion, user script code generation, palette ordering, management command discovery, script capabilities detection, and mock Registry API calls.
 - Root scripts for separate extension and registry development/build flows.
 
 ## Not Implemented Yet
 
-- Real registry API.
-- Registry marketplace command data.
-- Account sign-in.
-- Command publishing flow.
+- Real backend registry database and server endpoints (currently simulated by async local mock API).
+- Account sign-in on registry website.
+- Command publishing flow UI.
 - Command install/pin persistence shared between website and extension.
 - Sandboxed local script execution with explicit permission grants.
 - Signed command package manifest and package fetching.

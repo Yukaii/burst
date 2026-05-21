@@ -7,12 +7,19 @@ import {
 } from '../src/lib/commands.ts';
 import {
   createLocalUserScriptCode,
+  detectRequiredCapabilities,
   getLocalScriptEventName,
   getLocalScriptMatchPatterns,
   getLocalScriptResultEventName,
   localScriptToCommand,
 } from '../src/lib/localScripts.ts';
 import { sampleCommandManifests, validateCommandManifest } from '../src/lib/manifest.ts';
+import {
+  getRegistryCommands,
+  getRegistryCommand,
+  getAuditReport,
+  getPublisherProfile,
+} from '../src/lib/registryApi.ts';
 
 const baseCommand = {
   id: 'base-command',
@@ -118,5 +125,73 @@ describe('command manifest validation', () => {
     expect(result.errors).toContain('source.integrity is required for archive packages.');
     expect(result.errors).toContain('runtime.entrypoint must be a relative package path without parent traversal.');
     expect(result.errors).toContain('runtime.entrypoint must point to a JavaScript or TypeScript module.');
+  });
+});
+
+describe('capability detection', () => {
+  test('detects page-dom, selection, clipboard, and toast capabilities', () => {
+    const code = `
+      export default async function run(context) {
+        const title = context.title;
+        const sel = context.selection;
+        context.toast("Hello");
+        await context.navigator.clipboard.writeText("Copy me");
+        const doc = context.page.querySelector("div");
+      }
+    `;
+    const capabilities = detectRequiredCapabilities(code);
+    expect(capabilities).toContain('page-dom');
+    expect(capabilities).toContain('selection');
+    expect(capabilities).toContain('clipboard-write');
+    expect(capabilities).toContain('toast');
+  });
+
+  test('returns empty array when no capabilities match', () => {
+    const code = `
+      export default async function run(context) {
+        // Nothing here
+      }
+    `;
+    expect(detectRequiredCapabilities(code)).toEqual([]);
+  });
+});
+
+describe('registry API layer', () => {
+  test('getRegistryCommands queries lists correctly', async () => {
+    const commands = await getRegistryCommands();
+    expect(commands.length).toBeGreaterThan(0);
+
+    const filtered = await getRegistryCommands('Markdown');
+    expect(filtered.some(c => c.id === 'markdown-link-builder')).toBe(true);
+  });
+
+  test('getRegistryCommand finds command details', async () => {
+    const command = await getRegistryCommand('copy-github-branch');
+    expect(command).toBeDefined();
+    expect(command?.id).toBe('copy-github-branch');
+    expect(command?.title).toBe('Copy GitHub branch name');
+
+    const missing = await getRegistryCommand('does-not-exist');
+    expect(missing).toBeUndefined();
+  });
+
+  test('getAuditReport finds reports', async () => {
+    const report = await getAuditReport('copy-github-branch', '1.0.0');
+    expect(report).toBeDefined();
+    expect(report?.commandId).toBe('copy-github-branch');
+    expect(report?.status).toBe('pass');
+
+    const missingReport = await getAuditReport('does-not-exist', '1.0.0');
+    expect(missingReport).toBeUndefined();
+  });
+
+  test('getPublisherProfile retrieves profiles', async () => {
+    const profile = await getPublisherProfile('@schen');
+    expect(profile).toBeDefined();
+    expect(profile?.name).toBe('Sarah Chen');
+    expect(profile?.verified).toBe(true);
+
+    const missingProfile = await getPublisherProfile('@non-existent');
+    expect(missingProfile).toBeUndefined();
   });
 });

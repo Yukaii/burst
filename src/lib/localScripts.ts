@@ -300,6 +300,25 @@ function getWebStorage(): WebStorage | undefined {
   return runtime.localStorage;
 }
 
+export function detectRequiredCapabilities(code: string): Array<'page-dom' | 'selection' | 'clipboard-write' | 'toast'> {
+  const capabilities: Array<'page-dom' | 'selection' | 'clipboard-write' | 'toast'> = [];
+
+  if (/page\b|document\b|querySelector|querySelectorAll|createElement/i.test(code)) {
+    capabilities.push('page-dom');
+  }
+  if (/selection\b|getSelection/i.test(code)) {
+    capabilities.push('selection');
+  }
+  if (/clipboard\b|writeText/i.test(code)) {
+    capabilities.push('clipboard-write');
+  }
+  if (/toast\b/i.test(code)) {
+    capabilities.push('toast');
+  }
+
+  return capabilities;
+}
+
 function getTodayDate(): string {
   return new Date().toISOString().slice(0, 10);
 }

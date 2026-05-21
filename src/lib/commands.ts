@@ -33,7 +33,9 @@ export type BurstCommand = {
   localScriptId?: string;
 };
 
-export const registryCommands: BurstCommand[] = [];
+import { registryCommandsData } from './registryApi';
+
+export const registryCommands: BurstCommand[] = registryCommandsData;
 
 export const managementCommands: BurstCommand[] = [
   {
