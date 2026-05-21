@@ -12,6 +12,7 @@ export type AuditReport = {
     remoteCode: { status: 'pass' | 'warning' | 'fail'; detail: string };
     networkAccess: { status: 'pass' | 'warning' | 'fail'; detail: string };
     obfuscation: { status: 'pass' | 'warning' | 'fail'; detail: string };
+    signature: { status: 'pass' | 'warning' | 'fail'; detail: string };
   };
   summary: string;
 };
@@ -137,6 +138,7 @@ const mockAuditReports: Record<string, AuditReport> = {
       remoteCode: { status: 'pass', detail: 'Zero external script dependencies. All source execution is local.' },
       networkAccess: { status: 'pass', detail: 'No external HTTP request or tracking calls detected.' },
       obfuscation: { status: 'pass', detail: 'Bundle is readable and variables are non-obfuscated.' },
+      signature: { status: 'pass', detail: 'Cryptographic signature verified against verified publisher @burst-examples key. Manifest integrity matches package source.' },
     },
     summary: 'This command passes all static analysis rules. The host scope is narrow, permissions are justified, and code is fully transparent.',
   },
@@ -151,6 +153,7 @@ const mockAuditReports: Record<string, AuditReport> = {
       remoteCode: { status: 'pass', detail: 'Static code build contains zero remote script loading.' },
       networkAccess: { status: 'pass', detail: 'No network request calls are present in the package source.' },
       obfuscation: { status: 'pass', detail: 'Plain text bundle with clean module exports.' },
+      signature: { status: 'pass', detail: 'Cryptographic signature verified against verified publisher @schen key. Manifest integrity matches package source.' },
     },
     summary: 'A clean global utility command. Fully audited and recommended for general use.',
   },
@@ -165,6 +168,7 @@ const mockAuditReports: Record<string, AuditReport> = {
       remoteCode: { status: 'pass', detail: 'Source code does not use eval() or load any third-party external scripts.' },
       networkAccess: { status: 'warning', detail: 'Makes POST requests to api.burst.dev containing thread contents.' },
       obfuscation: { status: 'pass', detail: 'Webpack build is cleanly formatted; verified main logic is clear.' },
+      signature: { status: 'warning', detail: 'Community package signature is self-signed/unverified. Review manifest content before installing.' },
     },
     summary: 'Matches host scope but performs outgoing network requests to pass comment data to a summary backend. Verify backend data processing privacy before using.',
   },
@@ -179,6 +183,7 @@ const mockAuditReports: Record<string, AuditReport> = {
       remoteCode: { status: 'pass', detail: 'No dynamic imports or eval structures.' },
       networkAccess: { status: 'pass', detail: 'No network calls present.' },
       obfuscation: { status: 'warning', detail: 'Source uses minified internal DOM helper libraries. Recommended review of git source.' },
+      signature: { status: 'warning', detail: 'Self-signed package signature. Code integrity verified against git commit hash.' },
     },
     summary: 'Main code is clean, but relies on a minified selector utility helper. Recommended to inspect original GitHub source code before running.',
   },
@@ -193,12 +198,13 @@ const mockAuditReports: Record<string, AuditReport> = {
       remoteCode: { status: 'pass', detail: 'No remote libraries or dynamic code blocks.' },
       networkAccess: { status: 'pass', detail: 'No external connections.' },
       obfuscation: { status: 'pass', detail: 'Source is completely non-obfuscated.' },
+      signature: { status: 'pass', detail: 'Cryptographic signature verified against verified publisher @schen key. Manifest integrity matches package source.' },
     },
     summary: 'A completely local formatter command. Passes all security checks.',
   },
 };
 
-const mockPublisherProfiles: Record<string, PublisherProfile> = {
+export const mockPublisherProfiles: Record<string, PublisherProfile> = {
   '@burst-examples': {
     name: 'Burst Examples',
     handle: '@burst-examples',
@@ -237,7 +243,12 @@ export const mockProfiles = [
   { handle: '@hn-power', name: 'HN PowerUser', avatarInitials: 'HN' },
 ];
 
+export const publishedScriptCodes = new Map<string, string>();
+
 export function getMockScriptCode(commandId: string): string {
+  if (publishedScriptCodes.has(commandId)) {
+    return publishedScriptCodes.get(commandId)!;
+  }
   switch (commandId) {
     case 'copy-github-branch':
       return `export default async function run({ page, toast }) {
@@ -326,12 +337,23 @@ export async function getAuditReport(id: string, version: string): Promise<Audit
   const code = getMockScriptCode(id);
   const report = analyzeScriptCode(code, cmd.matchPatterns);
 
+  const publisherProfile = mockPublisherProfiles[cmd.publisher.handle];
+  const isVerified = publisherProfile?.verified ?? false;
+
   return {
     commandId: id,
     version,
     auditedAt: '2026-05-20',
     status: report.status,
-    checks: report.checks,
+    checks: {
+      ...report.checks,
+      signature: {
+        status: isVerified ? 'pass' : 'warning',
+        detail: isVerified
+          ? `Cryptographic signature verified against verified publisher ${cmd.publisher.handle} key. Manifest integrity matches package source.`
+          : `Community package signature is self-signed/unverified. Review manifest content before installing.`,
+      },
+    },
     summary: report.summary,
   };
 }

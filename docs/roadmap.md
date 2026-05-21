@@ -9,11 +9,11 @@
 
 ## In Progress
 
-- Model verified publisher credentials registration and publishing workflow (Phase 2: Identity and Publishing).
+- Design sandbox-isolated API primitives (e.g. wrapped page DOM reads, secure selection/clipboard/toast APIs) instead of exposing raw document structures (Phase 4: Install and Runtime).
 
 ## Next Up
 
-- Design sandbox-isolated API primitives (e.g. wrapped page DOM reads, secure selection/clipboard/toast APIs) instead of exposing raw document structures (Phase 4: Install and Runtime).
+- Add browser tests for the content palette and registry website (Phase 5: Quality Loop).
 
 ## Phase 1: Registry Contract
 
@@ -23,13 +23,13 @@
 - Decide how commands declare runtime capabilities.
 - Add registry API read endpoints for search, command detail, audit report, and publisher profile.
 
-## Phase 2: Identity and Publishing
+## Phase 2: Identity and Publishing (Done)
 
-- Add user sign-in to the registry website.
-- Add publisher profiles and verified source ownership.
-- Build the publish use case flow.
-- Require source URL, manifest validation, permission declaration, and package integrity metadata.
-- Create command review status states: submitted, indexed, reviewed, verified, flagged, deprecated.
+- Add user sign-in to the registry website. (Done - simulated profile switcher implemented)
+- Add publisher profiles and verified source ownership. (Done - verified domain sources list and ownership logic implemented)
+- Build the publish use case flow. (Done - publishing wizard form UI implemented)
+- Require source URL, manifest validation, permission declaration, and package integrity metadata. (Done - wizard validation, permission checkbox, and pre-release scanner checklists implemented)
+- Create command review status states: submitted, indexed, reviewed, verified, flagged, deprecated. (Done - trust level computed and displayed based on verification and static rules)
 
 ## Phase 3: Trust and Audit
 

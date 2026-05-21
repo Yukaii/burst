@@ -16,6 +16,7 @@ import {
   stripDefaultExport,
 } from '@/src/lib/localScripts';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
+import logoUrl from '@/assets/logo.svg';
 import './style.css';
 
 const iconOptions: Array<{ icon: CommandIcon; label: string; hint: string }> = [
@@ -402,7 +403,7 @@ function DashboardApp() {
     <main className="dashboard-shell">
       <aside className="script-list" aria-label="Local scripts">
         <header>
-          <div className="brand-mark">B</div>
+          <img className="brand-mark" src={logoUrl} alt="Burst Logo" style={{ background: 'transparent' }} />
           <div>
             <h1>Burst</h1>
             <p>Local scripts</p>

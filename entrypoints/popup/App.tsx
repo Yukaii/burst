@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import logoUrl from '@/assets/logo.svg';
 import './App.css';
 
 function App() {
@@ -16,7 +17,7 @@ function App() {
   return (
     <main className="popup-shell">
       <header className="popup-header">
-        <span className="brand-mark">B</span>
+        <img className="brand-mark" src={logoUrl} alt="Burst Logo" style={{ background: 'transparent' }} />
         <div>
           <h1>Burst</h1>
           <p>Command palette</p>

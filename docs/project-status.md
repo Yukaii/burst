@@ -49,20 +49,20 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Page text selection capture fix resolving autofocus-triggered selection reset in the command palette UI.
 - Static analysis audit engine (Phase 3: Trust and Audit) implementing client-side regex heuristics for host scope, sensitive APIs, remote code evaluation, outgoing network requests, and obfuscation signatures.
 - Static Security Audit checklist UI panels integrated dynamically inside the extension dashboard script editor and the command palette warning consent overlay.
+- Verified publisher credentials registration and publishing workflow (Phase 2) with verified sources checks.
+- Command publishing flow UI wizard with live static audit analysis and pre-release scanner checklists.
+- Simulated cryptographic package signature verification and manifest integrity checks in the registry audit console.
+- Persisted user settings (dark mode theme preferences, update updates configuration, local cache resets) on the settings dashboard.
+- Browser extension premium brand logo SVG asset integrated into the popup, dashboard, and registry header views.
 
 ## In Progress
 
-- Verified publisher credentials registration and publishing workflow (Phase 2).
+- Sandbox-isolated user script runtime execution contexts (relying on browser's native userScripts sandbox, investigating further primitives).
 
 ## Not Implemented Yet
 
-- Real backend registry database and server endpoints (currently simulated by async local mock API).
-- Account sign-in on registry website (simulated profile switcher implemented).
-- Command publishing flow UI.
-- Signed command package manifest and package fetching.
-- Sandbox-isolated user script runtime execution contexts.
-- Persisted user settings beyond Chrome-managed shortcut assignment.
-- Browser extension icons and brand assets.
+- Real backend registry database and server endpoints (simulated by async local mock API).
+- Account sign-in on registry website (simulated via active profile switcher).
 - Stable public command API.
 
 ## Known Tradeoffs
