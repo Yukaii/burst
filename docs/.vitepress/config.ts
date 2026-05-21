@@ -33,7 +33,7 @@ export default defineConfig({
       },
     ],
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/yukai/Projects/Personal/burst' },
+      { icon: 'github', link: 'https://github.com/Yukaii/burst' },
     ],
     footer: {
       message: 'Released under the MIT License.',
