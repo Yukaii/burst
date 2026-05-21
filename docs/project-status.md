@@ -40,17 +40,21 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Manifest package checks for HTTPS source URLs, safe relative entrypoints, archive integrity metadata, and semantic versions.
 - Bun test coverage for host matching, local script match conversion, user script code generation, palette ordering, management command discovery, script capabilities detection, and mock Registry API calls.
 - Root scripts for separate extension and registry development/build flows.
+- Simulated publisher authentication/profile switcher panel on the registry website with mock publisher credentials.
+- Bidirectional registry-to-extension postMessage sync relay bridge for installing, uninstalling, pinning, and unpinning registry scripts.
+- Installed registry command persistence in extension local storage, integrated into Chrome's userScripts API dynamically.
+- Dynamic user scripts execution routing in background.ts.
+- Command execution consent boundary warning modal overlay in the shadow DOM palette gating medium/high risk script execution.
+- Persistent security permission grants storage avoiding repetitive prompts.
 
 ## Not Implemented Yet
 
 - Real backend registry database and server endpoints (currently simulated by async local mock API).
-- Account sign-in on registry website.
+- Account sign-in on registry website (simulated profile switcher implemented).
 - Command publishing flow UI.
-- Command install/pin persistence shared between website and extension.
-- Sandboxed local script execution with explicit permission grants.
 - Signed command package manifest and package fetching.
 - Static analysis or audit pipeline.
-- Runtime sandbox/permission execution model.
+- Sandbox-isolated user script runtime execution contexts.
 - Persisted user settings beyond Chrome-managed shortcut assignment.
 - Browser extension icons and brand assets.
 - Stable public command API.

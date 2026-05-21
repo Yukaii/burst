@@ -5,20 +5,107 @@ import {
   loadLocalScripts,
   LocalScript,
 } from '@/src/lib/localScripts';
+import {
+  loadInstalledRegistryCommands,
+  loadPinnedRegistryCommandIds,
+  installRegistryCommand,
+  uninstallRegistryCommand,
+  pinRegistryCommand,
+  unpinRegistryCommand,
+  getRegistryScriptRegistrationId,
+  getRegistryScriptMatchPatterns,
+  createRegistryUserScriptCode,
+} from '@/src/lib/registryStorage';
+import { getMockScriptCode } from '@/src/lib/registryApi';
 
 export default defineBackground(() => {
-  browser.runtime.onMessage.addListener((message: unknown) => {
-    if (isSyncLocalScriptsMessage(message)) {
-      return registerEnabledLocalScripts();
+  browser.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
+    if (typeof message !== 'object' || message === null) return;
+    const { type } = message as { type?: string };
+
+    if (type === 'burst:sync-local-scripts') {
+      const promise = registerEnabledLocalScripts();
+      return promise;
     }
 
-    if (!isManagementMessage(message)) return;
+    if (type === 'burst:get-installed-commands') {
+      const promise = (async () => {
+        const installed = await loadInstalledRegistryCommands();
+        const pinned = await loadPinnedRegistryCommandIds();
+        return {
+          installedIds: installed.map((c) => c.id),
+          pinnedIds: pinned,
+        };
+      })();
+      return promise;
+    }
 
-    const path = message.action === 'create-local-script'
-      ? '/dashboard.html?mode=new'
-      : '/dashboard.html';
+    if (type === 'burst:install-command') {
+      const { command } = message as { command: any };
+      const promise = (async () => {
+        await installRegistryCommand(command);
+        await registerEnabledLocalScripts();
+        const installed = await loadInstalledRegistryCommands();
+        const pinned = await loadPinnedRegistryCommandIds();
+        return {
+          installedIds: installed.map((c) => c.id),
+          pinnedIds: pinned,
+        };
+      })();
+      return promise;
+    }
 
-    void browser.tabs.create({ url: browser.runtime.getURL(path) });
+    if (type === 'burst:uninstall-command') {
+      const { commandId } = message as { commandId: string };
+      const promise = (async () => {
+        await uninstallRegistryCommand(commandId);
+        await registerEnabledLocalScripts();
+        const installed = await loadInstalledRegistryCommands();
+        const pinned = await loadPinnedRegistryCommandIds();
+        return {
+          installedIds: installed.map((c) => c.id),
+          pinnedIds: pinned,
+        };
+      })();
+      return promise;
+    }
+
+    if (type === 'burst:pin-command') {
+      const { commandId } = message as { commandId: string };
+      const promise = (async () => {
+        await pinRegistryCommand(commandId);
+        const installed = await loadInstalledRegistryCommands();
+        const pinned = await loadPinnedRegistryCommandIds();
+        return {
+          installedIds: installed.map((c) => c.id),
+          pinnedIds: pinned,
+        };
+      })();
+      return promise;
+    }
+
+    if (type === 'burst:unpin-command') {
+      const { commandId } = message as { commandId: string };
+      const promise = (async () => {
+        await unpinRegistryCommand(commandId);
+        const installed = await loadInstalledRegistryCommands();
+        const pinned = await loadPinnedRegistryCommandIds();
+        return {
+          installedIds: installed.map((c) => c.id),
+          pinnedIds: pinned,
+        };
+      })();
+      return promise;
+    }
+
+    if (isManagementMessage(message)) {
+      const path = message.action === 'create-local-script'
+        ? '/dashboard.html?mode=new'
+        : '/dashboard.html';
+
+      void browser.tabs.create({ url: browser.runtime.getURL(path) });
+      return;
+    }
   });
 
   browser.commands.onCommand.addListener(async (command) => {
@@ -54,15 +141,6 @@ function isManagementMessage(
     && ['open-dashboard', 'open-installed', 'create-local-script'].includes(String(message.action));
 }
 
-function isSyncLocalScriptsMessage(
-  message: unknown,
-): message is { type: 'burst:sync-local-scripts' } {
-  return typeof message === 'object'
-    && message !== null
-    && 'type' in message
-    && message.type === 'burst:sync-local-scripts';
-}
-
 type UserScriptsApi = {
   getScripts: () => Promise<Array<{ id?: string }>>;
   register: (scripts: UserScriptRegistration[]) => Promise<void>;
@@ -94,25 +172,43 @@ async function registerEnabledLocalScripts() {
     const existingScripts = await userScripts.getScripts();
     const existingIds = existingScripts
       .map((script) => script.id)
-      .filter((id): id is string => Boolean(id?.startsWith('burst-local-script-')));
+      .filter((id): id is string => Boolean(id?.startsWith('burst-local-script-') || id?.startsWith('burst-registry-script-')));
 
     if (existingIds.length > 0) {
       await userScripts.unregister({ ids: existingIds });
     }
 
+    let count = 0;
+
     const scripts = await loadLocalScripts();
     const enabledScripts = scripts.filter((item) => item.status === 'enabled');
     for (const script of enabledScripts) {
       await registerLocalScript(userScripts, script);
+      count++;
     }
 
-    return { ok: true, count: enabledScripts.length } satisfies LocalScriptRegistrationResult;
+    const registryCommands = await loadInstalledRegistryCommands();
+    for (const command of registryCommands) {
+      const code = getMockScriptCode(command.id);
+      await userScripts.register([
+        {
+          id: getRegistryScriptRegistrationId(command.id),
+          matches: getRegistryScriptMatchPatterns(command.matchPatterns),
+          js: [{ code: createRegistryUserScriptCode(command.id, code) }],
+          runAt: 'document_idle',
+        },
+      ]);
+      count++;
+    }
+
+    return { ok: true, count } satisfies LocalScriptRegistrationResult;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to register local scripts.';
-    console.error('[Burst] Failed to sync local scripts', error);
+    const message = error instanceof Error ? error.message : 'Failed to register scripts.';
+    console.error('[Burst] Failed to sync scripts', error);
     return { ok: false, count: 0, message } satisfies LocalScriptRegistrationResult;
   }
 }
+
 
 async function registerLocalScript(userScripts: UserScriptsApi, script: LocalScript) {
   try {

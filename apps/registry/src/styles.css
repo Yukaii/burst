@@ -926,3 +926,148 @@ input {
 .empty-inspector .manifest-report span.is-invalid {
   color: #991b1b;
 }
+
+/* Auth Panel Styles */
+.auth-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 15px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  padding-top: 15px;
+}
+
+.auth-panel > strong {
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+  padding: 0 4px;
+}
+
+.auth-profile-select {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 8px;
+  color: #94a3b8;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.auth-profile-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+}
+
+.auth-profile-btn.is-active {
+  background: rgba(125, 211, 252, 0.15);
+  border-color: rgba(125, 211, 252, 0.3);
+  color: #ffffff;
+}
+
+.auth-profile-btn .profile-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #334155;
+  color: #e2e8f0;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.auth-profile-btn.is-active .profile-avatar {
+  background: #7dd3fc;
+  color: #0f172a;
+}
+
+.profile-details {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.profile-name {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.profile-handle {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+/* Command Row Status Indicators */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 11px;
+  width: 16px;
+  height: 16px;
+}
+
+.installed-indicator {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.pinned-indicator {
+  font-size: 10px;
+}
+
+/* Inspector Actions styles */
+.action-btn {
+  transition: all 0.2s;
+}
+
+.install-btn {
+  background: #101820;
+  color: #ffffff;
+}
+
+.install-btn.is-installed {
+  background: #22c55e !important;
+  color: #ffffff !important;
+}
+
+.install-btn.is-installed:hover {
+  background: #16a34a !important;
+}
+
+.pin-btn {
+  background: #ffffff;
+  color: #101820;
+  border: 1px solid #dbe3ee;
+}
+
+.pin-btn.is-pinned {
+  background: #f59e0b !important;
+  color: #ffffff !important;
+  border-color: #f59e0b !important;
+}
+
+.pin-btn.is-pinned:hover {
+  background: #d97706 !important;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

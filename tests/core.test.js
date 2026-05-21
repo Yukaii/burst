@@ -20,6 +20,15 @@ import {
   getAuditReport,
   getPublisherProfile,
 } from '../src/lib/registryApi.ts';
+import {
+  getRegistryScriptRegistrationId,
+  getRegistryScriptEventName,
+  getRegistryScriptResultEventName,
+  getRegistryScriptMatchPatterns,
+  createRegistryUserScriptCode,
+  loadConsentGrants,
+  saveConsentGrant,
+} from '../src/lib/registryStorage.ts';
 
 const baseCommand = {
   id: 'base-command',
@@ -193,5 +202,40 @@ describe('registry API layer', () => {
 
     const missingProfile = await getPublisherProfile('@non-existent');
     expect(missingProfile).toBeUndefined();
+  });
+});
+
+describe('registry storage and consent', () => {
+  test('generates registry user script registration metadata', () => {
+    const commandId = 'test-cmd';
+    expect(getRegistryScriptRegistrationId(commandId)).toBe('burst-registry-script-test-cmd');
+    expect(getRegistryScriptEventName(commandId)).toBe('burst:run-registry-script:test-cmd');
+    expect(getRegistryScriptResultEventName(commandId)).toBe('burst:registry-script-result:test-cmd');
+    expect(getRegistryScriptMatchPatterns(['github.com/*'])).toEqual(['*://github.com/*']);
+  });
+
+  test('generates registry user script code wrapper', () => {
+    const commandId = 'test-cmd';
+    const rawCode = `export default async function run({ page }) { console.log(page); }`;
+    const wrapped = createRegistryUserScriptCode(commandId, rawCode);
+
+    expect(wrapped).toContain('burst:run-registry-script:test-cmd');
+    expect(wrapped).toContain('burst:registry-script-result:test-cmd');
+    expect(wrapped).toContain('async function run({ page })');
+    expect(wrapped).not.toContain('export default');
+  });
+
+  test('manages consent grants storage', async () => {
+    const grants = await loadConsentGrants();
+    expect(grants).toEqual([]);
+
+    await saveConsentGrant('copy-github-branch');
+    const updated = await loadConsentGrants();
+    expect(updated).toContain('copy-github-branch');
+
+    // Duplicate grant should be a no-op
+    await saveConsentGrant('copy-github-branch');
+    const reloaded = await loadConsentGrants();
+    expect(reloaded.filter(id => id === 'copy-github-branch').length).toBe(1);
   });
 });

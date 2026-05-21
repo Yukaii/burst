@@ -9,9 +9,9 @@
 
 ## Next Up
 
-- Build publisher profile authentication / sign-in scaffold on the registry website.
-- Implement registry command installation and pinning flow (syncing installed commands to the extension's local storage).
-- Define command execution boundary and consent popup UI when executing commands requesting high-risk permissions.
+- Build static checks for host scope, dangerous permissions, obfuscation, remote code loading, and network access (Phase 3: Trust and Audit).
+- Model verified publisher credentials registration and publishing workflow (Phase 2: Identity and Publishing).
+- Design sandbox-isolated API primitives (e.g. wrapped page DOM reads, secure selection/clipboard/toast APIs) instead of exposing raw document structures (Phase 4: Install and Runtime).
 
 ## Phase 1: Registry Contract
 
@@ -38,13 +38,11 @@
 
 ## Phase 4: Install and Runtime
 
-- Add install and pin persistence.
-- Sync installed commands between registry website and extension.
+- Add install and pin persistence. (Done - local storage sync relay bridge implemented)
+- Sync installed commands between registry website and extension. (Done - content script message bridge implemented)
 - Add extension settings for palette behavior while leaving global shortcut assignment in Chrome's shortcut UI.
-- Persist local scripts from the extension dashboard. Done for extension-local records.
-- Add dashboard test harnesses for page context, selected text, DOM reads, and permission previews.
-- Design the command execution boundary.
-- Require explicit user consent before granting sensitive permissions.
+- Design the command execution boundary. (Done - shadow DOM warning consent boundary overlay implemented)
+- Require explicit user consent before granting sensitive permissions. (Done - persistent consent grants storage implemented)
 - Add safe runtime APIs for page DOM reads, selected text, clipboard writes, captures, and connector calls.
 
 ## Phase 4.1: Local Script Data Model

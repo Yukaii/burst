@@ -230,10 +230,57 @@ const mockPublisherProfiles: Record<string, PublisherProfile> = {
   },
 };
 
+export const mockProfiles = [
+  { handle: 'guest', name: 'Guest User', avatarInitials: 'G' },
+  { handle: '@schen', name: 'Sarah Chen', avatarInitials: 'SC' },
+  { handle: '@hn-power', name: 'HN PowerUser', avatarInitials: 'HN' },
+];
+
+export function getMockScriptCode(commandId: string): string {
+  switch (commandId) {
+    case 'copy-github-branch':
+      return `export default async function run({ page, toast }) {
+  const branch = page.querySelector('[data-icv-name="Switch branches/tags"]')?.textContent?.trim() || 'main';
+  await navigator.clipboard.writeText(branch);
+  toast('Copied branch: ' + branch);
+}`;
+    case 'markdown-link-builder':
+      return `export default async function run({ title, url, toast }) {
+  const link = \`[\${title}](\${url})\`;
+  await navigator.clipboard.writeText(link);
+  toast('Copied Markdown link: ' + link);
+}`;
+    case 'hn-comments-summarizer':
+      return `export default async function run({ page, toast }) {
+  const commentNode = page.querySelector('.comment');
+  const text = commentNode?.textContent?.trim() || 'No comments found';
+  toast('HN Thread Summary: ' + text.substring(0, 50) + '...');
+}`;
+    case 'tailwind-css-exporter':
+      return `export default async function run({ toast }) {
+  toast('Exported Tailwind CSS elements');
+}`;
+    case 'json-formatter-toast':
+      return `export default async function run({ selection, toast }) {
+  try {
+    const formatted = JSON.stringify(JSON.parse(selection), null, 2);
+    toast('JSON: ' + formatted.substring(0, 40) + '...');
+  } catch (e) {
+    toast('Select valid JSON text first');
+  }
+}`;
+    default:
+      return `export default async function run({ toast }) {
+  toast('Running command ' + ${JSON.stringify(commandId)});
+}`;
+  }
+}
+
 // Simulated network delay helper
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
 
 export async function getRegistryCommands(query = ''): Promise<BurstCommand[]> {
   await delay(150);

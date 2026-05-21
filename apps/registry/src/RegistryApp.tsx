@@ -9,6 +9,7 @@ import {
   AuditReport,
   PublisherProfile,
   registryCommandsData,
+  mockProfiles,
 } from '@/src/lib/registryApi';
 
 const navItems = ['Discover', 'Audits', 'Publish', 'Settings'];
@@ -37,6 +38,11 @@ export function RegistryApp() {
   const [activePublisherProfile, setActivePublisherProfile] = useState<PublisherProfile | null>(null);
   const [inspectorLoading, setInspectorLoading] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<'details' | 'audit' | 'publisher'>('details');
+
+  // New simulated authentication and sync states
+  const [currentUser, setCurrentUser] = useState(mockProfiles[0]);
+  const [installedCommandIds, setInstalledCommandIds] = useState<string[]>([]);
+  const [pinnedCommandIds, setPinnedCommandIds] = useState<string[]>([]);
 
   const validManifests = sampleManifestValidationResults.filter((sample) => sample.result.ok).length;
 
@@ -115,6 +121,43 @@ export function RegistryApp() {
     };
   }, [activeCommandId]);
 
+  // Sync state message listener
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.source !== window || !event.data || typeof event.data !== 'object') return;
+      const { type } = event.data;
+
+      if (type === 'burst:installed-commands-response') {
+        setInstalledCommandIds(event.data.installedIds || []);
+        setPinnedCommandIds(event.data.pinnedIds || []);
+      }
+    };
+
+    window.addEventListener('message', handler);
+    // Fetch initial state
+    window.postMessage({ type: 'burst:get-installed-commands' }, '*');
+
+    return () => {
+      window.removeEventListener('message', handler);
+    };
+  }, []);
+
+  const handleInstall = (command: BurstCommand) => {
+    window.postMessage({ type: 'burst:install-command', command }, '*');
+  };
+
+  const handleUninstall = (commandId: string) => {
+    window.postMessage({ type: 'burst:uninstall-command', commandId }, '*');
+  };
+
+  const handlePin = (commandId: string) => {
+    window.postMessage({ type: 'burst:pin-command', commandId }, '*');
+  };
+
+  const handleUnpin = (commandId: string) => {
+    window.postMessage({ type: 'burst:unpin-command', commandId }, '*');
+  };
+
   return (
     <div className="registry-shell">
       <aside className="sidebar" aria-label="Registry navigation">
@@ -132,6 +175,28 @@ export function RegistryApp() {
             </button>
           ))}
         </nav>
+
+        {/* Authentication selection panel */}
+        <div className="auth-panel">
+          <strong>Simulated Profile</strong>
+          <div className="auth-profile-select">
+            {mockProfiles.map((profile) => (
+              <button
+                key={profile.handle}
+                className={`auth-profile-btn ${currentUser.handle === profile.handle ? 'is-active' : ''}`}
+                onClick={() => setCurrentUser(profile)}
+                type="button"
+              >
+                <span className="profile-avatar">{profile.avatarInitials}</span>
+                <span className="profile-details">
+                  <span className="profile-name">{profile.name}</span>
+                  <span className="profile-handle">{profile.handle === 'guest' ? 'Not signed in' : profile.handle}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="sidebar-note">
           <strong>Security model</strong>
           <span>Audit labels inform discovery. Source review stays yours.</span>
@@ -193,7 +258,15 @@ export function RegistryApp() {
                   onClick={() => setActiveCommandId(command.id)}
                 >
                   <span className="command-title">
-                    <strong>{command.title}</strong>
+                    <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {command.title}
+                      {installedCommandIds.includes(command.id) && (
+                        <span className="status-indicator installed-indicator" title="Installed">✓</span>
+                      )}
+                      {pinnedCommandIds.includes(command.id) && (
+                        <span className="status-indicator pinned-indicator" title="Pinned">📌</span>
+                      )}
+                    </strong>
                     <em>{command.publisher.name} {command.publisher.handle}</em>
                   </span>
                   <span>{command.website}</span>
@@ -218,6 +291,12 @@ export function RegistryApp() {
               loading={inspectorLoading}
               activeTab={inspectorTab}
               setActiveTab={setInspectorTab}
+              installedCommandIds={installedCommandIds}
+              pinnedCommandIds={pinnedCommandIds}
+              onInstall={handleInstall}
+              onUninstall={handleUninstall}
+              onPin={handlePin}
+              onUnpin={handleUnpin}
             />
           ) : (
             <EmptyInspector />
@@ -269,6 +348,12 @@ function CommandInspector({
   loading,
   activeTab,
   setActiveTab,
+  installedCommandIds,
+  pinnedCommandIds,
+  onInstall,
+  onUninstall,
+  onPin,
+  onUnpin,
 }: {
   command: BurstCommand;
   auditReport: AuditReport | null;
@@ -276,6 +361,12 @@ function CommandInspector({
   loading: boolean;
   activeTab: 'details' | 'audit' | 'publisher';
   setActiveTab: (tab: 'details' | 'audit' | 'publisher') => void;
+  installedCommandIds: string[];
+  pinnedCommandIds: string[];
+  onInstall: (command: BurstCommand) => void;
+  onUninstall: (commandId: string) => void;
+  onPin: (commandId: string) => void;
+  onUnpin: (commandId: string) => void;
 }) {
   if (loading) {
     return (
@@ -475,8 +566,21 @@ function CommandInspector({
       )}
 
       <div className="inspector-actions">
-        <button type="button">Install</button>
-        <button type="button">Pin</button>
+        <button
+          className={`action-btn install-btn ${installedCommandIds.includes(command.id) ? 'is-installed' : ''}`}
+          type="button"
+          onClick={() => (installedCommandIds.includes(command.id) ? onUninstall(command.id) : onInstall(command))}
+        >
+          {installedCommandIds.includes(command.id) ? 'Installed' : 'Install'}
+        </button>
+        <button
+          className={`action-btn pin-btn ${pinnedCommandIds.includes(command.id) ? 'is-pinned' : ''}`}
+          type="button"
+          disabled={!installedCommandIds.includes(command.id)}
+          onClick={() => (pinnedCommandIds.includes(command.id) ? onUnpin(command.id) : onPin(command.id))}
+        >
+          {pinnedCommandIds.includes(command.id) ? 'Pinned' : 'Pin'}
+        </button>
       </div>
     </aside>
   );
