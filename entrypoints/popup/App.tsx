@@ -29,10 +29,15 @@ function App() {
   const [activeScriptsCount, setActiveScriptsCount] = useState<number>(0);
   const [gitCount, setGitCount] = useState<number>(0);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [hasUserScriptsPermission, setHasUserScriptsPermission] = useState<boolean>(true);
 
   useEffect(() => {
     async function loadData() {
       try {
+        const hasWxt = typeof browser !== 'undefined' && !!browser.userScripts;
+        const hasChrome = typeof chrome !== 'undefined' && !!chrome.userScripts;
+        setHasUserScriptsPermission(hasWxt || hasChrome);
+
         const local = await loadLocalScripts();
         const enabled = local.filter((s) => s.status === 'enabled').length;
         setActiveScriptsCount(enabled);
@@ -93,6 +98,21 @@ function App() {
           <kbd>K</kbd>
         </div>
       </section>
+
+      {!hasUserScriptsPermission && (
+        <section className="popup-warning" aria-label="Permission alert">
+          <div className="popup-warning-content">
+            <span className="warning-icon">⚠️</span>
+            <div>
+              <h3>User Scripts Disabled</h3>
+              <p>Setup action required to run automations.</p>
+            </div>
+          </div>
+          <button type="button" className="btn-warning-action-sm" onClick={openOptionsPage}>
+            Fix Setup
+          </button>
+        </section>
+      )}
 
       <section className="popup-list" aria-label="Burst status">
         <div className="popup-row">
