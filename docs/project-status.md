@@ -26,6 +26,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Popup status panel for account/registry posture.
 - Extension dashboard page with CodeMirror-based local script editing/testing/management and editor font controls.
 - Local script persistence through extension local storage, including first-run seed data, draft creation, and explicit saves.
+- Local script status controls for enabling, disabling, draft state, and deletion.
 - Enabled local scripts are surfaced in the webpage command palette when their match pattern fits the current host.
 - Enabled local scripts execute through Chrome's `userScripts` API and are triggered from the command palette without runtime string evaluation.
 - Palette-triggered local scripts report started/complete/error status back to the palette; pages loaded before registration now show a reload instruction instead of failing silently.

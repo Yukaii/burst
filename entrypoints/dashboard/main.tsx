@@ -166,6 +166,31 @@ function DashboardApp() {
     await persistScripts(nextScripts, 'Saved to local storage');
   }
 
+  async function setSelectedScriptStatus(status: LocalScript['status']) {
+    if (!selectedScript) return;
+
+    const nextScripts = scripts.map((script) =>
+      script.id === selectedScript.id ? prepareLocalScriptForSave({ ...script, status }) : script,
+    );
+
+    setScripts(nextScripts);
+    await persistScripts(nextScripts, status === 'enabled' ? 'Enabled and synced' : 'Status saved');
+  }
+
+  async function deleteSelectedScript() {
+    if (!selectedScript || !window.confirm(`Delete "${selectedScript.name}"?`)) return;
+
+    const selectedIndex = scripts.findIndex((script) => script.id === selectedScript.id);
+    const nextScripts = scripts.filter((script) => script.id !== selectedScript.id);
+    const fallbackDraft = nextScripts.length > 0 ? undefined : createLocalScriptDraft();
+    const finalScripts = fallbackDraft ? [fallbackDraft] : nextScripts;
+    const nextSelection = finalScripts[Math.max(0, selectedIndex - 1)] ?? finalScripts[0];
+
+    setScripts(finalScripts);
+    setSelectedId(nextSelection.id);
+    await persistScripts(finalScripts, fallbackDraft ? 'Deleted script and created a draft' : 'Deleted script');
+  }
+
   function testSelectedScript() {
     if (!selectedScript) return;
 
@@ -180,9 +205,11 @@ function DashboardApp() {
   async function persistScripts(nextScripts: LocalScript[], successMessage: string) {
     try {
       await saveLocalScripts(nextScripts);
-      void browser.runtime.sendMessage({ type: 'burst:sync-local-scripts' }).catch(() => {
-        // Static dashboard previews do not have an extension runtime.
-      });
+      if (typeof browser !== 'undefined' && browser.runtime?.sendMessage) {
+        void browser.runtime.sendMessage({ type: 'burst:sync-local-scripts' }).catch(() => {
+          // Static dashboard previews do not have an extension runtime.
+        });
+      }
       setSaveState(successMessage);
     } catch (error) {
       setSaveState(error instanceof Error ? error.message : 'Failed to save scripts');
@@ -271,6 +298,27 @@ function DashboardApp() {
             onChange={(icon) => updateSelectedScript({ icon })}
           />
         </div>
+
+        <section className="script-controls" aria-label="Script controls">
+          <div>
+            <span>Status</span>
+            <div className="status-toggle" role="group" aria-label="Script status">
+              {(['enabled', 'disabled', 'draft'] as const).map((status) => (
+                <button
+                  className={selectedScript.status === status ? 'is-active' : ''}
+                  key={status}
+                  type="button"
+                  onClick={() => void setSelectedScriptStatus(status)}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button className="danger-button" type="button" onClick={() => void deleteSelectedScript()}>
+            Delete
+          </button>
+        </section>
 
         <section className="editor-settings" aria-label="Editor settings">
           <label>

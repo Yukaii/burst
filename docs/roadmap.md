@@ -9,8 +9,6 @@
 
 ## Next Up
 
-- Add local script enable/disable/delete controls in the dashboard.
-- Add local script record migrations so future storage changes do not strand existing installs.
 - Add import/export for local scripts so users can review and back up local commands.
 - Add a minimal `burst.command.json` schema and validate sample manifests before building marketplace rows.
 - Add focused tests for local script matching, user script registration code generation, and palette ordering.
@@ -52,8 +50,8 @@
 ## Phase 4.1: Local Script Data Model
 
 - Replace dashboard-only seed state with extension local storage. Done.
-- Add migration/versioning for local script records.
-- Add enable/disable/delete actions.
+- Add migration/versioning for local script records. Deferred until extension distribution.
+- Add enable/disable/delete actions. Done.
 - Expose stored local scripts inside the command palette discovery list. Done for enabled scripts.
 - Add import/export for local script backup and review.
 - Add runtime execution with an explicit API surface instead of raw page globals. Basic `userScripts` execution is in place; per-capability permission grants remain.
