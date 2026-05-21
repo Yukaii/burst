@@ -1,10 +1,5 @@
 import { useState } from 'react';
-import { seedCommands } from '@/src/lib/commands';
 import './App.css';
-
-const auditedCount = seedCommands.filter((command) =>
-  command.trustLevel === 'verified' || command.trustLevel === 'reviewed',
-).length;
 
 function App() {
   const [showRegistryNotice, setShowRegistryNotice] = useState(false);
@@ -36,11 +31,11 @@ function App() {
       <section className="popup-list" aria-label="Burst status">
         <div className="popup-row">
           <span>Registry</span>
-          <strong>{seedCommands.length} commands</strong>
+          <strong>Coming soon</strong>
         </div>
         <div className="popup-row">
           <span>Audited</span>
-          <strong>{auditedCount}</strong>
+          <strong>Pending</strong>
         </div>
         <div className="popup-row">
           <span>Account</span>

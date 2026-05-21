@@ -19,23 +19,24 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - WXT + React extension scaffold using Bun.
 - Shadow DOM command palette mounted on every webpage and opened through Chrome extension commands.
 - Minimal dark command palette with no injected floating launcher button.
-- Site-aware command discovery using typed seed registry data.
+- Site-aware command discovery for enabled local scripts and built-in management commands.
 - Local management commands in the palette for opening the dashboard, creating scripts, and listing installed scripts.
 - Command icon metadata for website favicons, initials, emoji, URLs, and packaged assets.
 - Command details for publisher, trust level, risk, permissions, installs, rating, and source URL.
 - Popup status panel for account/registry posture.
 - Extension dashboard page with CodeMirror-based local script editing/testing/management and editor font controls.
 - Local script persistence through extension local storage, including first-run seed data, draft creation, and explicit saves.
-- Enabled local scripts are surfaced in the webpage command palette ahead of registry suggestions when their match pattern fits the current host.
+- Enabled local scripts are surfaced in the webpage command palette when their match pattern fits the current host.
 - Enabled local scripts execute through Chrome's `userScripts` API and are triggered from the command palette without runtime string evaluation.
 - Palette-triggered local scripts report started/complete/error status back to the palette; pages loaded before registration now show a reload instruction instead of failing silently.
 - Dashboard source check confirms the required `export default function run(context) { ... }` shape without using `eval`.
-- Registry website scaffold with marketplace search, command rows, audit labels, and a selected-command inspector.
+- Registry website scaffold with marketplace layout and empty states while the real registry API is pending.
 - Root scripts for separate extension and registry development/build flows.
 
 ## Not Implemented Yet
 
 - Real registry API.
+- Registry marketplace command data.
 - Account sign-in.
 - Command publishing flow.
 - Command install/pin persistence shared between website and extension.

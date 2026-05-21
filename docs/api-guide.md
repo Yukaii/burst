@@ -8,22 +8,22 @@ Registry and local commands should converge on a manifest shaped like:
 
 ```json
 {
-  "id": "github-pr-summary",
-  "title": "Summarize pull request",
-  "description": "Collect changed files, review comments, and CI status.",
+  "id": "example-command",
+  "title": "Example command",
+  "description": "A narrow website action with declared source and permissions.",
   "website": "github.com",
-  "matchPatterns": ["github.com/*/pull/*"],
+  "matchPatterns": ["github.com/*"],
   "publisher": {
-    "name": "Burst Labs",
-    "handle": "@burst",
-    "avatarInitials": "BL"
+    "name": "Example Publisher",
+    "handle": "@example",
+    "avatarInitials": "EX"
   },
   "icon": {
     "type": "favicon",
     "host": "github.com"
   },
   "permissions": ["Read page DOM", "Read selected text"],
-  "sourceUrl": "https://github.com/burst-registry/github-pr-summary",
+  "sourceUrl": "https://github.com/example/example-command",
   "version": "0.1.0"
 }
 ```

@@ -8,13 +8,13 @@ Burst is a browser command palette for every webpage. It is inspired by Omni-sty
 - Shadow DOM content-script palette so webpage CSS does not pollute the UI.
 - Minimal dark command palette with command search, keyboard navigation, and site-aware discovery.
 - Built-in management commands for local script install/list/manage flows.
+- Enabled local scripts from the dashboard appear in the palette and execute through Chrome `userScripts`.
 - Chrome extension command shortcut for opening the palette. The default is `Command+Shift+K` on macOS and `Ctrl+Shift+K` elsewhere.
-- Popup surface for sign-in direction, local registry posture, publishing entry points, and seed registry metrics.
+- Popup surface for sign-in direction, local registry posture, and publishing entry points.
 - Options page explaining keyboard shortcut configuration.
 - Extension dashboard page for local script creation, testing, and management with CodeMirror 6 editing and font controls.
 - Command icon metadata for favicon, initials, emoji, URL, or packaged assets.
-- Registry website scaffold in `apps/registry` for command discovery, audit review, and publishing entry points.
-- Typed seed command registry in `src/lib/commands.ts` to shape the early product contract.
+- Registry website scaffold in `apps/registry` for command discovery, audit review, and publishing entry points. Marketplace data is intentionally empty until the registry contract/API exists.
 
 ## Development
 
@@ -77,7 +77,9 @@ Burst should make user-published browser automation discoverable without implyin
 
 Near-term architecture work:
 
-- Replace seed registry data with a signed registry API.
+- Add local script enable/disable/delete controls and import/export.
+- Define `burst.command.json` and validate package manifests.
+- Replace empty registry data with a signed registry API.
 - Define the command package manifest and permission model.
 - Add account sign-in and publisher flows.
 - Add source review, audit reports, and install/pin workflows.

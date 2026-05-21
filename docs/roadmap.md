@@ -5,7 +5,15 @@
 - Keep extension and registry website in one monorepo.
 - Share command registry types between extension and registry.
 - Make discovery, source review, risk, permissions, and publisher identity visible before execution.
-- Use seed data until the registry contract is stable.
+- Keep the extension palette focused on local scripts and management commands until registry install data is real.
+
+## Next Up
+
+- Add local script enable/disable/delete controls in the dashboard.
+- Add local script record migrations so future storage changes do not strand existing installs.
+- Add import/export for local scripts so users can review and back up local commands.
+- Add a minimal `burst.command.json` schema and validate sample manifests before building marketplace rows.
+- Add focused tests for local script matching, user script registration code generation, and palette ordering.
 
 ## Phase 1: Registry Contract
 

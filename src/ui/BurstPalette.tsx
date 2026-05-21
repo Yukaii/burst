@@ -7,7 +7,6 @@ import {
   getHostFromUrl,
   managementCommands,
   searchCommands,
-  seedCommands,
 } from '@/src/lib/commands';
 import {
   getLocalScriptEventName,
@@ -40,7 +39,6 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const siteCommands = useMemo(
     () => [
       ...localCommands.filter((command) => commandMatchesHost(command, host)),
-      ...seedCommands.filter((command) => commandMatchesHost(command, host)),
       ...managementCommands,
     ],
     [host, localCommands],

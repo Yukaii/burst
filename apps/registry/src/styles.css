@@ -289,6 +289,28 @@ input {
   background: #eef9ff;
 }
 
+.empty-registry {
+  display: grid;
+  gap: 7px;
+  min-height: 220px;
+  place-content: center;
+  border-top: 1px solid #edf2f7;
+  padding: 28px;
+  text-align: center;
+}
+
+.empty-registry strong {
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.empty-registry span {
+  max-width: 460px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .command-title {
   display: grid;
   gap: 4px;

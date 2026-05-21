@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BurstCommand, searchCommands, seedCommands } from '@/src/lib/commands';
+import { BurstCommand, registryCommands, searchCommands } from '@/src/lib/commands';
 
 const navItems = ['Discover', 'Audits', 'Publish', 'Settings'];
 
@@ -18,10 +18,10 @@ const riskCopy: Record<BurstCommand['risk'], string> = {
 
 export function RegistryApp() {
   const [query, setQuery] = useState('');
-  const [activeCommandId, setActiveCommandId] = useState(seedCommands[0]?.id);
+  const [activeCommandId, setActiveCommandId] = useState(registryCommands[0]?.id);
 
-  const commands = useMemo(() => searchCommands(seedCommands, query), [query]);
-  const activeCommand = commands.find((command) => command.id === activeCommandId) ?? commands[0] ?? seedCommands[0];
+  const commands = useMemo(() => searchCommands(registryCommands, query), [query]);
+  const activeCommand = commands.find((command) => command.id === activeCommandId) ?? commands[0];
 
   return (
     <div className="registry-shell">
@@ -60,13 +60,13 @@ export function RegistryApp() {
         </header>
 
         <section className="summary-grid" aria-label="Registry summary">
-          <SummaryStat label="Commands" value={seedCommands.length.toString()} />
+          <SummaryStat label="Commands" value={registryCommands.length.toString()} />
           <SummaryStat
             label="Audited"
-            value={seedCommands.filter((command) => command.trustLevel === 'verified' || command.trustLevel === 'reviewed').length.toString()}
+            value={registryCommands.filter((command) => command.trustLevel === 'verified' || command.trustLevel === 'reviewed').length.toString()}
           />
-          <SummaryStat label="Sensitive" value={seedCommands.filter((command) => command.risk === 'high').length.toString()} />
-          <SummaryStat label="Pinned seeds" value={seedCommands.filter((command) => command.pinned).length.toString()} />
+          <SummaryStat label="Sensitive" value={registryCommands.filter((command) => command.risk === 'high').length.toString()} />
+          <SummaryStat label="Installable" value="0" />
         </section>
 
         <section className="workspace">
@@ -87,26 +87,33 @@ export function RegistryApp() {
               <span>Usage</span>
             </div>
 
-            {commands.map((command) => (
-              <button
-                className={`command-row ${activeCommand.id === command.id ? 'is-selected' : ''}`}
-                key={command.id}
-                type="button"
-                onClick={() => setActiveCommandId(command.id)}
-              >
-                <span className="command-title">
-                  <strong>{command.title}</strong>
-                  <em>{command.publisher.name} {command.publisher.handle}</em>
-                </span>
-                <span>{command.website}</span>
-                <span className={`trust-badge trust-${command.trustLevel}`}>{trustCopy[command.trustLevel]}</span>
-                <span className={`risk-badge risk-${command.risk}`}>{riskCopy[command.risk]}</span>
-                <span>{command.installs.toLocaleString()} installs</span>
-              </button>
-            ))}
+            {commands.length > 0 ? (
+              commands.map((command) => (
+                <button
+                  className={`command-row ${activeCommand?.id === command.id ? 'is-selected' : ''}`}
+                  key={command.id}
+                  type="button"
+                  onClick={() => setActiveCommandId(command.id)}
+                >
+                  <span className="command-title">
+                    <strong>{command.title}</strong>
+                    <em>{command.publisher.name} {command.publisher.handle}</em>
+                  </span>
+                  <span>{command.website}</span>
+                  <span className={`trust-badge trust-${command.trustLevel}`}>{trustCopy[command.trustLevel]}</span>
+                  <span className={`risk-badge risk-${command.risk}`}>{riskCopy[command.risk]}</span>
+                  <span>{command.installs.toLocaleString()} installs</span>
+                </button>
+              ))
+            ) : (
+              <div className="empty-registry">
+                <strong>No registry commands yet</strong>
+                <span>The marketplace will populate after the registry API, manifest contract, and publishing flow are implemented.</span>
+              </div>
+            )}
           </div>
 
-          <CommandInspector command={activeCommand} />
+          {activeCommand ? <CommandInspector command={activeCommand} /> : <EmptyInspector />}
         </section>
       </main>
     </div>
@@ -119,6 +126,24 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
       <span>{label}</span>
     </div>
+  );
+}
+
+function EmptyInspector() {
+  return (
+    <aside className="inspector empty-inspector" aria-label="Registry status">
+      <div className="inspector-head">
+        <span className="publisher-avatar">B</span>
+        <div>
+          <h2>Registry pending</h2>
+          <p>Next work is the manifest contract, install package format, and read API that will feed this screen.</p>
+        </div>
+      </div>
+      <div className="audit-report">
+        <h3>Next milestone</h3>
+        <p>Define `burst.command.json`, versioned source metadata, permission declarations, and audit report records before adding real marketplace rows.</p>
+      </div>
+    </aside>
   );
 }
 
