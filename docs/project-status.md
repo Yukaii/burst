@@ -56,6 +56,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Browser extension premium brand logo SVG asset integrated into the popup, dashboard, and registry header views.
 - Sandbox-isolated user script runtime execution wrappers shadowing page globals (`document`, `window`, `navigator`, `location`) using parameter-bound IIFE scopes and capability-gated explicit APIs (page, selection, clipboard, toast).
 - Premium extension options settings page and syncing mechanism for Theme (Light/Dark/System), Alignment (Top/Center), Backdrop Close, Developer Logging, and Consent Revocation.
+- Stable public command API documented and capability-gated in sandboxed runtime executions.
 
 ## In Progress
 
@@ -65,12 +66,10 @@ The registry website should live outside WXT entrypoints because it is a normal 
 
 - Real backend registry database and server endpoints (simulated by async local mock API).
 - Account sign-in on registry website (simulated via active profile switcher).
-- Stable public command API.
 
 ## Known Tradeoffs
 
 - Seed local scripts are copied into storage on first launch so the dashboard has useful starter data; after that, the dashboard reads and writes the stored records.
-- Local script execution is functional but not yet gated by explicit per-capability permission grants.
 - Newly registered or edited user scripts apply to matching page loads after registration. Existing tabs may need a reload before the listener is present.
 - Dashboard Test validates the expected export shape only. Full syntax diagnostics should come from a dedicated parser or registration dry run.
 - Local script import currently replaces the full local script list after confirmation instead of merging records.

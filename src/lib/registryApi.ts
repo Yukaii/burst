@@ -298,6 +298,11 @@ export function getMockScriptCode(commandId: string): string {
 // Detect CLI environment
 const isCliTest = typeof window === 'undefined' || (typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || process.env.TEST === 'true'));
 
+// In non-CLI browser contexts (like extension dashboard running at chrome-extension://... or similar),
+// API requests must target the local registry website running on http://localhost:5174.
+const isRegistryHost = typeof window !== 'undefined' && (window.location.host === 'localhost:5174' || window.location.host === 'localhost:5175');
+const API_BASE = isRegistryHost ? '' : 'http://localhost:5174';
+
 export async function getRegistryCommands(query = ''): Promise<BurstCommand[]> {
   if (isCliTest) {
     const normalized = query.trim().toLowerCase();
@@ -318,7 +323,8 @@ export async function getRegistryCommands(query = ''): Promise<BurstCommand[]> {
       return searchable.includes(normalized);
     });
   }
-  const url = new URL('/api/commands', window.location.origin);
+  const origin = API_BASE || window.location.origin;
+  const url = new URL('/api/commands', origin);
   if (query) {
     url.searchParams.set('q', query);
   }
@@ -331,7 +337,7 @@ export async function getRegistryCommand(id: string): Promise<BurstCommand | und
   if (isCliTest) {
     return registryCommandsData.find((command) => command.id === id);
   }
-  const response = await fetch(`/api/commands/${encodeURIComponent(id)}`);
+  const response = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(id)}`);
   if (response.status === 404) return undefined;
   if (!response.ok) throw new Error('Failed to fetch registry command');
   return response.json();
@@ -365,7 +371,7 @@ export async function getAuditReport(id: string, version: string): Promise<Audit
       summary: report.summary,
     };
   }
-  const response = await fetch(`/api/commands/${encodeURIComponent(id)}/audit?v=${encodeURIComponent(version)}`);
+  const response = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(id)}/audit?v=${encodeURIComponent(version)}`);
   if (response.status === 404) return undefined;
   if (!response.ok) throw new Error('Failed to fetch audit report');
   return response.json();
@@ -375,7 +381,7 @@ export async function getPublisherProfile(handle: string): Promise<PublisherProf
   if (isCliTest) {
     return mockPublisherProfiles[handle];
   }
-  const response = await fetch(`/api/publishers/${encodeURIComponent(handle)}`);
+  const response = await fetch(`${API_BASE}/api/publishers/${encodeURIComponent(handle)}`);
   if (response.status === 404) return undefined;
   if (!response.ok) throw new Error('Failed to fetch publisher profile');
   return response.json();
@@ -385,7 +391,7 @@ export async function getCurrentUser(): Promise<{ handle: string; name: string; 
   if (isCliTest) {
     return mockProfiles[0];
   }
-  const response = await fetch('/api/auth/me');
+  const response = await fetch(`${API_BASE}/api/auth/me`);
   if (!response.ok) throw new Error('Failed to fetch current user');
   return response.json();
 }
@@ -395,7 +401,7 @@ export async function loginSimulatedUser(handle: string): Promise<{ ok: boolean;
     const profile = mockProfiles.find((p) => p.handle === handle) || mockProfiles[0];
     return { ok: true, user: profile };
   }
-  const response = await fetch('/api/auth/login', {
+  const response = await fetch(`${API_BASE}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ handle }),
@@ -408,7 +414,7 @@ export async function logout(): Promise<{ ok: boolean }> {
   if (isCliTest) {
     return { ok: true };
   }
-  const response = await fetch('/api/auth/logout', {
+  const response = await fetch(`${API_BASE}/api/auth/logout`, {
     method: 'POST',
   });
   if (!response.ok) throw new Error('Failed to logout');
@@ -425,7 +431,7 @@ export async function publishCommand(payload: any): Promise<BurstCommand> {
     };
     return newCmd;
   }
-  const response = await fetch('/api/commands', {
+  const response = await fetch(`${API_BASE}/api/commands`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
