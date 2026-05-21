@@ -9,7 +9,7 @@ import {
   searchCommands,
   seedCommands,
 } from '@/src/lib/commands';
-import { loadLocalScripts, localScriptToCommand } from '@/src/lib/localScripts';
+import { getLocalScript, loadLocalScripts, localScriptToCommand } from '@/src/lib/localScripts';
 
 type BurstPaletteProps = {
   pageUrl: string;
@@ -51,10 +51,14 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
 
   const activeCommand = filteredCommands[activeIndex] ?? filteredCommands[0];
 
-  function runCommand(command: BurstCommand) {
+  async function runCommand(command: BurstCommand) {
     if (command.action === 'run-local-script') {
-      // Execution boundary is still being designed; keep source review in the dashboard for now.
-      void browser.runtime.sendMessage({ type: 'burst:run-management-command', action: 'open-dashboard' });
+      if (command.localScriptId) {
+        await runLocalScript(command.localScriptId).catch((error: unknown) => {
+          console.error('[Burst] Local script failed', error);
+        });
+      }
+
       setIsOpen(false);
       return;
     }
@@ -116,7 +120,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
 
       if (event.key === 'Enter' && activeCommand) {
         event.preventDefault();
-        runCommand(activeCommand);
+        void runCommand(activeCommand);
       }
     }
 
@@ -153,7 +157,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
                 role="option"
                 aria-selected={index === activeIndex}
                 onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => runCommand(command)}
+                onClick={() => void runCommand(command)}
               >
                 <CommandIcon command={command} />
                 <span className="burst-command-copy">
@@ -172,6 +176,34 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
       </section>
     </div>
   );
+}
+
+async function runLocalScript(scriptId: string) {
+  const script = await getLocalScript(scriptId);
+  if (!script || script.status !== 'enabled') return;
+
+  const run = compileLocalScript(script.code);
+  await run({
+    page: document,
+    window,
+    location,
+    navigator,
+    selection: window.getSelection()?.toString() ?? '',
+    url: location.href,
+    title: document.title,
+  });
+}
+
+function compileLocalScript(code: string): (context: Record<string, unknown>) => unknown | Promise<unknown> {
+  const moduleBody = code.replace(/^\s*export\s+default\s+/, '');
+  const factory = new Function(`return (${moduleBody});`);
+  const run = factory();
+
+  if (typeof run !== 'function') {
+    throw new Error('Local script must export a default function.');
+  }
+
+  return run;
 }
 
 function CommandIcon({ command }: { command: BurstCommand }) {

@@ -27,6 +27,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Extension dashboard page with CodeMirror-based local script editing/testing/management and editor font controls.
 - Local script persistence through extension local storage, including first-run seed data, draft creation, and explicit saves.
 - Enabled local scripts are surfaced in the webpage command palette ahead of registry suggestions when their match pattern fits the current host.
+- Enabled local scripts execute from the command palette in the content-script context with page, selection, URL, title, window, location, and navigator context.
 - Dashboard syntax test action for the current script source.
 - Registry website scaffold with marketplace search, command rows, audit labels, and a selected-command inspector.
 - Root scripts for separate extension and registry development/build flows.
@@ -37,7 +38,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Account sign-in.
 - Command publishing flow.
 - Command install/pin persistence shared between website and extension.
-- Real local script execution from webpage context.
+- Sandboxed local script execution with explicit permission grants.
 - Signed command package manifest.
 - Static analysis or audit pipeline.
 - Runtime sandbox/permission execution model.
@@ -48,6 +49,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 ## Known Tradeoffs
 
 - Seed local scripts are copied into storage on first launch so the dashboard has useful starter data; after that, the dashboard reads and writes the stored records.
+- Local script execution is functional but not yet sandboxed behind explicit runtime permissions.
 - Dashboard Test currently performs syntax validation only. It does not execute code in a page-context sandbox yet.
 - The dashboard bundle is larger after adding CodeMirror 6. It is isolated to the dashboard page, not the content script.
 

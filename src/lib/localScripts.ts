@@ -73,6 +73,11 @@ export async function loadLocalScripts(): Promise<LocalScript[]> {
   return seedLocalScripts;
 }
 
+export async function getLocalScript(id: string): Promise<LocalScript | undefined> {
+  const scripts = await loadLocalScripts();
+  return scripts.find((script) => script.id === id);
+}
+
 export async function saveLocalScripts(scripts: LocalScript[]): Promise<void> {
   const nextScripts = scripts.map(normalizeLocalScript);
   const extensionStorage = getExtensionStorage();
