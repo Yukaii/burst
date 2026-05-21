@@ -9,7 +9,6 @@
 
 ## Next Up
 
-- Add focused tests for local script matching, user script registration code generation, and palette ordering.
 - Add dashboard test harnesses for page context, selected text, DOM reads, and permission previews.
 - Add package validation around manifest source URLs, entrypoints, and integrity metadata.
 
@@ -58,7 +57,7 @@
 
 ## Phase 5: Quality Loop
 
-- Add unit tests for registry matching and search.
+- Add unit tests for registry matching and search. Started with host matching, palette ordering, management discovery, local script match conversion, and user script code generation.
 - Add browser tests for the content palette and registry website.
 - Add CI for typecheck, build, lint, and package validation.
 - Add release packaging for Chrome and Firefox.

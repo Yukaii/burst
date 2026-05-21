@@ -34,6 +34,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Dashboard source check confirms the required `export default function run(context) { ... }` shape without using `eval`.
 - Registry website scaffold with marketplace layout and empty states while the real registry API is pending.
 - Minimal `burst.command.json` v1 manifest contract with sample manifest validation.
+- Bun test coverage for host matching, local script match conversion, user script code generation, palette ordering, and management command discovery.
 - Root scripts for separate extension and registry development/build flows.
 
 ## Not Implemented Yet
@@ -65,6 +66,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 Expected checks:
 
 ```sh
+bun run test
 bun run compile
 bun run build
 ```

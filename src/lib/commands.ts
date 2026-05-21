@@ -176,3 +176,11 @@ export function searchCommands(commands: BurstCommand[], query: string): BurstCo
     return searchable.includes(normalized);
   });
 }
+
+export function orderPaletteCommands(commands: BurstCommand[]): BurstCommand[] {
+  return [...commands].sort((a, b) => {
+    const localScriptDelta = Number(Boolean(b.localScriptId)) - Number(Boolean(a.localScriptId));
+    if (localScriptDelta !== 0) return localScriptDelta;
+    return Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
+  });
+}

@@ -19,6 +19,7 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "compile": "tsc --noEmit && bun --filter @burst/registry compile",
+    "test": "bun test",
     "postinstall": "wxt prepare"
   },
   "dependencies": {

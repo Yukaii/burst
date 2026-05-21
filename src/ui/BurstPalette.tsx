@@ -6,6 +6,7 @@ import {
   getCommandIconUrl,
   getHostFromUrl,
   managementCommands,
+  orderPaletteCommands,
   searchCommands,
 } from '@/src/lib/commands';
 import {
@@ -45,13 +46,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   );
 
   const filteredCommands = useMemo(() => {
-    const ordered = [...siteCommands].sort((a, b) => {
-      const localScriptDelta = Number(Boolean(b.localScriptId)) - Number(Boolean(a.localScriptId));
-      if (localScriptDelta !== 0) return localScriptDelta;
-      return Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
-    });
-
-    return searchCommands(ordered, query);
+    return searchCommands(orderPaletteCommands(siteCommands), query);
   }, [query, siteCommands]);
 
   const activeCommand = filteredCommands[activeIndex] ?? filteredCommands[0];
