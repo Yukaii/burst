@@ -34,10 +34,10 @@ export const seedLocalScripts: LocalScript[] = [
     icon: { type: 'favicon', host: 'github.com' },
     status: 'enabled',
     updatedAt: '2026-05-20',
-    code: `export default async function run({ page }) {
+    code: `export default async function run({ page, toast }) {
   const branch = page.querySelector('[data-icv-name="Switch branches/tags"]')?.textContent?.trim();
   await navigator.clipboard.writeText(branch ?? location.href);
-  console.log("hello world")
+  toast(branch ? \`Copied \${branch}\` : 'Copied page URL');
 }`,
   },
   {
@@ -62,7 +62,7 @@ export function createLocalScriptDraft(): LocalScript {
     icon: { type: 'initials', value: 'UL' },
     status: 'draft',
     updatedAt: getTodayDate(),
-    code: `export default async function run() {\n  // Write a local command here.\n}`,
+    code: `export default async function run({ toast }) {\n  toast('Command finished');\n}`,
   };
 }
 
@@ -167,7 +167,8 @@ export function createLocalUserScriptCode(script: LocalScript): string {
         navigator,
         selection: window.getSelection()?.toString() ?? '',
         url: location.href,
-        title: document.title
+        title: document.title,
+        toast: (message) => emit({ status: 'toast', message: String(message) })
       });
       emit({ status: 'complete' });
     } catch (error) {

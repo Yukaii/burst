@@ -1,6 +1,6 @@
 # API Guide
 
-This guide captures the current intended contracts. The implementation still uses seed data, so treat this as the product/API direction rather than a stable public API.
+This guide captures the current intended contracts. Treat this as a working draft rather than a stable public API.
 
 ## Command Manifest
 
@@ -62,27 +62,68 @@ These commands are available on every page and route to the extension dashboard.
 
 ## Local Script Draft
 
-Local scripts currently use this seed shape:
+Local scripts are stored in extension local storage with this shape:
 
 ```ts
 type LocalScript = {
   id: string;
   name: string;
   matchPattern: string;
-  icon: string;
+  icon: CommandIcon;
   status: 'enabled' | 'disabled' | 'draft';
   updatedAt: string;
   code: string;
 };
 ```
 
-The dashboard should eventually persist this data in extension storage and validate it before execution.
+Enabled local scripts are registered with Chrome's `userScripts` API. After saving or enabling a script, matching already-open pages may need a reload before the registered listener is present.
+
+## Local Runtime API
+
+Local script source must export a default function:
+
+```ts
+export default async function run(context) {
+  // command code
+}
+```
+
+The current runtime context is:
+
+```ts
+type LocalRuntimeContext = {
+  page: Document;
+  window: Window;
+  location: Location;
+  navigator: Navigator;
+  selection: string;
+  url: string;
+  title: string;
+  toast: (message: string) => void;
+};
+```
+
+Example:
+
+```ts
+export default async function run({ page, toast }) {
+  const branch = page
+    .querySelector('[data-icv-name="Switch branches/tags"]')
+    ?.textContent
+    ?.trim();
+
+  await navigator.clipboard.writeText(branch ?? location.href);
+  toast(branch ? `Copied ${branch}` : 'Copied page URL');
+}
+```
+
+Use `toast(message)` for short command feedback such as `Copied`, `Saved`, or `No selection found`. Toasts are displayed by the Burst content UI and auto-dismiss.
 
 ## Runtime Direction
 
-Command runtime APIs are not implemented yet. The intended direction is:
+The intended runtime direction is:
 
 - Run only after explicit install and user consent.
 - Separate registry discovery from local execution.
-- Expose narrow APIs for page DOM reads, selected text, clipboard writes, captures, and connector calls.
+- Expose narrow APIs for page DOM reads, selected text, clipboard writes, toast notifications, captures, and connector calls.
 - Show permissions, source, publisher identity, and audit state before install.

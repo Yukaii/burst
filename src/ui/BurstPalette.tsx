@@ -34,6 +34,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [localCommands, setLocalCommands] = useState<BurstCommand[]>([]);
   const [statusMessage, setStatusMessage] = useState<string>();
+  const [toastMessage, setToastMessage] = useState<string>();
   const host = useMemo(() => getHostFromUrl(pageUrl), [pageUrl]);
 
   const siteCommands = useMemo(
@@ -60,7 +61,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   async function runCommand(command: BurstCommand) {
     if (command.action === 'run-local-script') {
       if (command.localScriptId) {
-        const result = await runLocalScript(command.localScriptId);
+        const result = await runLocalScript(command.localScriptId, setToastMessage);
         if (!result.ok) {
           setStatusMessage(result.message);
           return;
@@ -148,54 +149,71 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     setStatusMessage(undefined);
   }, [query]);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (!toastMessage) return;
+
+    const timeout = window.setTimeout(() => setToastMessage(undefined), 2200);
+    return () => window.clearTimeout(timeout);
+  }, [toastMessage]);
 
   return (
-    <div className="burst-overlay" role="presentation">
-      <section className="burst-shell" aria-label="Burst command palette">
-        <label className="burst-search">
-          <span>{host}</span>
-          <input
-            autoFocus
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={`Search ${pageTitle || host}`}
-          />
-        </label>
+    <>
+      {isOpen ? (
+        <div className="burst-overlay" role="presentation">
+          <section className="burst-shell" aria-label="Burst command palette">
+            <label className="burst-search">
+              <span>{host}</span>
+              <input
+                autoFocus
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={`Search ${pageTitle || host}`}
+              />
+            </label>
 
-        <div className="burst-results" role="listbox" aria-label="Available commands">
-          {statusMessage ? <div className="burst-status">{statusMessage}</div> : null}
-          {filteredCommands.length > 0 ? (
-            filteredCommands.map((command, index) => (
-              <button
-                className={`burst-command ${index === activeIndex ? 'is-active' : ''}`}
-                key={command.id}
-                type="button"
-                role="option"
-                aria-selected={index === activeIndex}
-                onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => void runCommand(command)}
-              >
-                <CommandIcon command={command} />
-                <span className="burst-command-copy">
-                  <strong>{command.title}</strong>
-                  <span>
-                    {command.website} · {trustLabels[command.trustLevel]} · {command.publisher.handle}
-                  </span>
-                </span>
-                <kbd>{command.shortcut ?? '↵'}</kbd>
-              </button>
-            ))
-          ) : (
-            <div className="burst-empty">No commands found.</div>
-          )}
+            <div className="burst-results" role="listbox" aria-label="Available commands">
+              {statusMessage ? <div className="burst-status">{statusMessage}</div> : null}
+              {filteredCommands.length > 0 ? (
+                filteredCommands.map((command, index) => (
+                  <button
+                    className={`burst-command ${index === activeIndex ? 'is-active' : ''}`}
+                    key={command.id}
+                    type="button"
+                    role="option"
+                    aria-selected={index === activeIndex}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onClick={() => void runCommand(command)}
+                  >
+                    <CommandIcon command={command} />
+                    <span className="burst-command-copy">
+                      <strong>{command.title}</strong>
+                      <span>
+                        {command.website} · {trustLabels[command.trustLevel]} · {command.publisher.handle}
+                      </span>
+                    </span>
+                    <kbd>{command.shortcut ?? '↵'}</kbd>
+                  </button>
+                ))
+              ) : (
+                <div className="burst-empty">No commands found.</div>
+              )}
+            </div>
+          </section>
         </div>
-      </section>
-    </div>
+      ) : null}
+      {toastMessage ? (
+        <div className="burst-toast" role="status">
+          {toastMessage}
+        </div>
+      ) : null}
+    </>
   );
 }
 
-async function runLocalScript(scriptId: string): Promise<{ ok: boolean; message?: string }> {
+async function runLocalScript(
+  scriptId: string,
+  onToast: (message: string) => void,
+): Promise<{ ok: boolean; message?: string }> {
   const resultEventName = getLocalScriptResultEventName(scriptId);
 
   const result = new Promise<{ ok: boolean; message?: string }>((resolve) => {
@@ -211,8 +229,13 @@ async function runLocalScript(scriptId: string): Promise<{ ok: boolean; message?
       const detail = event instanceof CustomEvent ? event.detail as { status?: string; message?: string } : {};
       if (detail.status === 'started') return;
 
-      window.clearTimeout(timeout);
+      if (detail.status === 'toast' && detail.message) {
+        onToast(detail.message);
+        return;
+      }
+
       document.removeEventListener(resultEventName, handleResult);
+      window.clearTimeout(timeout);
       resolve({
         ok: detail.status === 'complete',
         message: detail.message ?? 'Local script failed.',
