@@ -1676,11 +1676,11 @@ input {
 /* Premium Dark Mode Styling Overrides */
 html[data-theme="dark"] {
   color: #f1f5f9;
-  background: #090d16;
+  background: #0c0c0e;
 }
 
 html[data-theme="dark"] body {
-  background: #090d16;
+  background: #0c0c0e;
 }
 
 html[data-theme="dark"] .command-list,
@@ -1695,20 +1695,25 @@ html[data-theme="dark"] .live-audit-panel,
 html[data-theme="dark"] .audit-tester-section,
 html[data-theme="dark"] .guideline-card,
 html[data-theme="dark"] .settings-section-card {
-  background: #111827;
-  border-color: #1f2937;
+  background: #16161a;
+  border-color: rgba(255, 255, 255, 0.05);
   color: #f1f5f9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 html[data-theme="dark"] .command-row {
-  background: #111827;
-  border-top-color: #1f2937;
+  background: #16161a;
+  border-top-color: rgba(255, 255, 255, 0.04);
   color: #cbd5e1;
 }
 
-html[data-theme="dark"] .command-row:hover,
+html[data-theme="dark"] .command-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
 html[data-theme="dark"] .command-row.is-selected {
-  background: #1e293b;
+  background: rgba(14, 165, 233, 0.1);
+  color: #ffffff;
 }
 
 html[data-theme="dark"] h1,
@@ -1761,21 +1766,21 @@ html[data-theme="dark"] .setting-info span {
 
 html[data-theme="dark"] input,
 html[data-theme="dark"] textarea {
-  background: #1f2937;
-  border-color: #374151;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
   color: #ffffff;
 }
 
 html[data-theme="dark"] input::placeholder,
 html[data-theme="dark"] textarea::placeholder {
-  color: #6b7280;
+  color: #64748b;
 }
 
 html[data-theme="dark"] .permissions-checklist-field .permissions-checkboxes,
 html[data-theme="dark"] .guest-warning-card .note,
 html[data-theme="dark"] .table-head {
-  background: #1f2937;
-  border-color: #374151;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 html[data-theme="dark"] .permission-checkbox-label {
@@ -1784,11 +1789,11 @@ html[data-theme="dark"] .permission-checkbox-label {
 
 html[data-theme="dark"] .list-header,
 html[data-theme="dark"] .tester-audit-report {
-  border-bottom-color: #1f2937;
+  border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 html[data-theme="dark"] .inspector-tabs {
-  border-bottom-color: #1f2937;
+  border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 html[data-theme="dark"] .inspector-tabs button:hover {
@@ -1796,19 +1801,19 @@ html[data-theme="dark"] .inspector-tabs button:hover {
 }
 
 html[data-theme="dark"] .inspector-tabs button.is-active {
-  color: #0e7490;
-  border-bottom-color: #0e7490;
+  color: #0ea5e9;
+  border-bottom-color: #0ea5e9;
 }
 
 html[data-theme="dark"] .audit-summary-card,
 html[data-theme="dark"] .publisher-profile-card,
 html[data-theme="dark"] .publisher-stats-grid {
-  background: #1f2937;
-  border-color: #374151;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 html[data-theme="dark"] .check-icon {
-  background: #1f2937;
+  background: rgba(255, 255, 255, 0.04);
   box-shadow: none;
 }
 
@@ -1831,40 +1836,41 @@ html[data-theme="dark"] .live-check-item.check-fail {
 }
 
 html[data-theme="dark"] .btn-secondary {
-  background: #1f2937;
+  background: rgba(255, 255, 255, 0.06);
   color: #cbd5e1;
-  border-color: #374151 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 html[data-theme="dark"] .btn-secondary:hover {
-  background: #374151;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
 }
 
 html[data-theme="dark"] .guideline-card code {
-  background: #374151;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 html[data-theme="dark"] .toggle-btn {
-  background: #1f2937;
-  border-color: #374151;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
   color: #cbd5e1;
 }
 
 html[data-theme="dark"] .toggle-btn.is-active,
 html[data-theme="dark"] .toggle-btn:hover {
-  background: #0e7490;
-  border-color: #0e7490;
+  background: #0ea5e9;
+  border-color: #0ea5e9;
   color: #ffffff;
 }
 
 html[data-theme="dark"] .pin-btn {
-  background: #111827;
+  background: #16161a;
   color: #ffffff;
-  border-color: #374151;
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 html[data-theme="dark"] .empty-inspector .manifest-report div {
-  border-bottom-color: #1f2937;
+  border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 
