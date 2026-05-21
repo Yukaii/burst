@@ -26,6 +26,12 @@ export type LocalScript = {
   code: string;
 };
 
+export type LocalScriptBackup = {
+  version: 1;
+  exportedAt: string;
+  scripts: LocalScript[];
+};
+
 export const seedLocalScripts: LocalScript[] = [
   {
     id: 'local-github-copy-branch',
@@ -102,6 +108,21 @@ export function prepareLocalScriptForSave(script: LocalScript): LocalScript {
     ...script,
     updatedAt: getTodayDate(),
   });
+}
+
+export function createLocalScriptBackup(scripts: LocalScript[]): LocalScriptBackup {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    scripts: scripts.map(normalizeLocalScript),
+  };
+}
+
+export function parseLocalScriptBackup(value: unknown): LocalScript[] {
+  if (Array.isArray(value)) return parseLocalScripts(value);
+  if (!isLocalScriptBackup(value)) return [];
+
+  return parseLocalScripts(value.scripts);
 }
 
 export function localScriptToCommand(script: LocalScript): BurstCommand {
@@ -236,6 +257,13 @@ function isLocalScript(value: unknown): value is LocalScript {
     && typeof script.code === 'string'
     && isLocalScriptStatus(script.status)
     && isCommandIcon(script.icon);
+}
+
+function isLocalScriptBackup(value: unknown): value is LocalScriptBackup {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const backup = value as Partial<LocalScriptBackup>;
+  return backup.version === 1 && Array.isArray(backup.scripts);
 }
 
 function isLocalScriptStatus(value: unknown): value is LocalScriptStatus {

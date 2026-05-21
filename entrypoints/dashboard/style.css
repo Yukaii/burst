@@ -106,6 +106,7 @@ p {
 }
 
 .new-script-button,
+.script-list-actions button,
 .editor-actions button {
   height: 38px;
   border: 0;
@@ -115,6 +116,27 @@ p {
   cursor: pointer;
   font-size: 13px;
   font-weight: 820;
+}
+
+.script-list-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.script-list-actions button {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: #111827;
+  color: #f8fafc;
+}
+
+.script-list-actions button:hover {
+  border-color: rgba(125, 211, 252, 0.24);
+  background: #1e293b;
+}
+
+.script-import-input {
+  display: none;
 }
 
 .script-rows {

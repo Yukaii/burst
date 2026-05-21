@@ -78,6 +78,18 @@ type LocalScript = {
 
 Enabled local scripts are registered with Chrome's `userScripts` API. After saving or enabling a script, matching already-open pages may need a reload before the registered listener is present.
 
+Local script backups use a versioned JSON envelope:
+
+```ts
+type LocalScriptBackup = {
+  version: 1;
+  exportedAt: string;
+  scripts: LocalScript[];
+};
+```
+
+Importing a backup validates each script record and replaces the current local script list after user confirmation.
+
 ## Local Runtime API
 
 Local script source must export a default function:

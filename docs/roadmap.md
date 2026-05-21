@@ -9,9 +9,9 @@
 
 ## Next Up
 
-- Add import/export for local scripts so users can review and back up local commands.
 - Add a minimal `burst.command.json` schema and validate sample manifests before building marketplace rows.
 - Add focused tests for local script matching, user script registration code generation, and palette ordering.
+- Add dashboard test harnesses for page context, selected text, DOM reads, and permission previews.
 
 ## Phase 1: Registry Contract
 
@@ -53,7 +53,7 @@
 - Add migration/versioning for local script records. Deferred until extension distribution.
 - Add enable/disable/delete actions. Done.
 - Expose stored local scripts inside the command palette discovery list. Done for enabled scripts.
-- Add import/export for local script backup and review.
+- Add import/export for local script backup and review. Done.
 - Add runtime execution with an explicit API surface instead of raw page globals. Basic `userScripts` execution is in place; per-capability permission grants remain.
 
 ## Phase 5: Quality Loop

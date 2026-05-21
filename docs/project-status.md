@@ -27,6 +27,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Extension dashboard page with CodeMirror-based local script editing/testing/management and editor font controls.
 - Local script persistence through extension local storage, including first-run seed data, draft creation, and explicit saves.
 - Local script status controls for enabling, disabling, draft state, and deletion.
+- Local script JSON import/export for backup and source review.
 - Enabled local scripts are surfaced in the webpage command palette when their match pattern fits the current host.
 - Enabled local scripts execute through Chrome's `userScripts` API and are triggered from the command palette without runtime string evaluation.
 - Palette-triggered local scripts report started/complete/error status back to the palette; pages loaded before registration now show a reload instruction instead of failing silently.
@@ -55,6 +56,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Local script execution is functional but not yet gated by explicit per-capability permission grants.
 - Newly registered or edited user scripts apply to matching page loads after registration. Existing tabs may need a reload before the listener is present.
 - Dashboard Test validates the expected export shape only. Full syntax diagnostics should come from a dedicated parser or registration dry run.
+- Local script import currently replaces the full local script list after confirmation instead of merging records.
 - The dashboard bundle is larger after adding CodeMirror 6. It is isolated to the dashboard page, not the content script.
 
 ## Verification Baseline

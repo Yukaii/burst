@@ -1,13 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { EditorView } from '@codemirror/view';
 import type { CommandIcon } from '@/src/lib/commands';
 import {
+  createLocalScriptBackup,
   createLocalScriptDraft,
   loadLocalScripts,
   LocalScript,
+  parseLocalScriptBackup,
   prepareLocalScriptForSave,
   saveLocalScripts,
 } from '@/src/lib/localScripts';
@@ -97,6 +99,7 @@ function DashboardApp() {
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [saveState, setSaveState] = useState('Loading scripts');
   const [testOutput, setTestOutput] = useState('Ready. Test runs will execute against the current editor source.');
+  const importInputRef = useRef<HTMLInputElement>(null);
   const selectedScript = scripts.find((script) => script.id === selectedId) ?? scripts[0];
   const editorTheme = useMemo(
     () => createEditorTheme(editorFontFamily, editorFontSize),
@@ -191,6 +194,47 @@ function DashboardApp() {
     await persistScripts(finalScripts, fallbackDraft ? 'Deleted script and created a draft' : 'Deleted script');
   }
 
+  function exportScripts() {
+    const backup = createLocalScriptBackup(scripts);
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = `burst-local-scripts-${backup.exportedAt.slice(0, 10)}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    setSaveState(`Exported ${backup.scripts.length} scripts`);
+  }
+
+  async function importScripts(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      const parsed = JSON.parse(await file.text()) as unknown;
+      const importedScripts = parseLocalScriptBackup(parsed);
+      if (importedScripts.length === 0) {
+        setSaveState('Import failed: no valid scripts found');
+        return;
+      }
+
+      if (!window.confirm(`Import ${importedScripts.length} scripts and replace the current local scripts?`)) {
+        setSaveState('Import cancelled');
+        return;
+      }
+
+      setScripts(importedScripts);
+      setSelectedId(importedScripts[0].id);
+      await persistScripts(importedScripts, `Imported ${importedScripts.length} scripts`);
+    } catch (error) {
+      setSaveState(error instanceof Error ? error.message : 'Import failed');
+    }
+  }
+
   function testSelectedScript() {
     if (!selectedScript) return;
 
@@ -246,6 +290,22 @@ function DashboardApp() {
         <button className="new-script-button" type="button" onClick={createDraft}>
           New script
         </button>
+
+        <div className="script-list-actions" aria-label="Script backup actions">
+          <button type="button" onClick={exportScripts}>
+            Export
+          </button>
+          <button type="button" onClick={() => importInputRef.current?.click()}>
+            Import
+          </button>
+          <input
+            ref={importInputRef}
+            className="script-import-input"
+            type="file"
+            accept="application/json"
+            onChange={(event) => void importScripts(event)}
+          />
+        </div>
 
         <div className="script-rows">
           {scripts.map((script) => (
