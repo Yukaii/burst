@@ -20,7 +20,10 @@
     "zip:firefox": "wxt zip -b firefox",
     "compile": "tsc --noEmit && bun --filter @burst/registry compile",
     "test": "bun test",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.5",
@@ -37,6 +40,7 @@
     "@wxt-dev/module-react": "^1.1.5",
     "typescript": "^5.9.3",
     "vite": "^8.0.13",
+    "vitepress": "^1.5.0",
     "wxt": "^0.20.26"
   }
 }
