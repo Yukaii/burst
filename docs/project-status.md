@@ -54,10 +54,12 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Simulated cryptographic package signature verification and manifest integrity checks in the registry audit console.
 - Persisted user settings (dark mode theme preferences, update updates configuration, local cache resets) on the settings dashboard.
 - Browser extension premium brand logo SVG asset integrated into the popup, dashboard, and registry header views.
+- Sandbox-isolated user script runtime execution wrappers shadowing page globals (`document`, `window`, `navigator`, `location`) using parameter-bound IIFE scopes and capability-gated explicit APIs (page, selection, clipboard, toast).
+- Premium extension options settings page and syncing mechanism for Theme (Light/Dark/System), Alignment (Top/Center), Backdrop Close, Developer Logging, and Consent Revocation.
 
 ## In Progress
 
-- Sandbox-isolated user script runtime execution contexts (relying on browser's native userScripts sandbox, investigating further primitives).
+- None.
 
 ## Not Implemented Yet
 

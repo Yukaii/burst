@@ -1,4 +1,5 @@
 import type { BurstCommand } from './commands';
+import { createSandboxedUserScriptCode } from './localScripts';
 
 const INSTALLED_COMMANDS_KEY = 'burst.installedRegistryCommands.v1';
 const PINNED_COMMANDS_KEY = 'burst.pinnedRegistryCommands.v1';
@@ -213,33 +214,24 @@ export function getRegistryScriptMatchPatterns(patterns: string[]): string[] {
 }
 
 export function createRegistryUserScriptCode(commandId: string, code: string): string {
-  const functionSource = code.replace(/^\s*export\s+default\s+/, '');
   const eventName = getRegistryScriptEventName(commandId);
   const resultEventName = getRegistryScriptResultEventName(commandId);
+  return createSandboxedUserScriptCode(code, eventName, resultEventName);
+}
 
-  return `(() => {
-  const run = ${functionSource};
-  document.addEventListener(${JSON.stringify(eventName)}, async (event) => {
-    const emit = (detail) => document.dispatchEvent(new CustomEvent(${JSON.stringify(resultEventName)}, { detail }));
-    try {
-      emit({ status: 'started' });
-      const capturedSelection = (event && event.detail && event.detail.selection) || '';
-      await run({
-        page: document,
-        window,
-        location,
-        navigator,
-        selection: capturedSelection || (window.getSelection()?.toString() ?? ''),
-        url: location.href,
-        title: document.title,
-        toast: (message) => emit({ status: 'toast', message: String(message) })
-      });
-      emit({ status: 'complete' });
-    } catch (error) {
-      console.error('[Burst] Registry script failed', error);
-      emit({ status: 'error', message: error instanceof Error ? error.message : String(error) });
-    }
-  });
-})();`;
+export async function clearConsentGrants(): Promise<void> {
+  const extensionStorage = getExtensionStorage();
+  if (extensionStorage) {
+    await extensionStorage.set({ [CONSENT_GRANTS_KEY]: [] });
+    return;
+  }
+
+  const webStorage = getWebStorage();
+  if (webStorage) {
+    webStorage.setItem(CONSENT_GRANTS_KEY, JSON.stringify([]));
+    return;
+  }
+
+  memoryGrants = [];
 }
 

@@ -170,35 +170,167 @@ export function getLocalScriptMatchPatterns(script: LocalScript): string[] {
   return [`*://${pattern}`];
 }
 
-export function createLocalUserScriptCode(script: LocalScript): string {
-  const functionSource = stripDefaultExport(script.code);
-  const eventName = getLocalScriptEventName(script.id);
-  const resultEventName = getLocalScriptResultEventName(script.id);
+export function createSandboxedUserScriptCode(code: string, eventName: string, resultEventName: string): string {
+  const functionSource = stripDefaultExport(code);
+  const capabilities = detectRequiredCapabilities(code);
 
   return `(() => {
-  const run = ${functionSource};
+  const capabilities = ${JSON.stringify(capabilities)};
+  const hasCap = (c) => capabilities.includes(c);
+
   document.addEventListener(${JSON.stringify(eventName)}, async (event) => {
     const emit = (detail) => document.dispatchEvent(new CustomEvent(${JSON.stringify(resultEventName)}, { detail }));
+    
     try {
       emit({ status: 'started' });
       const capturedSelection = (event && event.detail && event.detail.selection) || '';
-      await run({
-        page: document,
-        window,
-        location,
-        navigator,
-        selection: capturedSelection || (window.getSelection()?.toString() ?? ''),
-        url: location.href,
-        title: document.title,
-        toast: (message) => emit({ status: 'toast', message: String(message) })
-      });
+
+      // 1. Wrapped Page DOM reads
+      const page = {
+        querySelector(selector) {
+          if (!hasCap('page-dom')) {
+            throw new Error("SecurityError: Script lacks 'page-dom' capability to read the DOM.");
+          }
+          const el = document.querySelector(selector);
+          return el ? wrapElement(el) : null;
+        },
+        querySelectorAll(selector) {
+          if (!hasCap('page-dom')) {
+            throw new Error("SecurityError: Script lacks 'page-dom' capability to read the DOM.");
+          }
+          const nodes = document.querySelectorAll(selector);
+          return Array.from(nodes).map(wrapElement);
+        },
+        get title() {
+          if (!hasCap('page-dom')) return '';
+          return document.title;
+        }
+      };
+
+      function wrapElement(el) {
+        return {
+          get textContent() { return el.textContent; },
+          get innerText() { return el.innerText; },
+          get value() { return el.value; },
+          getAttribute(name) { return el.getAttribute(name); },
+          hasAttribute(name) { return el.hasAttribute(name); },
+          querySelector(selector) {
+            const sub = el.querySelector(selector);
+            return sub ? wrapElement(sub) : null;
+          },
+          querySelectorAll(selector) {
+            const subs = el.querySelectorAll(selector);
+            return Array.from(subs).map(wrapElement);
+          }
+        };
+      }
+
+      // 2. Clipboard writes
+      const clipboard = {
+        async writeText(text) {
+          if (!hasCap('clipboard-write')) {
+            throw new Error("SecurityError: Script lacks 'clipboard-write' capability.");
+          }
+          return navigator.clipboard.writeText(text);
+        }
+      };
+
+      // 3. Selection API
+      const getSelection = () => {
+        if (!hasCap('selection')) {
+          throw new Error("SecurityError: Script lacks 'selection' capability.");
+        }
+        return {
+          toString() {
+            return capturedSelection || (window.getSelection()?.toString() ?? '');
+          }
+        };
+      };
+
+      // 4. Toast API
+      const toast = (message) => {
+        if (!hasCap('toast')) {
+          throw new Error("SecurityError: Script lacks 'toast' capability.");
+        }
+        emit({ status: 'toast', message: String(message) });
+      };
+
+      // Wrapped location & navigator
+      const wrappedLocation = {
+        get href() {
+          if (!hasCap('page-dom')) return '';
+          return location.href;
+        },
+        get host() {
+          if (!hasCap('page-dom')) return '';
+          return location.host;
+        },
+        get hostname() {
+          if (!hasCap('page-dom')) return '';
+          return location.hostname;
+        },
+        get origin() {
+          if (!hasCap('page-dom')) return '';
+          return location.origin;
+        },
+        get pathname() {
+          if (!hasCap('page-dom')) return '';
+          return location.pathname;
+        },
+        toString() {
+          if (!hasCap('page-dom')) return '';
+          return location.href;
+        }
+      };
+
+      const wrappedNavigator = {
+        get clipboard() { return clipboard; },
+        get userAgent() { return navigator.userAgent; },
+        get language() { return navigator.language; }
+      };
+
+      const wrappedWindow = {
+        getSelection,
+        get location() { return wrappedLocation; },
+        get navigator() { return wrappedNavigator; },
+        document: page
+      };
+
+      const selectionText = hasCap('selection')
+        ? (capturedSelection || (window.getSelection()?.toString() ?? ''))
+        : '';
+
+      const context = {
+        page,
+        window: wrappedWindow,
+        location: wrappedLocation,
+        navigator: wrappedNavigator,
+        selection: selectionText,
+        clipboard,
+        url: hasCap('page-dom') ? location.href : '',
+        title: hasCap('page-dom') ? document.title : '',
+        toast
+      };
+
+      // Shadow the globals by wrapping the user script in an IIFE parameter binding
+      const userRun = (function(document, window, navigator, location) {
+        return ${functionSource};
+      })(page, wrappedWindow, wrappedNavigator, wrappedLocation);
+
+      await userRun(context);
       emit({ status: 'complete' });
     } catch (error) {
-      console.error('[Burst] Local script failed', error);
+      console.error('[Burst] Script failed', error);
       emit({ status: 'error', message: error instanceof Error ? error.message : String(error) });
     }
   });
 })();`;
+}
+
+export function createLocalUserScriptCode(script: LocalScript): string {
+  const eventName = getLocalScriptEventName(script.id);
+  const resultEventName = getLocalScriptResultEventName(script.id);
+  return createSandboxedUserScriptCode(script.code, eventName, resultEventName);
 }
 
 export function stripDefaultExport(code: string): string {

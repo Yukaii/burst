@@ -13,8 +13,6 @@
   inset: 0;
   z-index: 2147483647;
   display: grid;
-  place-items: start center;
-  padding: 14vh 16px 24px;
   background: rgba(2, 6, 23, 0.34);
   color: #f8fafc;
   backdrop-filter: blur(2px);
@@ -587,5 +585,213 @@
   font-size: 11px;
   color: #94a3b8;
   line-height: 1.3;
+}
+
+/* Palette Positioning */
+.burst-overlay.position-top {
+  place-items: start center;
+  padding: 14vh 16px 24px;
+}
+
+.burst-overlay.position-center {
+  place-items: center center;
+  padding: 24px 16px;
+}
+
+/* Light Theme Overrides */
+.theme-light.burst-overlay {
+  background: rgba(148, 163, 184, 0.25);
+  color: #0f172a;
+}
+
+.theme-light .burst-shell {
+  background: #ffffff;
+  border-color: rgba(148, 163, 184, 0.3);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.15);
+}
+
+.theme-light .burst-search {
+  border-bottom-color: rgba(148, 163, 184, 0.18);
+}
+
+.theme-light .burst-search span {
+  color: #64748b;
+}
+
+.theme-light .burst-search input {
+  color: #0f172a;
+}
+
+.theme-light .burst-search input::placeholder {
+  color: #94a3b8;
+}
+
+.theme-light .burst-command {
+  color: #334155;
+}
+
+.theme-light .burst-command-icon {
+  background: #f1f5f9;
+  border-color: rgba(148, 163, 184, 0.2);
+  color: #0284c7;
+}
+
+.theme-light .burst-command.is-active,
+.theme-light .burst-command:hover {
+  border-color: rgba(14, 165, 233, 0.2);
+  background: rgba(241, 245, 249, 0.95);
+}
+
+.theme-light .burst-command-copy strong {
+  color: #0f172a;
+}
+
+.theme-light .burst-command-copy span {
+  color: #64748b;
+}
+
+.theme-light .burst-command kbd {
+  background: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #475569;
+}
+
+.theme-light .burst-status {
+  border-color: rgba(14, 165, 233, 0.2);
+  background: rgba(56, 189, 248, 0.1);
+  color: #0369a1;
+}
+
+.theme-light .burst-empty {
+  color: #64748b;
+}
+
+.theme-light .burst-toast {
+  background: #ffffff;
+  border-color: rgba(14, 165, 233, 0.2);
+  color: #0f172a;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.15);
+}
+
+/* Security Consent Modal Light overrides */
+.theme-light .burst-consent-modal {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.theme-light .burst-consent-header {
+  border-bottom-color: rgba(148, 163, 184, 0.18);
+}
+
+.theme-light .burst-consent-header h2 {
+  color: #0f172a;
+}
+
+.theme-light .burst-consent-subtitle {
+  color: #64748b;
+}
+
+.theme-light .burst-consent-subtitle strong {
+  color: #0f172a;
+}
+
+.theme-light .burst-consent-subtitle code {
+  background: #f1f5f9;
+  color: #0284c7;
+}
+
+.theme-light .burst-consent-info-grid {
+  background: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.15);
+}
+
+.theme-light .info-label {
+  color: #64748b;
+}
+
+.theme-light .info-value {
+  color: #334155;
+}
+
+.theme-light .info-value.link {
+  color: #0284c7;
+}
+
+.theme-light .info-value.link:hover {
+  color: #0369a1;
+}
+
+.theme-light .burst-consent-permissions h3 {
+  color: #0f172a;
+}
+
+.theme-light .burst-consent-permissions li {
+  color: #334155;
+}
+
+.theme-light .checkbox-icon {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0284c7;
+}
+
+.theme-light .burst-consent-warning-box {
+  background: rgba(239, 68, 68, 0.05);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.theme-light .burst-consent-warning-box p {
+  color: #b91c1c;
+}
+
+.theme-light .burst-consent-footer {
+  border-top-color: rgba(148, 163, 184, 0.18);
+}
+
+.theme-light .btn-cancel {
+  background: #f1f5f9;
+  color: #334155;
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.theme-light .btn-cancel:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.theme-light .burst-consent-audit h3 {
+  color: #0f172a;
+}
+
+.theme-light .burst-audit-summary-box {
+  background: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.15);
+}
+
+.theme-light .burst-audit-summary-box p {
+  color: #475569;
+}
+
+.theme-light .burst-audit-checklist li.audit-item.is-pass {
+  background: rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+
+.theme-light .burst-audit-checklist li.audit-item.is-warning {
+  background: rgba(245, 158, 11, 0.05);
+  border-color: rgba(245, 158, 11, 0.15);
+}
+
+.theme-light .burst-audit-checklist li.audit-item.is-fail {
+  background: rgba(239, 68, 68, 0.05);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.theme-light .burst-audit-checklist .check-text strong {
+  color: #334155;
+}
+
+.theme-light .burst-audit-checklist .check-text span {
+  color: #64748b;
 }
 

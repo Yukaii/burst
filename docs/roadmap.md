@@ -9,7 +9,7 @@
 
 ## In Progress
 
-- Design sandbox-isolated API primitives (e.g. wrapped page DOM reads, secure selection/clipboard/toast APIs) instead of exposing raw document structures (Phase 4: Install and Runtime).
+- None.
 
 ## Next Up
 
@@ -42,10 +42,10 @@
 
 - Add install and pin persistence. (Done - local storage sync relay bridge implemented)
 - Sync installed commands between registry website and extension. (Done - content script message bridge implemented)
-- Add extension settings for palette behavior while leaving global shortcut assignment in Chrome's shortcut UI.
+- Add extension settings for palette behavior while leaving global shortcut assignment in Chrome's shortcut UI. (Done - premium Options panel and storage sync implemented)
 - Design the command execution boundary. (Done - shadow DOM warning consent boundary overlay implemented)
 - Require explicit user consent before granting sensitive permissions. (Done - persistent consent grants storage implemented)
-- Add safe runtime APIs for page DOM reads, selected text, clipboard writes, captures, and connector calls.
+- Add safe runtime APIs for page DOM reads, selected text, clipboard writes, captures, and connector calls. (Done - capability-gated page, selection, clipboard, toast wrappers and page globals shadowing IIFE implemented)
 
 ## Phase 4.1: Local Script Data Model
 
@@ -54,7 +54,7 @@
 - Add enable/disable/delete actions. Done.
 - Expose stored local scripts inside the command palette discovery list. Done for enabled scripts.
 - Add import/export for local script backup and review. Done.
-- Add runtime execution with an explicit API surface instead of raw page globals. Basic `userScripts` execution is in place; per-capability permission grants remain.
+- Add runtime execution with an explicit API surface instead of raw page globals. (Done - sandboxed runtime context with page, selection, clipboard, toast proxies and document/window/navigator/location shadowing IIFE implemented)
 
 ## Phase 5: Quality Loop
 

@@ -7,6 +7,7 @@ import {
 } from '../src/lib/commands.ts';
 import {
   createLocalUserScriptCode,
+  createSandboxedUserScriptCode,
   detectRequiredCapabilities,
   getLocalScriptEventName,
   getLocalScriptMatchPatterns,
@@ -82,9 +83,9 @@ describe('local script registration', () => {
 
     expect(source).toContain(getLocalScriptEventName(localScript.id));
     expect(source).toContain(getLocalScriptResultEventName(localScript.id));
-    expect(source).toContain('toast: (message) => emit');
+    expect(source).toContain('toast = (message) =>');
     expect(source).toContain('const capturedSelection = (event && event.detail && event.detail.selection) || \'\';');
-    expect(source).toContain('selection: capturedSelection || (window.getSelection()?.toString() ?? \'\')');
+    expect(source).toContain('selection: selectionText');
     expect(source).not.toContain('export default');
     expect(source).not.toContain('new Function');
     expect(source).not.toContain('eval(');
@@ -224,7 +225,7 @@ describe('registry storage and consent', () => {
     expect(wrapped).toContain('burst:registry-script-result:test-cmd');
     expect(wrapped).toContain('async function run({ page })');
     expect(wrapped).toContain('const capturedSelection = (event && event.detail && event.detail.selection) || \'\';');
-    expect(wrapped).toContain('selection: capturedSelection || (window.getSelection()?.toString() ?? \'\')');
+    expect(wrapped).toContain('selection: selectionText');
     expect(wrapped).not.toContain('export default');
   });
 
@@ -240,5 +241,59 @@ describe('registry storage and consent', () => {
     await saveConsentGrant('copy-github-branch');
     const reloaded = await loadConsentGrants();
     expect(reloaded.filter(id => id === 'copy-github-branch').length).toBe(1);
+  });
+});
+
+import { loadSettings, saveSettings } from '../src/lib/settings.ts';
+
+describe('extension settings storage', () => {
+  test('loads default settings', async () => {
+    const settings = await loadSettings();
+    expect(settings.theme).toBe('dark');
+    expect(settings.position).toBe('top');
+    expect(settings.backdropClickClose).toBe(true);
+    expect(settings.showConsoleLogs).toBe(false);
+  });
+
+  test('saves and loads settings correctly', async () => {
+    const customSettings = {
+      theme: 'light',
+      position: 'center',
+      backdropClickClose: false,
+      showConsoleLogs: true,
+    };
+    await saveSettings(customSettings);
+    const loaded = await loadSettings();
+    expect(loaded).toEqual(customSettings);
+  });
+});
+
+describe('sandbox IIFE wrapping and lexical shadowing', () => {
+  test('shadows global variables with IIFE parameter bindings', () => {
+    const code = `
+      export default async function run({ page }) {
+        const div = document.querySelector('div');
+      }
+    `;
+    const wrapped = createSandboxedUserScriptCode(code, 'run-evt', 'res-evt');
+    
+    // Check shadowing IIFE structure
+    expect(wrapped).toContain('const userRun = (function(document, window, navigator, location)');
+    expect(wrapped).toContain('})(page, wrappedWindow, wrappedNavigator, wrappedLocation);');
+  });
+
+  test('extracts and exposes capability restrictions in the runtime scope', () => {
+    const code = `
+      export default async function run(context) {
+        context.toast("test");
+        await context.navigator.clipboard.writeText("hello");
+      }
+    `;
+    const wrapped = createSandboxedUserScriptCode(code, 'run-evt', 'res-evt');
+
+    expect(wrapped).toContain('capabilities = ["clipboard-write","toast"]');
+    expect(wrapped).toContain('const hasCap = (c) => capabilities.includes(c);');
+    expect(wrapped).toContain('if (!hasCap(\'clipboard-write\'))');
+    expect(wrapped).toContain('if (!hasCap(\'toast\'))');
   });
 });

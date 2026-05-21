@@ -25,6 +25,7 @@ import {
 } from '@/src/lib/registryStorage';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
 import { getMockScriptCode } from '@/src/lib/registryApi';
+import { ExtensionSettings, DEFAULT_SETTINGS, loadSettings } from '@/src/lib/settings';
 
 type BurstPaletteProps = {
   pageUrl: string;
@@ -47,6 +48,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [toastMessage, setToastMessage] = useState<string>();
   const [consentPendingCommand, setConsentPendingCommand] = useState<BurstCommand | null>(null);
   const [capturedSelection, setCapturedSelection] = useState('');
+  const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const host = useMemo(() => getHostFromUrl(pageUrl), [pageUrl]);
 
   const consentAnalysis = useMemo(() => {
@@ -70,9 +72,21 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const activeCommand = filteredCommands[activeIndex] ?? filteredCommands[0];
 
   async function runCommand(command: BurstCommand) {
+    if (settings.showConsoleLogs) {
+      console.log(`[Burst] Execution started for "${command.title}" (${command.id})`, {
+        action: command.action,
+        selection: capturedSelection,
+        url: pageUrl,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     if (command.action === 'run-local-script') {
       if (command.localScriptId) {
         const result = await runLocalScript(command.localScriptId, capturedSelection, setToastMessage);
+        if (settings.showConsoleLogs) {
+          console.log(`[Burst] Execution outcome for "${command.title}":`, result);
+        }
         if (!result.ok) {
           setStatusMessage(result.message);
           return;
@@ -93,6 +107,9 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
       }
 
       const result = await runRegistryScript(command.id, capturedSelection, setToastMessage);
+      if (settings.showConsoleLogs) {
+        console.log(`[Burst] Execution outcome for "${command.title}":`, result);
+      }
       if (!result.ok) {
         setStatusMessage(result.message);
         return;
@@ -140,6 +157,35 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     browser.runtime.onMessage.addListener(handleMessage);
     return () => browser.runtime.onMessage.removeListener(handleMessage);
   }, []);
+
+  useEffect(() => {
+    async function initSettings() {
+      const loaded = await loadSettings();
+      setSettings(loaded);
+    }
+    void initSettings();
+
+    if (typeof browser !== 'undefined' && browser.storage?.onChanged) {
+      const handleStorageChange = (changes: Record<string, any>, areaName: string) => {
+        if (areaName === 'local' && changes['burst.settings.v1']) {
+          const newValue = changes['burst.settings.v1'].newValue;
+          if (newValue) {
+            setSettings(newValue);
+          }
+        }
+      };
+      browser.storage.onChanged.addListener(handleStorageChange);
+      return () => {
+        browser.storage.onChanged.removeListener(handleStorageChange);
+      };
+    }
+  }, []);
+
+  function handleOverlayClick(e: React.MouseEvent) {
+    if (e.target === e.currentTarget && settings.backdropClickClose) {
+      setIsOpen(false);
+    }
+  }
 
   useEffect(() => {
     if (!isOpen) {
@@ -232,10 +278,18 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     return () => window.clearTimeout(timeout);
   }, [toastMessage]);
 
+  const activeTheme = settings.theme === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    : settings.theme;
+
   return (
     <>
       {isOpen ? (
-        <div className="burst-overlay" role="presentation">
+        <div
+          className={`burst-overlay position-${settings.position} theme-${activeTheme}`}
+          role="presentation"
+          onClick={handleOverlayClick}
+        >
           <section className="burst-shell" aria-label="Burst command palette">
             {consentPendingCommand ? (
               <div className="burst-consent-modal">
