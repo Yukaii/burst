@@ -48,7 +48,7 @@
 - Add enable/disable/delete actions.
 - Expose stored local scripts inside the command palette discovery list. Done for enabled scripts.
 - Add import/export for local script backup and review.
-- Add runtime execution with an explicit API surface instead of raw page globals. Basic content-context execution is in place; sandboxed APIs remain.
+- Add runtime execution with an explicit API surface instead of raw page globals. Basic `userScripts` execution is in place; per-capability permission grants remain.
 
 ## Phase 5: Quality Loop
 

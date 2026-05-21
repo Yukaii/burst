@@ -9,7 +9,7 @@ import {
   searchCommands,
   seedCommands,
 } from '@/src/lib/commands';
-import { getLocalScript, loadLocalScripts, localScriptToCommand } from '@/src/lib/localScripts';
+import { getLocalScriptEventName, loadLocalScripts, localScriptToCommand } from '@/src/lib/localScripts';
 
 type BurstPaletteProps = {
   pageUrl: string;
@@ -54,9 +54,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   async function runCommand(command: BurstCommand) {
     if (command.action === 'run-local-script') {
       if (command.localScriptId) {
-        await runLocalScript(command.localScriptId).catch((error: unknown) => {
-          console.error('[Burst] Local script failed', error);
-        });
+        runLocalScript(command.localScriptId);
       }
 
       setIsOpen(false);
@@ -178,32 +176,8 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   );
 }
 
-async function runLocalScript(scriptId: string) {
-  const script = await getLocalScript(scriptId);
-  if (!script || script.status !== 'enabled') return;
-
-  const run = compileLocalScript(script.code);
-  await run({
-    page: document,
-    window,
-    location,
-    navigator,
-    selection: window.getSelection()?.toString() ?? '',
-    url: location.href,
-    title: document.title,
-  });
-}
-
-function compileLocalScript(code: string): (context: Record<string, unknown>) => unknown | Promise<unknown> {
-  const moduleBody = code.replace(/^\s*export\s+default\s+/, '');
-  const factory = new Function(`return (${moduleBody});`);
-  const run = factory();
-
-  if (typeof run !== 'function') {
-    throw new Error('Local script must export a default function.');
-  }
-
-  return run;
+function runLocalScript(scriptId: string) {
+  window.dispatchEvent(new CustomEvent(getLocalScriptEventName(scriptId)));
 }
 
 function CommandIcon({ command }: { command: BurstCommand }) {

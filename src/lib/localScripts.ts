@@ -128,6 +128,50 @@ export function localScriptToCommand(script: LocalScript): BurstCommand {
   };
 }
 
+export function getLocalScriptEventName(scriptId: string): string {
+  return `burst:run-local-script:${scriptId}`;
+}
+
+export function getLocalScriptRegistrationId(scriptId: string): string {
+  return `burst-local-script-${scriptId}`;
+}
+
+export function getLocalScriptMatchPatterns(script: LocalScript): string[] {
+  const pattern = script.matchPattern.trim();
+  if (pattern === '<all_urls>') return ['<all_urls>'];
+  if (pattern.includes('://')) return [pattern];
+  if (!pattern.includes('/')) return [`*://${pattern}/*`];
+  return [`*://${pattern}`];
+}
+
+export function createLocalUserScriptCode(script: LocalScript): string {
+  const functionSource = stripDefaultExport(script.code);
+  const eventName = getLocalScriptEventName(script.id);
+
+  return `(() => {
+  const run = ${functionSource};
+  window.addEventListener(${JSON.stringify(eventName)}, async () => {
+    try {
+      await run({
+        page: document,
+        window,
+        location,
+        navigator,
+        selection: window.getSelection()?.toString() ?? '',
+        url: location.href,
+        title: document.title
+      });
+    } catch (error) {
+      console.error('[Burst] Local script failed', error);
+    }
+  });
+})();`;
+}
+
+export function stripDefaultExport(code: string): string {
+  return code.replace(/^\s*export\s+default\s+/, '');
+}
+
 async function readStoredScripts(): Promise<LocalScript[]> {
   const extensionStorage = getExtensionStorage();
 

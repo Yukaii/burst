@@ -27,8 +27,8 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Extension dashboard page with CodeMirror-based local script editing/testing/management and editor font controls.
 - Local script persistence through extension local storage, including first-run seed data, draft creation, and explicit saves.
 - Enabled local scripts are surfaced in the webpage command palette ahead of registry suggestions when their match pattern fits the current host.
-- Enabled local scripts execute from the command palette in the content-script context with page, selection, URL, title, window, location, and navigator context.
-- Dashboard syntax test action for the current script source.
+- Enabled local scripts execute through Chrome's `userScripts` API and are triggered from the command palette without runtime string evaluation.
+- Dashboard source check confirms the required `export default function run(context) { ... }` shape without using `eval`.
 - Registry website scaffold with marketplace search, command rows, audit labels, and a selected-command inspector.
 - Root scripts for separate extension and registry development/build flows.
 
@@ -49,8 +49,8 @@ The registry website should live outside WXT entrypoints because it is a normal 
 ## Known Tradeoffs
 
 - Seed local scripts are copied into storage on first launch so the dashboard has useful starter data; after that, the dashboard reads and writes the stored records.
-- Local script execution is functional but not yet sandboxed behind explicit runtime permissions.
-- Dashboard Test currently performs syntax validation only. It does not execute code in a page-context sandbox yet.
+- Local script execution is functional but not yet gated by explicit per-capability permission grants.
+- Dashboard Test validates the expected export shape only. Full syntax diagnostics should come from a dedicated parser or registration dry run.
 - The dashboard bundle is larger after adding CodeMirror 6. It is isolated to the dashboard page, not the content script.
 
 ## Verification Baseline

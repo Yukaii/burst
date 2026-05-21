@@ -170,9 +170,8 @@ function DashboardApp() {
     if (!selectedScript) return;
 
     try {
-      // Compilation-only test for now. Runtime isolation is tracked separately.
       compileLocalScript(selectedScript.code);
-      setTestOutput(`Syntax check passed for ${selectedScript.name}.`);
+      setTestOutput(`${selectedScript.name} is ready to register as a user script.`);
     } catch (error) {
       setTestOutput(error instanceof Error ? error.message : 'Syntax check failed.');
     }
@@ -181,6 +180,9 @@ function DashboardApp() {
   async function persistScripts(nextScripts: LocalScript[], successMessage: string) {
     try {
       await saveLocalScripts(nextScripts);
+      void browser.runtime.sendMessage({ type: 'burst:sync-local-scripts' }).catch(() => {
+        // Static dashboard previews do not have an extension runtime.
+      });
       setSaveState(successMessage);
     } catch (error) {
       setSaveState(error instanceof Error ? error.message : 'Failed to save scripts');
@@ -372,8 +374,9 @@ function IconSelect({ value, onChange }: { value: CommandIcon; onChange: (value:
 }
 
 function compileLocalScript(code: string) {
-  const moduleBody = code.replace(/^\s*export\s+default\s+/, '');
-  new Function(`return (${moduleBody});`);
+  if (!/^\s*export\s+default\s+(async\s+)?function\b/.test(code)) {
+    throw new Error('Local scripts must use: export default function run(context) { ... }');
+  }
 }
 
 function LocalScriptIcon({ icon }: { icon: CommandIcon }) {

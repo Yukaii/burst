@@ -4,7 +4,8 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   manifest: {
-    permissions: ['storage'],
+    permissions: ['storage', 'userScripts'],
+    host_permissions: ['<all_urls>'],
     commands: {
       'toggle-palette': {
         suggested_key: {
