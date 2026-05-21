@@ -8,6 +8,10 @@ import {
   getRegistryCommand,
   getAuditReport,
   getPublisherProfile,
+  getCurrentUser,
+  loginSimulatedUser,
+  logout,
+  publishCommand,
   AuditReport,
   PublisherProfile,
   registryCommandsData,
@@ -46,10 +50,22 @@ export function RegistryApp() {
   const [inspectorLoading, setInspectorLoading] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<'details' | 'audit' | 'publisher'>('details');
 
-  // New simulated authentication and sync states
+  // Authentication and sync states
   const [currentUser, setCurrentUser] = useState(mockProfiles[0]);
   const [installedCommandIds, setInstalledCommandIds] = useState<string[]>([]);
   const [pinnedCommandIds, setPinnedCommandIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const user = await getCurrentUser();
+        setCurrentUser(user);
+      } catch (err) {
+        console.error('Failed to fetch user session:', err);
+      }
+    }
+    void fetchUser();
+  }, []);
 
   const validManifests = sampleManifestValidationResults.filter((sample) => sample.result.ok).length;
 
@@ -149,6 +165,17 @@ export function RegistryApp() {
     };
   }, []);
 
+  const handleProfileSwitch = async (profile: typeof mockProfiles[number]) => {
+    try {
+      const res = await loginSimulatedUser(profile.handle);
+      if (res.ok) {
+        setCurrentUser(res.user);
+      }
+    } catch (err) {
+      console.error('Failed to switch profile:', err);
+    }
+  };
+
   const handleInstall = (command: BurstCommand) => {
     window.postMessage({ type: 'burst:install-command', command }, '*');
   };
@@ -199,7 +226,7 @@ export function RegistryApp() {
               <button
                 key={profile.handle}
                 className={`auth-profile-btn ${currentUser.handle === profile.handle ? 'is-active' : ''}`}
-                onClick={() => setCurrentUser(profile)}
+                onClick={() => handleProfileSwitch(profile)}
                 type="button"
               >
                 <span className="profile-avatar">{profile.avatarInitials}</span>
@@ -723,7 +750,7 @@ function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: PublishPanel
 
   const auditResult = analyzeScriptCode(code, parsedMatchPatterns);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
     if (!title.trim()) newErrors.title = 'Title is required';
@@ -779,33 +806,27 @@ function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: PublishPanel
       if (!finalPermissions.includes('Network access')) finalPermissions.push('Network access');
     }
 
-    const newCommand: BurstCommand = {
-      id,
-      title,
-      description,
-      website,
-      matchPatterns: parsedMatchPatterns,
-      publisher: {
-        name: currentUser.name,
-        handle: currentUser.handle,
-        avatarInitials: currentUser.avatarInitials,
-      },
-      trustLevel,
-      risk: riskLevel,
-      permissions: finalPermissions.length > 0 ? finalPermissions : ['None'],
-      sourceUrl,
-      installs: 0,
-      rating: 5.0,
-      icon: { type: 'initials', value: title.substring(0, 2).toUpperCase() },
-    };
-
-    registryCommandsData.unshift(newCommand);
-    publishedScriptCodes.set(id, code);
-    if (profileDetails) {
-      profileDetails.publishedCommandsCount += 1;
+    try {
+      const payload = {
+        id,
+        title,
+        description,
+        website,
+        matchPatterns: parsedMatchPatterns,
+        publisherHandle: currentUser.handle,
+        trustLevel,
+        risk: riskLevel,
+        permissions: finalPermissions.length > 0 ? finalPermissions : ['None'],
+        sourceUrl,
+        icon: { type: 'initials', value: title.substring(0, 2).toUpperCase() },
+        code,
+        version: '1.0.0',
+      };
+      const newCommand = await publishCommand(payload);
+      onPublishSuccess(newCommand);
+    } catch (err) {
+      setErrors({ form: err instanceof Error ? err.message : 'Failed to publish command' });
     }
-
-    onPublishSuccess(newCommand);
   };
 
   return (
@@ -816,6 +837,23 @@ function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: PublishPanel
       </div>
 
       <form onSubmit={handleSubmit} className="publish-form-layout">
+        {errors.form && (
+          <div
+            className="form-error-banner"
+            style={{
+              color: 'var(--red)',
+              background: 'rgba(239, 68, 68, 0.1)',
+              padding: '12px',
+              borderRadius: '6px',
+              marginBottom: '16px',
+              fontSize: '14px',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              gridColumn: 'span 2',
+            }}
+          >
+            {errors.form}
+          </div>
+        )}
         <div className="form-main">
           <div className="form-group-row">
             <div className="form-field title-field">
