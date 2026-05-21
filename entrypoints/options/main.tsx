@@ -173,9 +173,19 @@ function OptionsApp() {
               </p>
             </div>
             <div className="setting-control">
-              <a href="chrome://extensions/shortcuts" target="_blank" rel="noopener noreferrer" className="btn-link">
+              <button
+                onClick={() => {
+                  if (typeof browser !== 'undefined' && browser.tabs?.create) {
+                    void browser.tabs.create({ url: 'chrome://extensions/shortcuts' });
+                  } else {
+                    window.open('chrome://extensions/shortcuts', '_blank');
+                  }
+                }}
+                type="button"
+                className="btn-link"
+              >
                 Configure Keybinds
-              </a>
+              </button>
             </div>
           </div>
 
