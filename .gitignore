@@ -27,3 +27,5 @@ web-ext.config.ts
 
 # App builds
 apps/*/dist
+docs/.vitepress/dist
+docs/.vitepress/cache

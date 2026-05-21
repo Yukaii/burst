@@ -63,6 +63,9 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - GitHub Raw manifest parser fetching and installing commands from external git repositories.
 - Unified Update Checker dashboard panel checking versions and providing one-click updates for official and custom Git registry scripts.
 - Sleek macOS-inspired visual redesign across all user-facing pages (Popup, Options, Dashboard, Shadow DOM Command Palette, and Registry Web App) featuring dynamic light/dark/system theme propagation, CodeMirror theme synchronization, glassmorphism, and keycap badges.
+- Dashboard layout redesigned into a split-pane IDE workspace resolving editor overlapping issues.
+- Refactored dropdown controls like IconSelect and LocalScriptIcon using Tailwind CSS to emulate premium Shadcn UI select patterns.
+- Expanded VitePress documentation with comprehensive guides covering decentralized Git registries, SQLite schemas, REST API endpoints, and a new Project Architecture & Developer Guide.
 
 ## In Progress
 

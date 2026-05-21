@@ -810,41 +810,55 @@ function DashboardApp() {
 
   if (loadState === 'loading') {
     return (
-      <main className="dashboard-shell is-loading">
-        <section className="empty-dashboard">Loading local scripts</section>
+      <main className="h-screen w-screen flex items-center justify-center bg-background text-foreground">
+        <section className="text-sm font-semibold tracking-wider text-muted-foreground uppercase animate-pulse">
+          Loading local scripts...
+        </section>
       </main>
     );
   }
 
   if (loadState === 'error' || !selectedScript) {
     return (
-      <main className="dashboard-shell is-loading">
-        <section className="empty-dashboard">{saveState}</section>
+      <main className="h-screen w-screen flex items-center justify-center bg-background text-foreground">
+        <section className="text-sm font-semibold text-destructive uppercase">
+          {saveState}
+        </section>
       </main>
     );
   }
 
   return (
-    <main className="dashboard-shell">
-      <aside className="script-list" aria-label="Local scripts">
-        <header>
-          <img className="brand-mark" src={logoUrl} alt="Burst Logo" style={{ background: 'transparent' }} />
-          <div>
-            <h1>Burst</h1>
-            <p>Local scripts</p>
+    <main className="h-screen w-screen flex bg-background text-foreground overflow-hidden">
+      {/* Left Sidebar */}
+      <aside className="w-[280px] shrink-0 bg-card border-r border-border flex flex-col p-4 gap-4 overflow-hidden" aria-label="Local scripts">
+        <header className="flex items-center gap-3 pb-2 border-b border-border">
+          <img src={logoUrl} className="w-6 h-6 shrink-0" alt="Burst Logo" />
+          <div className="min-w-0">
+            <h1 className="text-sm font-semibold text-foreground tracking-tight leading-none">Burst</h1>
+            <p className="text-[11px] text-muted-foreground font-medium mt-1">Local scripts companion</p>
           </div>
         </header>
 
-        <div className="dashboard-tabs">
+        {/* Tab switch segmented control */}
+        <div className="flex rounded-lg bg-muted p-1 gap-1 border border-border shrink-0">
           <button
-            className={`tab-btn ${activeTab === 'editor' ? 'is-active' : ''}`}
+            className={`flex-1 py-1 text-[11px] font-semibold rounded-md cursor-pointer transition-colors text-center ${
+              activeTab === 'editor'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
             type="button"
             onClick={() => setActiveTab('editor')}
           >
             Local Editor
           </button>
           <button
-            className={`tab-btn ${activeTab === 'git-updates' ? 'is-active' : ''}`}
+            className={`flex-1 py-1 text-[11px] font-semibold rounded-md cursor-pointer transition-colors text-center ${
+              activeTab === 'git-updates'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
             type="button"
             onClick={() => setActiveTab('git-updates')}
           >
@@ -853,325 +867,488 @@ function DashboardApp() {
         </div>
 
         {activeTab === 'editor' ? (
-          <>
-            <button className="new-script-button" type="button" onClick={createDraft}>
+          <div className="flex-1 flex flex-col min-h-0 gap-3">
+            <button
+              className="w-full inline-flex items-center justify-center rounded-md text-xs font-semibold h-8 bg-primary text-primary-foreground shadow hover:bg-primary/90 cursor-pointer transition-colors"
+              type="button"
+              onClick={createDraft}
+            >
               New script
             </button>
 
-            <div className="script-list-actions" aria-label="Script backup actions">
-              <button type="button" onClick={exportScripts}>
+            <div className="flex gap-2 shrink-0" aria-label="Script backup actions">
+              <button
+                type="button"
+                onClick={exportScripts}
+                className="flex-1 inline-flex items-center justify-center rounded-md text-xs font-semibold h-7 bg-secondary text-secondary-foreground border border-input shadow-sm hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors"
+              >
                 Export
               </button>
-              <button type="button" onClick={() => importInputRef.current?.click()}>
+              <button
+                type="button"
+                onClick={() => importInputRef.current?.click()}
+                className="flex-1 inline-flex items-center justify-center rounded-md text-xs font-semibold h-7 bg-secondary text-secondary-foreground border border-input shadow-sm hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors"
+              >
                 Import
               </button>
               <input
                 ref={importInputRef}
-                className="script-import-input"
+                className="hidden"
                 type="file"
                 accept="application/json"
                 onChange={(event) => void importScripts(event)}
               />
             </div>
 
-            <div className="script-rows">
+            {/* Script list scrollable content */}
+            <div className="flex-1 overflow-y-auto flex flex-col gap-1 pr-1">
               {scripts.map((script) => (
                 <button
-                  className={`script-row ${script.id === selectedId ? 'is-active' : ''}`}
+                  className={`w-full flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-colors text-left border border-transparent hover:bg-accent/40 ${
+                    script.id === selectedId
+                      ? 'bg-accent border-border'
+                      : ''
+                  }`}
                   key={script.id}
                   type="button"
                   onClick={() => setSelectedId(script.id)}
                 >
                   <LocalScriptIcon icon={script.icon} />
-                  <span className="script-copy">
-                    <strong>{script.name}</strong>
-                    <em>{script.matchPattern} · {script.status}</em>
+                  <span className="min-w-0 flex-1 flex flex-col gap-0.5">
+                    <strong className="text-xs font-semibold text-foreground truncate block">{script.name}</strong>
+                    <em className="text-[10px] text-muted-foreground truncate block not-italic font-medium">
+                      {script.matchPattern} · {script.status}
+                    </em>
                   </span>
                 </button>
               ))}
             </div>
-          </>
+          </div>
         ) : (
-          <>
+          <div className="flex-1 flex flex-col min-h-0 gap-3">
             <button
-              className={`updates-row ${selectedGitView === 'updates' ? 'is-active' : ''}`}
+              className={`w-full flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-colors text-left border border-transparent hover:bg-accent/40 ${
+                selectedGitView === 'updates' ? 'bg-accent border-border' : ''
+              }`}
               type="button"
               onClick={() => setSelectedGitView('updates')}
             >
-              <strong>Updates Checker</strong>
+              <span className="text-xs font-semibold text-foreground">Updates Checker</span>
               {availableUpdates.length > 0 && (
-                <span className="updates-badge">{availableUpdates.length}</span>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-primary text-primary-foreground">
+                  {availableUpdates.length}
+                </span>
               )}
             </button>
 
-            <div className="sidebar-section-title">Git Registries</div>
+            <div className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase pt-2 shrink-0">
+              Git Registries
+            </div>
 
-            <form className="add-registry-form" onSubmit={(e) => void handleAddRegistry(e)}>
-              <label>Add GitHub Repository</label>
-              <div className="input-group">
+            <form
+              className="flex flex-col gap-2 p-2.5 rounded-lg border border-border bg-muted/40 shrink-0"
+              onSubmit={(e) => void handleAddRegistry(e)}
+            >
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Add GitHub Repository
+              </label>
+              <div className="flex gap-2">
                 <input
                   type="text"
                   placeholder="owner/repo"
                   value={newRepoUrl}
                   onChange={(e) => setNewRepoUrl(e.target.value)}
+                  className="flex-1 flex h-8 rounded-md border border-input bg-background px-2.5 py-1 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none"
                 />
-                <button type="submit">Add</button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center rounded-md text-xs font-semibold h-8 bg-secondary text-secondary-foreground border border-input hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors px-2.5"
+                >
+                  Add
+                </button>
               </div>
-              {addError && <span className="add-registry-error">{addError}</span>}
+              {addError && <span className="text-[10px] text-destructive font-medium mt-0.5">{addError}</span>}
             </form>
 
-            <div className="script-rows">
+            <div className="flex-1 overflow-y-auto flex flex-col gap-1 pr-1">
               {gitRegistries.map((reg) => (
                 <button
-                  className={`script-row ${reg.id === selectedGitView ? 'is-active' : ''}`}
+                  className={`w-full flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-colors text-left border border-transparent hover:bg-accent/40 ${
+                    reg.id === selectedGitView ? 'bg-accent border-border' : ''
+                  }`}
                   key={reg.id}
                   type="button"
                   onClick={() => setSelectedGitView(reg.id)}
                 >
-                  <span className="script-icon">G</span>
-                  <span className="script-copy">
-                    <strong>{reg.name}</strong>
-                    <em>{reg.branch} · {reg.commands.length} commands</em>
+                  <span className="w-7 h-7 flex items-center justify-center rounded-md bg-secondary text-secondary-foreground border border-border text-xs font-bold shrink-0">
+                    G
+                  </span>
+                  <span className="min-w-0 flex-1 flex flex-col gap-0.5">
+                    <strong className="text-xs font-semibold text-foreground truncate block">{reg.name}</strong>
+                    <em className="text-[10px] text-muted-foreground truncate block not-italic font-medium">
+                      {reg.branch} · {reg.commands.length} commands
+                    </em>
                   </span>
                 </button>
               ))}
             </div>
-          </>
+          </div>
         )}
       </aside>
 
+      {/* Main Panel Area */}
       {activeTab === 'editor' ? (
-        <section className="editor-panel" aria-label="Script editor">
-          <header className="editor-header">
-            <div>
-              <span>{selectedScript.status}</span>
-              <h2>{selectedScript.name}</h2>
+        <section className="flex-1 flex flex-col h-full w-full bg-background text-foreground overflow-hidden" aria-label="Script editor">
+          {/* Header Toolbar */}
+          <header className="flex items-center justify-between border-b border-border px-6 py-4 bg-card">
+            <div className="flex items-center gap-3">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground px-2 py-0.5 rounded-full bg-secondary border border-border font-bold">
+                {selectedScript.status}
+              </span>
+              <h2 className="text-base font-semibold tracking-tight text-foreground truncate max-w-[300px]">
+                {selectedScript.name}
+              </h2>
             </div>
-            <div className="editor-actions">
-              <span className="save-state">{saveState}</span>
-              <button type="button" onClick={testSelectedScript}>Test</button>
-              <button type="button" onClick={saveSelectedScript}>Save</button>
+            <div className="flex items-center gap-3">
+              {saveState && (
+                <span className="text-xs text-muted-foreground animate-fade-in truncate max-w-[200px] font-medium">
+                  {saveState}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={testSelectedScript}
+                className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-3 py-1.5 bg-secondary text-secondary-foreground border border-input shadow-sm hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors"
+              >
+                Test
+              </button>
+              <button
+                type="button"
+                onClick={saveSelectedScript}
+                className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-3 py-1.5 bg-primary text-primary-foreground shadow hover:bg-primary/95 cursor-pointer transition-colors"
+              >
+                Save
+              </button>
             </div>
           </header>
 
-          <div className="meta-grid">
-            <label>
-              Name
-              <input
-                value={selectedScript.name}
-                onChange={(event) => updateSelectedScript({ name: event.target.value })}
-              />
-            </label>
-            <label>
-              Match
-              <input
-                value={selectedScript.matchPattern}
-                onChange={(event) => updateSelectedScript({ matchPattern: event.target.value })}
-              />
-            </label>
-            <IconSelect
-              value={selectedScript.icon}
-              onChange={(icon) => updateSelectedScript({ icon })}
-            />
-          </div>
+          {/* IDE Layout Workspace (Split Columns) */}
+          <div className="flex-1 flex min-h-0 overflow-hidden divide-x divide-border">
+            {/* Left Workspace Panel (60%): metadata inputs and source editor */}
+            <div className="flex-[3] flex flex-col min-w-0 h-full overflow-hidden bg-background">
+              {/* Metadata Inputs */}
+              <div className="grid grid-cols-3 gap-4 p-4 border-b border-border bg-card/20 shrink-0">
+                <label className="flex flex-col gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Name
+                  <input
+                    value={selectedScript.name}
+                    onChange={(event) => updateSelectedScript({ name: event.target.value })}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Match Pattern
+                  <input
+                    value={selectedScript.matchPattern}
+                    onChange={(event) => updateSelectedScript({ matchPattern: event.target.value })}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </label>
+                <IconSelect
+                  value={selectedScript.icon}
+                  onChange={(icon) => updateSelectedScript({ icon })}
+                />
+              </div>
 
-          <section className="script-controls" aria-label="Script controls">
-            <div>
-              <span>Status</span>
-              <div className="status-toggle" role="group" aria-label="Script status">
-                {(['enabled', 'disabled', 'draft'] as const).map((status) => (
+              {/* Source editor workspace */}
+              <div className="flex-1 flex flex-col min-h-0 p-4">
+                <div className="flex items-center justify-between pb-2">
+                  <span className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">Source Code</span>
+
+                  {/* Status pill group */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Status:</span>
+                    <div className="inline-flex items-center rounded-md border border-border p-0.5 bg-muted">
+                      {(['enabled', 'disabled', 'draft'] as const).map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => void setSelectedScriptStatus(status)}
+                          className={`px-2.5 py-0.5 rounded text-xs font-semibold cursor-pointer transition-colors ${
+                            selectedScript.status === status
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          {status}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Code Editor Container */}
+                <div className="flex-1 min-h-0 border border-border rounded-lg overflow-hidden bg-card/20 shadow-inner code-editor">
+                  <CodeMirror
+                    value={selectedScript.code}
+                    basicSetup={{
+                      bracketMatching: true,
+                      closeBrackets: true,
+                      defaultKeymap: true,
+                      foldGutter: false,
+                      highlightActiveLine: true,
+                      highlightActiveLineGutter: true,
+                      lineNumbers: true,
+                    }}
+                    extensions={[javascript({ jsx: true, typescript: true }), editorTheme]}
+                    height="100%"
+                    theme={activeTheme}
+                    onChange={(code) => updateSelectedScript({ code })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right Panel Workspace (40%): Settings, Security Audit, and Test Harness */}
+            <div className="flex-[2] flex flex-col min-w-0 h-full overflow-y-auto divide-y divide-border bg-card/5">
+              {/* Settings Dropdowns */}
+              <section className="p-4 flex flex-col gap-3" aria-label="Editor settings">
+                <h3 className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">Editor Options</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="flex flex-col gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Font Family
+                    <select
+                      value={editorFontFamily}
+                      onChange={(event) => setEditorFontFamily(event.target.value)}
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      {fontFamilyOptions.map((option) => (
+                        <option key={option.label} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Font Size
+                    <select
+                      value={editorFontSize}
+                      onChange={(event) => setEditorFontSize(Number(event.target.value))}
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      {fontSizeOptions.map((size) => (
+                        <option key={size} value={size}>
+                          {size}px
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </section>
+
+              {/* Static Security Audit */}
+              {staticAuditReport && (
+                <section className="p-4 flex flex-col gap-3" aria-label="Static security audit report">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">Static Security Audit</h3>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                      staticAuditReport.status === 'pass'
+                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                        : staticAuditReport.status === 'warning'
+                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                        : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                    }`}>
+                      {staticAuditReport.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground font-medium">{staticAuditReport.summary}</p>
+                  
+                  {/* Audit details grid list */}
+                  <div className="flex flex-col gap-2 mt-1">
+                    <div className="flex gap-3 text-xs bg-muted/30 p-2.5 rounded-md border border-border">
+                      <span className={`font-bold shrink-0 ${
+                        staticAuditReport.checks.hostScope.status === 'pass' ? 'text-emerald-500' : 'text-amber-500'
+                      }`}>
+                        {staticAuditReport.checks.hostScope.status === 'pass' ? '✓' : '⚠'}
+                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <strong className="text-foreground font-semibold">Host Scope & Match Patterns</strong>
+                        <span className="text-muted-foreground text-[11px] font-medium leading-relaxed">
+                          {staticAuditReport.checks.hostScope.detail}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 text-xs bg-muted/30 p-2.5 rounded-md border border-border">
+                      <span className={`font-bold shrink-0 ${
+                        staticAuditReport.checks.permissions.status === 'pass' ? 'text-emerald-500' : 'text-amber-500'
+                      }`}>
+                        {staticAuditReport.checks.permissions.status === 'pass' ? '✓' : '⚠'}
+                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <strong className="text-foreground font-semibold">Sensitive APIs & Permissions</strong>
+                        <span className="text-muted-foreground text-[11px] font-medium leading-relaxed">
+                          {staticAuditReport.checks.permissions.detail}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 text-xs bg-muted/30 p-2.5 rounded-md border border-border">
+                      <span className={`font-bold shrink-0 ${
+                        staticAuditReport.checks.remoteCode.status === 'pass' ? 'text-emerald-500' : 'text-amber-500'
+                      }`}>
+                        {staticAuditReport.checks.remoteCode.status === 'pass' ? '✓' : '⚠'}
+                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <strong className="text-foreground font-semibold">Remote Code & Injection</strong>
+                        <span className="text-muted-foreground text-[11px] font-medium leading-relaxed">
+                          {staticAuditReport.checks.remoteCode.detail}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 text-xs bg-muted/30 p-2.5 rounded-md border border-border">
+                      <span className={`font-bold shrink-0 ${
+                        staticAuditReport.checks.networkAccess.status === 'pass' ? 'text-emerald-500' : 'text-amber-500'
+                      }`}>
+                        {staticAuditReport.checks.networkAccess.status === 'pass' ? '✓' : '⚠'}
+                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <strong className="text-foreground font-semibold">Network Access</strong>
+                        <span className="text-muted-foreground text-[11px] font-medium leading-relaxed">
+                          {staticAuditReport.checks.networkAccess.detail}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 text-xs bg-muted/30 p-2.5 rounded-md border border-border">
+                      <span className={`font-bold shrink-0 ${
+                        staticAuditReport.checks.obfuscation.status === 'pass' ? 'text-emerald-500' : 'text-amber-500'
+                      }`}>
+                        {staticAuditReport.checks.obfuscation.status === 'pass' ? '✓' : '⚠'}
+                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <strong className="text-foreground font-semibold">Code Quality & Obfuscation Heuristics</strong>
+                        <span className="text-muted-foreground text-[11px] font-medium leading-relaxed">
+                          {staticAuditReport.checks.obfuscation.detail}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Test Harness Panel */}
+              <section className="p-4 flex flex-col gap-3" aria-label="Test harness">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">Test Harness</h3>
                   <button
-                    className={selectedScript.status === status ? 'is-active' : ''}
-                    key={status}
                     type="button"
-                    onClick={() => void setSelectedScriptStatus(status)}
+                    onClick={testSelectedScript}
+                    className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-2.5 py-1 bg-primary text-primary-foreground shadow hover:bg-primary/90 cursor-pointer transition-colors"
                   >
-                    {status}
+                    Run Test
                   </button>
-                ))}
-              </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap text-xs font-bold text-muted-foreground">
+                  <span className="text-[10px] tracking-wider uppercase">Capabilities:</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {detectedCapabilities.length === 0 ? (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">none</span>
+                    ) : (
+                      detectedCapabilities.map((cap) => (
+                        <span key={cap} className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-500 border border-sky-500/20">
+                          {cap}
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Mock input page properties */}
+                <div className="flex flex-col gap-2 mt-1">
+                  <label className="flex flex-col gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Mock URL
+                    <input
+                      type="text"
+                      value={mockUrl}
+                      onChange={(e) => setMockUrl(e.target.value)}
+                      placeholder="https://example.com"
+                      className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground shadow-sm focus-visible:outline-none"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Mock Title
+                    <input
+                      type="text"
+                      value={mockTitle}
+                      onChange={(e) => setMockTitle(e.target.value)}
+                      placeholder="Page Title"
+                      className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground shadow-sm focus-visible:outline-none"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Mock Selection
+                    <input
+                      type="text"
+                      value={mockSelection}
+                      onChange={(e) => setMockSelection(e.target.value)}
+                      placeholder="Selected text"
+                      className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground shadow-sm focus-visible:outline-none"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Mock DOM HTML
+                    <textarea
+                      value={mockHtml}
+                      onChange={(e) => setMockHtml(e.target.value)}
+                      placeholder="<div>Mock page content</div>"
+                      rows={2}
+                      className="flex w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs text-foreground shadow-sm focus-visible:outline-none font-mono"
+                    />
+                  </label>
+                </div>
+
+                {/* Console Outputs */}
+                <div className="flex flex-col gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-2">
+                  Console & Execution Logs
+                  <pre className="terminal-logs p-3 rounded-md bg-zinc-950 text-zinc-200 border border-zinc-800 font-mono text-[11px] leading-relaxed overflow-x-auto max-h-[160px] overflow-y-auto whitespace-pre-wrap select-text shadow-inner">
+                    {testOutput || 'No execution logs.'}
+                  </pre>
+                </div>
+              </section>
+
+              {/* Danger Section */}
+              <section className="p-4 flex flex-col gap-3" aria-label="Script deletion">
+                <h3 className="text-[10px] font-bold text-destructive tracking-wider uppercase">Danger Zone</h3>
+                <div className="flex items-center justify-between p-3 border border-destructive/20 bg-destructive/5 rounded-lg">
+                  <div className="flex flex-col gap-0.5">
+                    <strong className="text-xs text-foreground font-semibold">Delete Local Script</strong>
+                    <span className="text-[10px] text-muted-foreground">This action cannot be undone.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void deleteSelectedScript()}
+                    className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-3 py-1.5 bg-destructive text-destructive-foreground shadow hover:bg-destructive/90 cursor-pointer transition-colors border border-destructive/20"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </section>
             </div>
-            <button className="danger-button" type="button" onClick={() => void deleteSelectedScript()}>
-              Delete
-            </button>
-          </section>
-
-          <section className="editor-settings" aria-label="Editor settings">
-            <label>
-              Font
-              <select value={editorFontFamily} onChange={(event) => setEditorFontFamily(event.target.value)}>
-                {fontFamilyOptions.map((option) => (
-                  <option key={option.label} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Size
-              <select value={editorFontSize} onChange={(event) => setEditorFontSize(Number(event.target.value))}>
-                {fontSizeOptions.map((size) => (
-                  <option key={size} value={size}>
-                    {size}px
-                  </option>
-                ))}
-              </select>
-            </label>
-          </section>
-
-          <label className="code-editor">
-            Source
-            <CodeMirror
-              value={selectedScript.code}
-              basicSetup={{
-                bracketMatching: true,
-                closeBrackets: true,
-                defaultKeymap: true,
-                foldGutter: false,
-                highlightActiveLine: true,
-                highlightActiveLineGutter: true,
-                lineNumbers: true,
-              }}
-              extensions={[javascript({ jsx: true, typescript: true }), editorTheme]}
-              height="100%"
-              theme={activeTheme}
-              onChange={(code) => updateSelectedScript({ code })}
-            />
-          </label>
-
-          {staticAuditReport && (
-            <section className="static-audit-panel" aria-label="Static security audit report">
-              <div className="audit-header">
-                <h3>Static Security Audit</h3>
-                <span className={`audit-badge is-${staticAuditReport.status}`}>
-                  {staticAuditReport.status}
-                </span>
-              </div>
-              <p className="audit-summary">{staticAuditReport.summary}</p>
-              <div className="audit-checks-grid">
-                <div className="audit-check-item">
-                  <span className={`check-icon is-${staticAuditReport.checks.hostScope.status}`}>
-                    {staticAuditReport.checks.hostScope.status === 'pass' ? '✓' : staticAuditReport.checks.hostScope.status === 'warning' ? '⚠' : '✗'}
-                  </span>
-                  <div className="check-details">
-                    <strong>Host Scope & Match Patterns</strong>
-                    <span>{staticAuditReport.checks.hostScope.detail}</span>
-                  </div>
-                </div>
-                <div className="audit-check-item">
-                  <span className={`check-icon is-${staticAuditReport.checks.permissions.status}`}>
-                    {staticAuditReport.checks.permissions.status === 'pass' ? '✓' : staticAuditReport.checks.permissions.status === 'warning' ? '⚠' : '✗'}
-                  </span>
-                  <div className="check-details">
-                    <strong>Sensitive APIs & Permissions</strong>
-                    <span>{staticAuditReport.checks.permissions.detail}</span>
-                  </div>
-                </div>
-                <div className="audit-check-item">
-                  <span className={`check-icon is-${staticAuditReport.checks.remoteCode.status}`}>
-                    {staticAuditReport.checks.remoteCode.status === 'pass' ? '✓' : staticAuditReport.checks.remoteCode.status === 'warning' ? '⚠' : '✗'}
-                  </span>
-                  <div className="check-details">
-                    <strong>Remote Code & Injection</strong>
-                    <span>{staticAuditReport.checks.remoteCode.detail}</span>
-                  </div>
-                </div>
-                <div className="audit-check-item">
-                  <span className={`check-icon is-${staticAuditReport.checks.networkAccess.status}`}>
-                    {staticAuditReport.checks.networkAccess.status === 'pass' ? '✓' : staticAuditReport.checks.networkAccess.status === 'warning' ? '⚠' : '✗'}
-                  </span>
-                  <div className="check-details">
-                    <strong>Network Access</strong>
-                    <span>{staticAuditReport.checks.networkAccess.detail}</span>
-                  </div>
-                </div>
-                <div className="audit-check-item">
-                  <span className={`check-icon is-${staticAuditReport.checks.obfuscation.status}`}>
-                    {staticAuditReport.checks.obfuscation.status === 'pass' ? '✓' : staticAuditReport.checks.obfuscation.status === 'warning' ? '⚠' : '✗'}
-                  </span>
-                  <div className="check-details">
-                    <strong>Code Quality & Obfuscation Heuristics</strong>
-                    <span>{staticAuditReport.checks.obfuscation.detail}</span>
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-
-          <section className="test-harness" aria-label="Test harness">
-            <div className="harness-header">
-              <h3>Test Harness</h3>
-              <div className="harness-capabilities">
-                <span>Capabilities:</span>
-                <div className="capability-list">
-                  {detectedCapabilities.length === 0 ? (
-                    <span className="capability-tag none">none</span>
-                  ) : (
-                    detectedCapabilities.map((cap) => (
-                      <span key={cap} className="capability-tag">{cap}</span>
-                    ))
-                  )}
-                </div>
-              </div>
-              <button className="run-harness-button" type="button" onClick={testSelectedScript}>Run Test</button>
-            </div>
-
-            <div className="harness-grid">
-              <label>
-                Mock URL
-                <input
-                  type="text"
-                  value={mockUrl}
-                  onChange={(e) => setMockUrl(e.target.value)}
-                  placeholder="https://example.com"
-                />
-              </label>
-              <label>
-                Mock Title
-                <input
-                  type="text"
-                  value={mockTitle}
-                  onChange={(e) => setMockTitle(e.target.value)}
-                  placeholder="Page Title"
-                />
-              </label>
-              <label>
-                Mock Selection
-                <input
-                  type="text"
-                  value={mockSelection}
-                  onChange={(e) => setMockSelection(e.target.value)}
-                  placeholder="Selected text"
-                />
-              </label>
-            </div>
-
-            <div className="harness-dom-log">
-              <label className="harness-html-label">
-                Mock DOM HTML
-                <textarea
-                  value={mockHtml}
-                  onChange={(e) => setMockHtml(e.target.value)}
-                  placeholder="<div>Mock page content</div>"
-                />
-              </label>
-              <label className="harness-log-label">
-                Console & Execution Logs
-                <pre className="terminal-logs">{testOutput}</pre>
-              </label>
-            </div>
-          </section>
+          </div>
         </section>
       ) : selectedGitView === 'updates' ? (
-        <section className="update-checker-panel" aria-label="Update checker">
-          <header className="update-checker-header">
-            <div className="update-checker-info">
-              <h2>Unified Update Checker</h2>
-              <p>{updateStatusText}</p>
+        <section className="flex-1 flex flex-col h-full w-full bg-background text-foreground overflow-hidden" aria-label="Update checker">
+          <header className="flex items-center justify-between border-b border-border px-6 py-4 bg-card shrink-0">
+            <div>
+              <h2 className="text-base font-semibold tracking-tight text-foreground">Unified Update Checker</h2>
+              <p className="text-[11px] text-muted-foreground font-medium mt-1">{updateStatusText}</p>
             </div>
-            <div className="update-controls">
+            <div className="flex items-center gap-2">
               <button
-                className="check-updates-btn"
+                className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-3 py-1.5 bg-secondary text-secondary-foreground border border-input shadow-sm hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors disabled:opacity-50"
                 type="button"
                 disabled={isCheckingUpdates}
                 onClick={() => void checkUpdates()}
@@ -1180,7 +1357,7 @@ function DashboardApp() {
               </button>
               {availableUpdates.length > 0 && (
                 <button
-                  className="update-all-btn"
+                  className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-3 py-1.5 bg-primary text-primary-foreground shadow hover:bg-primary/95 cursor-pointer transition-colors"
                   type="button"
                   onClick={() => void handleUpdateAll()}
                 >
@@ -1190,56 +1367,52 @@ function DashboardApp() {
             </div>
           </header>
 
-          {availableUpdates.length === 0 ? (
-            <div className="no-updates-panel">
-              <svg
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <h4>All scripts up to date</h4>
-              <p>Click "Check for Updates" to scan official registry and git-based local scripts.</p>
-            </div>
-          ) : (
-            <div className="updates-grid">
-              {availableUpdates.map((update) => (
-                <div className="update-card" key={update.id}>
-                  <div className="card-icon">
-                    {update.type === 'official' ? 'R' : 'G'}
-                  </div>
-                  <div className="card-copy">
-                    <h4>{update.name}</h4>
-                    <div className="card-meta">
-                      <span className="card-badge">
-                        {update.type === 'official' ? 'Official Registry' : 'Git Registry'}
-                      </span>
-                      <span className="card-badge version-badge">
-                        Current: v{update.currentVersion}
-                      </span>
-                      <span className="card-badge update-version-badge">
-                        Latest: v{update.latestVersion}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    className="update-btn"
-                    type="button"
-                    onClick={() => void handleUpdateScript(update)}
-                  >
-                    Update
-                  </button>
+          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+            {availableUpdates.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-3 max-w-md mx-auto">
+                <div className="w-12 h-12 flex items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                  ✓
                 </div>
-              ))}
-            </div>
-          )}
+                <h4 className="text-sm font-semibold text-foreground">All scripts up to date</h4>
+                <p className="text-xs text-muted-foreground font-medium">
+                  All installed registry commands and git-based scripts are at the latest available version.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {availableUpdates.map((update) => (
+                  <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card/40 shadow-sm gap-4" key={update.id}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 flex items-center justify-center rounded-md bg-secondary text-secondary-foreground border border-border text-[11px] font-bold shrink-0">
+                        {update.type === 'official' ? 'R' : 'G'}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-semibold text-foreground truncate block">{update.name}</h4>
+                        <div className="flex gap-2 mt-1 flex-wrap">
+                          <span className="px-1.5 py-0.5 rounded bg-muted text-[9px] font-bold text-muted-foreground border border-border uppercase">
+                            {update.type === 'official' ? 'Official' : 'Git'}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-muted text-[9px] font-bold text-muted-foreground border border-border">
+                            Installed: v{update.currentVersion}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-sky-500/10 text-[9px] font-bold text-sky-500 border border-sky-500/20">
+                            Latest: v{update.latestVersion}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-2.5 py-1.5 bg-primary text-primary-foreground shadow hover:bg-primary/95 cursor-pointer transition-colors"
+                      type="button"
+                      onClick={() => void handleUpdateScript(update)}
+                    >
+                      Update
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
       ) : (
         (() => {
@@ -1247,16 +1420,25 @@ function DashboardApp() {
           if (!reg) return null;
 
           return (
-            <section className="git-registry-detail" aria-label="Git registry detail">
-              <header className="registry-detail-header">
-                <div className="registry-detail-info">
-                  <h2>{reg.name}</h2>
-                  <p>
-                    Git Repository: <a href={reg.url} target="_blank" rel="noopener noreferrer">{reg.url}</a> (branch: {reg.branch})
+            <section className="flex-1 flex flex-col h-full w-full bg-background text-foreground overflow-hidden" aria-label="Git registry detail">
+              <header className="flex items-center justify-between border-b border-border px-6 py-4 bg-card shrink-0">
+                <div className="min-w-0">
+                  <h2 className="text-base font-semibold tracking-tight text-foreground truncate">{reg.name}</h2>
+                  <p className="text-[11px] text-muted-foreground font-medium mt-1 truncate">
+                    Git Repository:{' '}
+                    <a
+                      href={reg.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      {reg.url}
+                    </a>{' '}
+                    (branch: {reg.branch})
                   </p>
                 </div>
                 <button
-                  className="remove-registry-btn"
+                  className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-3 py-1.5 bg-destructive text-destructive-foreground border border-destructive/20 hover:bg-destructive/90 shadow-sm cursor-pointer transition-colors"
                   type="button"
                   onClick={() => void handleRemoveRegistry(reg.id)}
                 >
@@ -1264,40 +1446,58 @@ function DashboardApp() {
                 </button>
               </header>
 
-              <div className="registry-command-grid">
+              <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
                 {reg.commands.length === 0 ? (
-                  <p style={{ color: '#64748b', fontSize: '13px' }}>No commands found in this registry's manifest.</p>
+                  <p className="text-xs text-muted-foreground font-medium">No commands found in this registry's manifest.</p>
                 ) : (
-                  reg.commands.map((cmd) => {
-                    const isInstalled = scripts.some(s => s.originRegistryUrl === reg.url && s.originCommandId === cmd.id);
-                    const installedScript = scripts.find(s => s.originRegistryUrl === reg.url && s.originCommandId === cmd.id);
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {reg.commands.map((cmd) => {
+                      const isInstalled = scripts.some(
+                        (s) => s.originRegistryUrl === reg.url && s.originCommandId === cmd.id
+                      );
+                      const installedScript = scripts.find(
+                        (s) => s.originRegistryUrl === reg.url && s.originCommandId === cmd.id
+                      );
 
-                    return (
-                      <div className="registry-command-card" key={cmd.id}>
-                        <LocalScriptIcon icon={cmd.icon} />
-                        <div className="card-copy">
-                          <h4>{cmd.title}</h4>
-                          <p>{cmd.description}</p>
-                          <div className="card-meta">
-                            <span className="card-badge version-badge">v{cmd.version || '1.0.0'}</span>
-                            <span className="card-badge">{cmd.website}</span>
-                            {isInstalled && (
-                              <span className="card-badge" style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.2)', background: 'rgba(16, 185, 129, 0.05)' }}>
-                                Installed v{installedScript?.version || '1.0.0'}
-                              </span>
-                            )}
+                      return (
+                        <div className="flex items-start justify-between p-4 rounded-xl border border-border bg-card/40 shadow-sm gap-4" key={cmd.id}>
+                          <div className="flex items-start gap-3 min-w-0">
+                            <LocalScriptIcon icon={cmd.icon} />
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-semibold text-foreground truncate block">{cmd.title}</h4>
+                              <p className="text-[11px] text-muted-foreground font-medium mt-1 line-clamp-2 leading-relaxed">
+                                {cmd.description}
+                              </p>
+                              <div className="flex gap-2 mt-2 flex-wrap">
+                                <span className="px-1.5 py-0.5 rounded bg-muted text-[9px] font-bold text-muted-foreground border border-border">
+                                  v{cmd.version || '1.0.0'}
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-muted text-[9px] font-bold text-muted-foreground border border-border">
+                                  {cmd.website}
+                                </span>
+                                {isInstalled && (
+                                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-[9px] font-bold text-emerald-500 border border-emerald-500/20">
+                                    Installed v{installedScript?.version || '1.0.0'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
+                          <button
+                            className={`inline-flex items-center justify-center rounded-md text-xs font-semibold px-2.5 py-1.5 cursor-pointer transition-colors shadow-sm shrink-0 ${
+                              isInstalled
+                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-none hover:bg-emerald-500/20'
+                                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            }`}
+                            type="button"
+                            onClick={() => void installGitCommand(cmd, reg)}
+                          >
+                            {isInstalled ? 'Reinstall' : 'Install'}
+                          </button>
                         </div>
-                        <button
-                          className={`install-btn ${isInstalled ? 'is-installed' : ''}`}
-                          type="button"
-                          onClick={() => void installGitCommand(cmd, reg)}
-                        >
-                          {isInstalled ? 'Reinstall' : 'Install'}
-                        </button>
-                      </div>
-                    );
-                  })
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </section>
@@ -1313,47 +1513,56 @@ function IconSelect({ value, onChange }: { value: CommandIcon; onChange: (value:
   const selectedOption = iconOptions.find((option) => iconsMatch(option.icon, value)) ?? iconOptions[2];
 
   return (
-    <label className="icon-select">
+    <div className="flex flex-col gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider relative">
       Icon
-      <span className="icon-menu">
+      <div className="relative">
         <button
-          className="icon-trigger"
+          className="flex h-9 w-full items-center gap-3 rounded-md border border-input bg-background px-3 py-1.5 text-xs text-foreground shadow-sm hover:bg-accent/40 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-left"
           type="button"
           aria-haspopup="listbox"
           aria-expanded={open}
           onClick={() => setOpen((current) => !current)}
         >
           <LocalScriptIcon icon={selectedOption.icon} />
-          <span>
-            <strong>{selectedOption.label}</strong>
-            <em>{selectedOption.hint}</em>
+          <span className="min-w-0 flex-1 flex flex-col justify-center">
+            <strong className="text-xs font-semibold text-foreground truncate block">{selectedOption.label}</strong>
+            <em className="text-[9px] text-muted-foreground truncate block not-italic font-normal mt-0.5">{selectedOption.hint}</em>
           </span>
+          <span className="text-[10px] text-muted-foreground shrink-0 select-none">▼</span>
         </button>
-        {open ? (
-          <span className="icon-options" role="listbox">
-          {iconOptions.map((option) => (
-            <button
-              className={iconsMatch(option.icon, value) ? 'is-selected' : ''}
-              key={getIconKey(option.icon)}
-              type="button"
-              role="option"
-              aria-selected={iconsMatch(option.icon, value)}
-              onClick={() => {
-                onChange(option.icon);
-                setOpen(false);
-              }}
-            >
-              <LocalScriptIcon icon={option.icon} />
-              <span>
-                <strong>{option.label}</strong>
-                <em>{option.hint}</em>
-              </span>
-            </button>
-          ))}
-          </span>
-        ) : null}
-      </span>
-    </label>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+            <div className="absolute right-0 top-full mt-1.5 z-20 w-full min-w-[200px] max-h-[300px] overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md animate-fade-in" role="listbox">
+              {iconOptions.map((option) => {
+                const isSelected = iconsMatch(option.icon, value);
+                return (
+                  <button
+                    className={`w-full flex items-center gap-3 p-2 rounded cursor-pointer transition-colors text-left border border-transparent hover:bg-accent/40 ${
+                      isSelected ? 'bg-accent border-border' : ''
+                    }`}
+                    key={getIconKey(option.icon)}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => {
+                      onChange(option.icon);
+                      setOpen(false);
+                    }}
+                  >
+                    <LocalScriptIcon icon={option.icon} />
+                    <span className="min-w-0 flex-1 flex flex-col justify-center">
+                      <strong className="text-xs font-semibold text-foreground truncate block">{option.label}</strong>
+                      <em className="text-[9px] text-muted-foreground truncate block not-italic font-normal mt-0.5">{option.hint}</em>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1367,8 +1576,8 @@ function LocalScriptIcon({ icon }: { icon: CommandIcon }) {
   const iconUrl = getLocalIconUrl(icon);
 
   return (
-    <span className="script-icon">
-      {iconUrl ? <img src={iconUrl} alt="" /> : getLocalIconLabel(icon)}
+    <span className="w-7 h-7 flex items-center justify-center rounded-md bg-secondary text-secondary-foreground border border-border text-xs font-bold shrink-0 overflow-hidden">
+      {iconUrl ? <img src={iconUrl} alt="" className="w-full h-full object-cover" /> : getLocalIconLabel(icon)}
     </span>
   );
 }

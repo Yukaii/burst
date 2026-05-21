@@ -10,6 +10,7 @@ export default defineConfig({
       { text: 'Home', link: '/' },
       { text: 'API Guide', link: '/api-guide' },
       { text: 'Registry Toolchain', link: '/registry-toolchain' },
+      { text: 'Project Guide', link: '/project-guide' },
       { text: 'Project Status', link: '/project-status' },
       { text: 'Roadmap', link: '/roadmap' },
     ],
@@ -27,6 +28,7 @@ export default defineConfig({
         items: [
           { text: 'Extension API Guide', link: '/api-guide' },
           { text: 'Registry & Toolchain Guide', link: '/registry-toolchain' },
+          { text: 'Project Developer Guide', link: '/project-guide' },
         ],
       },
     ],
