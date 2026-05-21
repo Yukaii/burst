@@ -9,8 +9,7 @@ import {
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener((message: unknown) => {
     if (isSyncLocalScriptsMessage(message)) {
-      void registerEnabledLocalScripts();
-      return;
+      return registerEnabledLocalScripts();
     }
 
     if (!isManagementMessage(message)) return;
@@ -77,25 +76,41 @@ type UserScriptRegistration = {
   runAt: 'document_idle';
 };
 
+type LocalScriptRegistrationResult = {
+  ok: boolean;
+  count: number;
+  message?: string;
+};
+
 async function registerEnabledLocalScripts() {
   const userScripts = getUserScriptsApi();
   if (!userScripts) {
-    console.warn('[Burst] userScripts API is unavailable; local scripts cannot execute.');
-    return;
+    const message = 'Chrome userScripts API is unavailable. Enable the browser user scripts toggle, then reload the extension.';
+    console.warn(`[Burst] ${message}`);
+    return { ok: false, count: 0, message };
   }
 
-  const existingScripts = await userScripts.getScripts();
-  const existingIds = existingScripts
-    .map((script) => script.id)
-    .filter((id): id is string => Boolean(id?.startsWith('burst-local-script-')));
+  try {
+    const existingScripts = await userScripts.getScripts();
+    const existingIds = existingScripts
+      .map((script) => script.id)
+      .filter((id): id is string => Boolean(id?.startsWith('burst-local-script-')));
 
-  if (existingIds.length > 0) {
-    await userScripts.unregister({ ids: existingIds });
-  }
+    if (existingIds.length > 0) {
+      await userScripts.unregister({ ids: existingIds });
+    }
 
-  const scripts = await loadLocalScripts();
-  for (const script of scripts.filter((item) => item.status === 'enabled')) {
-    await registerLocalScript(userScripts, script);
+    const scripts = await loadLocalScripts();
+    const enabledScripts = scripts.filter((item) => item.status === 'enabled');
+    for (const script of enabledScripts) {
+      await registerLocalScript(userScripts, script);
+    }
+
+    return { ok: true, count: enabledScripts.length } satisfies LocalScriptRegistrationResult;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to register local scripts.';
+    console.error('[Burst] Failed to sync local scripts', error);
+    return { ok: false, count: 0, message } satisfies LocalScriptRegistrationResult;
   }
 }
 

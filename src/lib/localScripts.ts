@@ -35,8 +35,9 @@ export const seedLocalScripts: LocalScript[] = [
     status: 'enabled',
     updatedAt: '2026-05-20',
     code: `export default async function run({ page }) {
-  const branch = page.querySelector('[data-hotkey="w"]')?.textContent?.trim();
+  const branch = page.querySelector('[data-icv-name="Switch branches/tags"]')?.textContent?.trim();
   await navigator.clipboard.writeText(branch ?? location.href);
+  console.log("hello world")
 }`,
   },
   {
@@ -132,6 +133,10 @@ export function getLocalScriptEventName(scriptId: string): string {
   return `burst:run-local-script:${scriptId}`;
 }
 
+export function getLocalScriptResultEventName(scriptId: string): string {
+  return `burst:local-script-result:${scriptId}`;
+}
+
 export function getLocalScriptRegistrationId(scriptId: string): string {
   return `burst-local-script-${scriptId}`;
 }
@@ -147,11 +152,14 @@ export function getLocalScriptMatchPatterns(script: LocalScript): string[] {
 export function createLocalUserScriptCode(script: LocalScript): string {
   const functionSource = stripDefaultExport(script.code);
   const eventName = getLocalScriptEventName(script.id);
+  const resultEventName = getLocalScriptResultEventName(script.id);
 
   return `(() => {
   const run = ${functionSource};
-  window.addEventListener(${JSON.stringify(eventName)}, async () => {
+  document.addEventListener(${JSON.stringify(eventName)}, async () => {
+    const emit = (detail) => document.dispatchEvent(new CustomEvent(${JSON.stringify(resultEventName)}, { detail }));
     try {
+      emit({ status: 'started' });
       await run({
         page: document,
         window,
@@ -161,8 +169,10 @@ export function createLocalUserScriptCode(script: LocalScript): string {
         url: location.href,
         title: document.title
       });
+      emit({ status: 'complete' });
     } catch (error) {
       console.error('[Burst] Local script failed', error);
+      emit({ status: 'error', message: error instanceof Error ? error.message : String(error) });
     }
   });
 })();`;

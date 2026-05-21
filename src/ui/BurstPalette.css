@@ -70,6 +70,18 @@
   padding: 6px;
 }
 
+.burst-status {
+  margin: 4px 4px 6px;
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 9px;
+  background: rgba(14, 116, 144, 0.16);
+  color: #bae6fd;
+  font-size: 12px;
+  font-weight: 680;
+  line-height: 1.35;
+  padding: 10px 11px;
+}
+
 .burst-command {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) auto;

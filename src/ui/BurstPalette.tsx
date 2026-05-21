@@ -9,7 +9,12 @@ import {
   searchCommands,
   seedCommands,
 } from '@/src/lib/commands';
-import { getLocalScriptEventName, loadLocalScripts, localScriptToCommand } from '@/src/lib/localScripts';
+import {
+  getLocalScriptEventName,
+  getLocalScriptResultEventName,
+  loadLocalScripts,
+  localScriptToCommand,
+} from '@/src/lib/localScripts';
 
 type BurstPaletteProps = {
   pageUrl: string;
@@ -28,6 +33,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [localCommands, setLocalCommands] = useState<BurstCommand[]>([]);
+  const [statusMessage, setStatusMessage] = useState<string>();
   const host = useMemo(() => getHostFromUrl(pageUrl), [pageUrl]);
 
   const siteCommands = useMemo(
@@ -54,7 +60,11 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   async function runCommand(command: BurstCommand) {
     if (command.action === 'run-local-script') {
       if (command.localScriptId) {
-        runLocalScript(command.localScriptId);
+        const result = await runLocalScript(command.localScriptId);
+        if (!result.ok) {
+          setStatusMessage(result.message);
+          return;
+        }
       }
 
       setIsOpen(false);
@@ -83,6 +93,13 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     if (!isOpen) return;
 
     async function refreshLocalCommands() {
+      const syncResult = await browser.runtime
+        .sendMessage({ type: 'burst:sync-local-scripts' })
+        .catch(() => undefined);
+      if (isLocalScriptSyncError(syncResult)) {
+        setStatusMessage(syncResult.message);
+      }
+
       const scripts = await loadLocalScripts();
       setLocalCommands(
         scripts
@@ -128,6 +145,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
 
   useEffect(() => {
     setActiveIndex(0);
+    setStatusMessage(undefined);
   }, [query]);
 
   if (!isOpen) return null;
@@ -146,6 +164,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
         </label>
 
         <div className="burst-results" role="listbox" aria-label="Available commands">
+          {statusMessage ? <div className="burst-status">{statusMessage}</div> : null}
           {filteredCommands.length > 0 ? (
             filteredCommands.map((command, index) => (
               <button
@@ -176,8 +195,35 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   );
 }
 
-function runLocalScript(scriptId: string) {
-  window.dispatchEvent(new CustomEvent(getLocalScriptEventName(scriptId)));
+async function runLocalScript(scriptId: string): Promise<{ ok: boolean; message?: string }> {
+  const resultEventName = getLocalScriptResultEventName(scriptId);
+
+  const result = new Promise<{ ok: boolean; message?: string }>((resolve) => {
+    const timeout = window.setTimeout(() => {
+      document.removeEventListener(resultEventName, handleResult);
+      resolve({
+        ok: false,
+        message: 'Local script is registered for future page loads. Reload this page, then run it again.',
+      });
+    }, 700);
+
+    function handleResult(event: Event) {
+      const detail = event instanceof CustomEvent ? event.detail as { status?: string; message?: string } : {};
+      if (detail.status === 'started') return;
+
+      window.clearTimeout(timeout);
+      document.removeEventListener(resultEventName, handleResult);
+      resolve({
+        ok: detail.status === 'complete',
+        message: detail.message ?? 'Local script failed.',
+      });
+    }
+
+    document.addEventListener(resultEventName, handleResult);
+  });
+
+  document.dispatchEvent(new CustomEvent(getLocalScriptEventName(scriptId)));
+  return result;
 }
 
 function CommandIcon({ command }: { command: BurstCommand }) {
@@ -197,4 +243,15 @@ function CommandIcon({ command }: { command: BurstCommand }) {
 function isToggleMessage(message: unknown): message is { type: 'burst:toggle-palette' } {
   return typeof message === 'object' && message !== null && 'type' in message
     && message.type === 'burst:toggle-palette';
+}
+
+function isLocalScriptSyncError(
+  value: unknown,
+): value is { ok: false; message: string } {
+  return typeof value === 'object'
+    && value !== null
+    && 'ok' in value
+    && value.ok === false
+    && 'message' in value
+    && typeof value.message === 'string';
 }

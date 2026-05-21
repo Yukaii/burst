@@ -4,6 +4,7 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   manifest: {
+    minimum_chrome_version: '120',
     permissions: ['storage', 'userScripts'],
     host_permissions: ['<all_urls>'],
     commands: {
