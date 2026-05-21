@@ -781,3 +781,391 @@ select {
   line-height: 1.3;
 }
 
+/* Git Registries & Updates Tab Styles */
+.dashboard-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 8px;
+}
+
+.tab-btn {
+  height: 32px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  text-align: center;
+}
+
+.tab-btn:hover {
+  color: #f8fafc;
+}
+
+.tab-btn.is-active {
+  background: rgba(125, 211, 252, 0.14);
+  color: #7dd3fc;
+  border: 1px solid rgba(125, 211, 252, 0.2);
+}
+
+/* Git Registry add form */
+.add-registry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.add-registry-form label {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 780;
+  text-transform: uppercase;
+}
+
+.add-registry-form .input-group {
+  display: flex;
+  gap: 6px;
+}
+
+.add-registry-form input {
+  height: 32px;
+  font-size: 12px;
+  flex-grow: 1;
+  border-radius: 8px;
+  padding: 0 8px;
+}
+
+.add-registry-form button {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 11px;
+  border-radius: 8px;
+  background: #7dd3fc;
+  color: #0f172a;
+  font-weight: 780;
+  border: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.add-registry-error {
+  color: #f87171;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+/* Sidebar Row for Updates */
+.updates-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.05);
+  color: #fbbf24;
+  cursor: pointer;
+  padding: 11px;
+  text-align: left;
+  margin-bottom: 12px;
+  border: 1px dashed rgba(245, 158, 11, 0.2);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.updates-row:hover,
+.updates-row.is-active {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+.updates-row strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.updates-badge {
+  background: #fbbf24;
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 10px;
+  line-height: 1;
+}
+
+.sidebar-section-title {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin: 12px 0 6px 4px;
+  letter-spacing: 0.05em;
+}
+
+/* Main Detail Panel views */
+.git-registry-detail,
+.update-checker-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 22px;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.registry-detail-header,
+.update-checker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  padding-bottom: 16px;
+}
+
+.registry-detail-info h2,
+.update-checker-info h2 {
+  font-size: 22px;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.registry-detail-info p,
+.update-checker-info p {
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.remove-registry-btn {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 11px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  cursor: pointer;
+  font-weight: 700;
+  transition: background 0.2s;
+}
+
+.remove-registry-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.registry-command-grid,
+.updates-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.registry-command-card,
+.update-card {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(17, 24, 39, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 12px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.registry-command-card:hover,
+.update-card:hover {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(30, 41, 59, 0.4);
+}
+
+.card-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 10px;
+  background: #111827;
+  color: #7dd3fc;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.card-icon img {
+  width: 24px;
+  height: 24px;
+}
+
+.card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-copy h4 {
+  margin: 0;
+  font-size: 15px;
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.card-copy p {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.card-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.card-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(148, 163, 184, 0.08);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  text-transform: uppercase;
+}
+
+.card-badge.version-badge {
+  background: rgba(125, 211, 252, 0.08);
+  color: #7dd3fc;
+  border-color: rgba(125, 211, 252, 0.16);
+}
+
+.card-badge.update-version-badge {
+  background: rgba(245, 158, 11, 0.08);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.16);
+}
+
+.install-btn,
+.update-btn {
+  height: 34px;
+  padding: 0 16px;
+  font-size: 12px;
+  border-radius: 8px;
+  background: #7dd3fc;
+  color: #0f172a;
+  font-weight: 780;
+  border: 0;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.install-btn:hover,
+.update-btn:hover {
+  background: #38bdf8;
+}
+
+.install-btn.is-installed {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.install-btn.is-installed:hover {
+  background: rgba(16, 185, 129, 0.2);
+}
+
+/* Update checker controls */
+.update-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.check-updates-btn {
+  height: 38px;
+  padding: 0 16px;
+  background: #fbbf24;
+  color: #0f172a;
+  font-weight: 800;
+  border-radius: 10px;
+  border: 0;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.check-updates-btn:hover:not(:disabled) {
+  background: #f59e0b;
+}
+
+.check-updates-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.update-all-btn {
+  height: 38px;
+  padding: 0 16px;
+  background: #10b981;
+  color: #ffffff;
+  font-weight: 800;
+  border-radius: 10px;
+  border: 0;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.update-all-btn:hover {
+  background: #059669;
+}
+
+.no-updates-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  background: rgba(17, 24, 39, 0.4);
+  border: 1px dashed rgba(148, 163, 184, 0.14);
+  border-radius: 12px;
+  color: #64748b;
+  text-align: center;
+  gap: 8px;
+}
+
+.no-updates-panel svg {
+  width: 36px;
+  height: 36px;
+  color: #475569;
+}
+
+.no-updates-panel h4 {
+  margin: 0;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.no-updates-panel p {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
