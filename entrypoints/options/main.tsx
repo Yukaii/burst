@@ -10,6 +10,8 @@ function OptionsApp() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusType, setStatusType] = useState<'success' | 'info'>('info');
 
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
   useEffect(() => {
     async function init() {
       const loaded = await loadSettings();
@@ -17,16 +19,6 @@ function OptionsApp() {
     }
     void init();
   }, []);
-
-  if (!settings) {
-    return (
-      <div className="options-loading">
-        <p>Loading settings...</p>
-      </div>
-    );
-  }
-
-  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (!settings) return;
@@ -49,6 +41,14 @@ function OptionsApp() {
       return () => media.removeEventListener('change', listener);
     }
   }, [settings?.theme]);
+
+  if (!settings) {
+    return (
+      <div className="options-loading">
+        <p>Loading settings...</p>
+      </div>
+    );
+  }
 
   async function updateSetting<K extends keyof ExtensionSettings>(key: K, value: ExtensionSettings[K]) {
     if (!settings) return;
