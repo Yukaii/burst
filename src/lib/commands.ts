@@ -27,6 +27,8 @@ export type BurstCommand = {
   installs: number;
   rating: number;
   icon: CommandIcon;
+  code?: string;
+  version?: string;
   pinned?: boolean;
   shortcut?: string;
   action?: 'open-dashboard' | 'open-installed' | 'create-local-script' | 'run-local-script' | 'run-registry-script';

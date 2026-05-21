@@ -24,6 +24,9 @@ export type LocalScript = {
   status: LocalScriptStatus;
   updatedAt: string;
   code: string;
+  originRegistryUrl?: string;
+  originCommandId?: string;
+  version?: string;
 };
 
 export type LocalScriptBackup = {
@@ -45,6 +48,7 @@ export const seedLocalScripts: LocalScript[] = [
   await navigator.clipboard.writeText(branch ?? location.href);
   toast(branch ? \`Copied \${branch}\` : 'Copied page URL');
 }`,
+    version: '1.0.0',
   },
   {
     id: 'local-highlight-capture',
@@ -57,6 +61,7 @@ export const seedLocalScripts: LocalScript[] = [
   const selection = window.getSelection()?.toString() ?? '';
   console.log({ selection, url: location.href });
 }`,
+    version: '1.0.0',
   },
 ];
 
@@ -69,6 +74,7 @@ export function createLocalScriptDraft(): LocalScript {
     status: 'draft',
     updatedAt: getTodayDate(),
     code: `export default async function run({ toast }) {\n  toast('Command finished');\n}`,
+    version: '1.0.0',
   };
 }
 
@@ -144,6 +150,8 @@ export function localScriptToCommand(script: LocalScript): BurstCommand {
     installs: 0,
     rating: 0,
     icon: script.icon,
+    code: script.code,
+    version: script.version,
     pinned: true,
     action: 'run-local-script',
     localScriptId: script.id,
@@ -370,6 +378,9 @@ function normalizeLocalScript(script: LocalScript): LocalScript {
     matchPattern: script.matchPattern.trim() || '<all_urls>',
     status: script.status,
     icon: normalizeIcon(script.icon),
+    originRegistryUrl: script.originRegistryUrl?.trim() || undefined,
+    originCommandId: script.originCommandId?.trim() || undefined,
+    version: script.version?.trim() || undefined,
   };
 }
 
@@ -389,7 +400,10 @@ function isLocalScript(value: unknown): value is LocalScript {
     && typeof script.updatedAt === 'string'
     && typeof script.code === 'string'
     && isLocalScriptStatus(script.status)
-    && isCommandIcon(script.icon);
+    && isCommandIcon(script.icon)
+    && (script.originRegistryUrl === undefined || typeof script.originRegistryUrl === 'string')
+    && (script.originCommandId === undefined || typeof script.originCommandId === 'string')
+    && (script.version === undefined || typeof script.version === 'string');
 }
 
 function isLocalScriptBackup(value: unknown): value is LocalScriptBackup {

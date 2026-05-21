@@ -189,7 +189,7 @@ async function registerEnabledLocalScripts() {
 
     const registryCommands = await loadInstalledRegistryCommands();
     for (const command of registryCommands) {
-      const code = getMockScriptCode(command.id);
+      const code = command.code || getMockScriptCode(command.id);
       await userScripts.register([
         {
           id: getRegistryScriptRegistrationId(command.id),

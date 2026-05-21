@@ -295,70 +295,144 @@ export function getMockScriptCode(commandId: string): string {
   }
 }
 
-// Simulated network delay helper
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
+// Detect CLI environment
+const isCliTest = typeof window === 'undefined' || (typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || process.env.TEST === 'true'));
 
 export async function getRegistryCommands(query = ''): Promise<BurstCommand[]> {
-  await delay(150);
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) return registryCommandsData;
-
-  return registryCommandsData.filter((command) => {
-    const searchable = [
-      command.title,
-      command.description,
-      command.website,
-      command.publisher.name,
-      command.publisher.handle,
-      command.trustLevel,
-      command.risk,
-      ...command.permissions,
-    ]
-      .join(' ')
-      .toLowerCase();
-
-    return searchable.includes(normalized);
-  });
+  if (isCliTest) {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return registryCommandsData;
+    return registryCommandsData.filter((command) => {
+      const searchable = [
+        command.title,
+        command.description,
+        command.website,
+        command.publisher.name,
+        command.publisher.handle,
+        command.trustLevel,
+        command.risk,
+        ...command.permissions,
+      ]
+        .join(' ')
+        .toLowerCase();
+      return searchable.includes(normalized);
+    });
+  }
+  const url = new URL('/api/commands', window.location.origin);
+  if (query) {
+    url.searchParams.set('q', query);
+  }
+  const response = await fetch(url.toString());
+  if (!response.ok) throw new Error('Failed to fetch registry commands');
+  return response.json();
 }
 
 export async function getRegistryCommand(id: string): Promise<BurstCommand | undefined> {
-  await delay(100);
-  return registryCommandsData.find((command) => command.id === id);
+  if (isCliTest) {
+    return registryCommandsData.find((command) => command.id === id);
+  }
+  const response = await fetch(`/api/commands/${encodeURIComponent(id)}`);
+  if (response.status === 404) return undefined;
+  if (!response.ok) throw new Error('Failed to fetch registry command');
+  return response.json();
 }
 
 export async function getAuditReport(id: string, version: string): Promise<AuditReport | undefined> {
-  await delay(120);
-  const cmd = registryCommandsData.find((c) => c.id === id);
-  if (!cmd) return undefined;
+  if (isCliTest) {
+    const cmd = registryCommandsData.find((c) => c.id === id);
+    if (!cmd) return undefined;
 
-  const code = getMockScriptCode(id);
-  const report = analyzeScriptCode(code, cmd.matchPatterns);
+    const code = getMockScriptCode(id);
+    const report = analyzeScriptCode(code, cmd.matchPatterns);
 
-  const publisherProfile = mockPublisherProfiles[cmd.publisher.handle];
-  const isVerified = publisherProfile?.verified ?? false;
+    const publisherProfile = mockPublisherProfiles[cmd.publisher.handle];
+    const isVerified = publisherProfile?.verified ?? false;
 
-  return {
-    commandId: id,
-    version,
-    auditedAt: '2026-05-20',
-    status: report.status,
-    checks: {
-      ...report.checks,
-      signature: {
-        status: isVerified ? 'pass' : 'warning',
-        detail: isVerified
-          ? `Cryptographic signature verified against verified publisher ${cmd.publisher.handle} key. Manifest integrity matches package source.`
-          : `Community package signature is self-signed/unverified. Review manifest content before installing.`,
+    return {
+      commandId: id,
+      version,
+      auditedAt: '2026-05-20',
+      status: report.status,
+      checks: {
+        ...report.checks,
+        signature: {
+          status: isVerified ? 'pass' : 'warning',
+          detail: isVerified
+            ? `Cryptographic signature verified against verified publisher ${cmd.publisher.handle} key. Manifest integrity matches package source.`
+            : `Community package signature is self-signed/unverified. Review manifest content before installing.`,
+        },
       },
-    },
-    summary: report.summary,
-  };
+      summary: report.summary,
+    };
+  }
+  const response = await fetch(`/api/commands/${encodeURIComponent(id)}/audit?v=${encodeURIComponent(version)}`);
+  if (response.status === 404) return undefined;
+  if (!response.ok) throw new Error('Failed to fetch audit report');
+  return response.json();
 }
 
 export async function getPublisherProfile(handle: string): Promise<PublisherProfile | undefined> {
-  await delay(100);
-  return mockPublisherProfiles[handle];
+  if (isCliTest) {
+    return mockPublisherProfiles[handle];
+  }
+  const response = await fetch(`/api/publishers/${encodeURIComponent(handle)}`);
+  if (response.status === 404) return undefined;
+  if (!response.ok) throw new Error('Failed to fetch publisher profile');
+  return response.json();
+}
+
+export async function getCurrentUser(): Promise<{ handle: string; name: string; avatarInitials: string }> {
+  if (isCliTest) {
+    return mockProfiles[0];
+  }
+  const response = await fetch('/api/auth/me');
+  if (!response.ok) throw new Error('Failed to fetch current user');
+  return response.json();
+}
+
+export async function loginSimulatedUser(handle: string): Promise<{ ok: boolean; user: { handle: string; name: string; avatarInitials: string } }> {
+  if (isCliTest) {
+    const profile = mockProfiles.find((p) => p.handle === handle) || mockProfiles[0];
+    return { ok: true, user: profile };
+  }
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ handle }),
+  });
+  if (!response.ok) throw new Error('Failed to login');
+  return response.json();
+}
+
+export async function logout(): Promise<{ ok: boolean }> {
+  if (isCliTest) {
+    return { ok: true };
+  }
+  const response = await fetch('/api/auth/logout', {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to logout');
+  return response.json();
+}
+
+export async function publishCommand(payload: any): Promise<BurstCommand> {
+  if (isCliTest) {
+    const newCmd = {
+      ...payload,
+      installs: 0,
+      rating: 5.0,
+      icon: payload.icon || { type: 'initials', value: payload.title.substring(0, 2).toUpperCase() },
+    };
+    return newCmd;
+  }
+  const response = await fetch('/api/commands', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'Failed to publish command' }));
+    throw new Error(err.error || 'Failed to publish command');
+  }
+  return response.json();
 }
