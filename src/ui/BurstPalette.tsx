@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as LucideIcons from 'lucide-react';
 import {
   BurstCommand,
@@ -27,6 +27,7 @@ import {
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
 import { getMockScriptCode } from '@/src/lib/registryApi';
 import { ExtensionSettings, DEFAULT_SETTINGS, loadSettings } from '@/src/lib/settings';
+import { captureSelectionSnapshot, restoreSelectionSnapshot, type SelectionSnapshot } from '@/src/ui/selection';
 
 type BurstPaletteProps = {
   pageUrl: string;
@@ -56,16 +57,20 @@ const trustLabels: Record<BurstCommand['trustLevel'], string> = {
   local: 'Local',
 };
 
+const PALETTE_QUERY_STORAGE_KEY = 'burst.palette.query.v1';
+
 export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => readPaletteQuery());
   const [activeIndex, setActiveIndex] = useState(0);
   const [localCommands, setLocalCommands] = useState<BurstCommand[]>([]);
   const [statusMessage, setStatusMessage] = useState<string>();
   const [toast, setToast] = useState<BurstToast>();
   const [consentPendingCommand, setConsentPendingCommand] = useState<BurstCommand | null>(null);
   const [capturedSelection, setCapturedSelection] = useState('');
+  const [capturedSelectionSnapshot, setCapturedSelectionSnapshot] = useState<SelectionSnapshot | null>(null);
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const host = useMemo(() => getHostFromUrl(pageUrl), [pageUrl]);
 
   const consentAnalysis = useMemo(() => {
@@ -87,6 +92,12 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   }, [query, siteCommands]);
 
   const activeCommand = filteredCommands[activeIndex] ?? filteredCommands[0];
+
+  function closePalette() {
+    restoreSelectionSnapshot(capturedSelectionSnapshot);
+    setConsentPendingCommand(null);
+    setIsOpen(false);
+  }
 
   async function runCommand(command: BurstCommand) {
     if (settings.showConsoleLogs) {
@@ -110,7 +121,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
         }
       }
 
-      setIsOpen(false);
+      closePalette();
       return;
     }
 
@@ -131,7 +142,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
         setStatusMessage(result.message);
         return;
       }
-      setIsOpen(false);
+      closePalette();
       return;
     }
 
@@ -139,7 +150,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
       void browser.runtime.sendMessage({ type: 'burst:run-management-command', action: command.action });
     }
 
-    setIsOpen(false);
+    closePalette();
   }
 
   async function handleConfirmConsent() {
@@ -153,7 +164,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
       setStatusMessage(result.message);
       return;
     }
-    setIsOpen(false);
+    closePalette();
   }
 
   useEffect(() => {
@@ -163,8 +174,9 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
           const next = !current;
           if (next) {
             // Capture selection synchronously before palette input autofocus steals focus
-            const sel = window.getSelection()?.toString() ?? '';
-            setCapturedSelection(sel);
+            const snapshot = captureSelectionSnapshot(window.getSelection());
+            setCapturedSelectionSnapshot(snapshot);
+            setCapturedSelection(snapshot.text);
           }
           return next;
         });
@@ -207,6 +219,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   useEffect(() => {
     if (!isOpen) {
       setConsentPendingCommand(null);
+      setCapturedSelectionSnapshot(null);
       return;
     }
 
@@ -245,11 +258,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault();
-        if (consentPendingCommand) {
-          setConsentPendingCommand(null);
-        } else {
-          setIsOpen(false);
-        }
+        closePalette();
         return;
       }
 
@@ -287,6 +296,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   }, [activeCommand, filteredCommands.length, isOpen, consentPendingCommand]);
 
   useEffect(() => {
+    writePaletteQuery(query);
     setActiveIndex(0);
     setStatusMessage(undefined);
   }, [query]);
@@ -298,15 +308,21 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    searchInputRef.current?.focus();
+  }, [isOpen]);
+
   const activeTheme = settings.theme === 'system'
     ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
     : settings.theme;
 
   return (
     <>
-      {isOpen ? (
-        <div
-          className={`burst-overlay position-${settings.position} theme-${activeTheme}`}
+      <div
+          className={`burst-overlay position-${settings.position} theme-${activeTheme} ${isOpen ? '' : 'is-hidden'}`}
+          hidden={!isOpen}
+          aria-hidden={!isOpen}
           role="presentation"
           onClick={handleOverlayClick}
         >
@@ -438,7 +454,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
                 <label className="burst-search">
                   <span>{host}</span>
                   <input
-                    autoFocus
+                    ref={searchInputRef}
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder={`Search ${pageTitle || host}`}
@@ -476,7 +492,6 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
             )}
           </section>
         </div>
-      ) : null}
       {toast ? (
         <div
           className={`burst-toast theme-${activeTheme} position-${toast.position} variant-${toast.variant} animation-${toast.animation}`}
@@ -643,6 +658,26 @@ function getToastIcon(variant: ToastVariant): string {
   if (variant === 'error') return '×';
   if (variant === 'info') return 'i';
   return '•';
+}
+
+function readPaletteQuery(): string {
+  try {
+    return window.sessionStorage.getItem(PALETTE_QUERY_STORAGE_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function writePaletteQuery(query: string): void {
+  try {
+    if (query) {
+      window.sessionStorage.setItem(PALETTE_QUERY_STORAGE_KEY, query);
+    } else {
+      window.sessionStorage.removeItem(PALETTE_QUERY_STORAGE_KEY);
+    }
+  } catch {
+    // Some pages restrict storage access; the palette still works without persistence.
+  }
 }
 
 function CommandIcon({ command }: { command: BurstCommand }) {

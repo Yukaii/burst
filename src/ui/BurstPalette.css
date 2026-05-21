@@ -18,6 +18,10 @@
   backdrop-filter: blur(2px);
 }
 
+.burst-overlay.is-hidden {
+  display: none;
+}
+
 .burst-shell {
   width: min(640px, calc(100vw - 32px));
   overflow: hidden;
