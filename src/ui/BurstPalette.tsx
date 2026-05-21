@@ -244,13 +244,16 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
         return;
       }
 
-      if (event.key === 'ArrowDown') {
+      const isDown = event.key === 'ArrowDown' || (event.ctrlKey && (event.key === 'n' || event.key === 'j'));
+      const isUp = event.key === 'ArrowUp' || (event.ctrlKey && (event.key === 'p' || event.key === 'k'));
+
+      if (isDown) {
         event.preventDefault();
         setActiveIndex((index) => Math.min(index + 1, filteredCommands.length - 1));
         return;
       }
 
-      if (event.key === 'ArrowUp') {
+      if (isUp) {
         event.preventDefault();
         setActiveIndex((index) => Math.max(index - 1, 0));
         return;
