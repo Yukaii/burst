@@ -83,7 +83,8 @@ describe('local script registration', () => {
     expect(source).toContain(getLocalScriptEventName(localScript.id));
     expect(source).toContain(getLocalScriptResultEventName(localScript.id));
     expect(source).toContain('toast: (message) => emit');
-    expect(source).toContain('selection: window.getSelection()?.toString() ??');
+    expect(source).toContain('const capturedSelection = (event && event.detail && event.detail.selection) || \'\';');
+    expect(source).toContain('selection: capturedSelection || (window.getSelection()?.toString() ?? \'\')');
     expect(source).not.toContain('export default');
     expect(source).not.toContain('new Function');
     expect(source).not.toContain('eval(');
@@ -188,7 +189,7 @@ describe('registry API layer', () => {
     const report = await getAuditReport('copy-github-branch', '1.0.0');
     expect(report).toBeDefined();
     expect(report?.commandId).toBe('copy-github-branch');
-    expect(report?.status).toBe('pass');
+    expect(report?.status).toBe('warning');
 
     const missingReport = await getAuditReport('does-not-exist', '1.0.0');
     expect(missingReport).toBeUndefined();
@@ -222,6 +223,8 @@ describe('registry storage and consent', () => {
     expect(wrapped).toContain('burst:run-registry-script:test-cmd');
     expect(wrapped).toContain('burst:registry-script-result:test-cmd');
     expect(wrapped).toContain('async function run({ page })');
+    expect(wrapped).toContain('const capturedSelection = (event && event.detail && event.detail.selection) || \'\';');
+    expect(wrapped).toContain('selection: capturedSelection || (window.getSelection()?.toString() ?? \'\')');
     expect(wrapped).not.toContain('export default');
   });
 

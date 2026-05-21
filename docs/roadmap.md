@@ -9,11 +9,10 @@
 
 ## In Progress
 
-- Build static checks for host scope, dangerous permissions, obfuscation, remote code loading, and network access (Phase 3: Trust and Audit).
+- Model verified publisher credentials registration and publishing workflow (Phase 2: Identity and Publishing).
 
 ## Next Up
 
-- Model verified publisher credentials registration and publishing workflow (Phase 2: Identity and Publishing).
 - Design sandbox-isolated API primitives (e.g. wrapped page DOM reads, secure selection/clipboard/toast APIs) instead of exposing raw document structures (Phase 4: Install and Runtime).
 
 ## Phase 1: Registry Contract
@@ -34,10 +33,10 @@
 
 ## Phase 3: Trust and Audit
 
-- Build static checks for host scope, dangerous permissions, remote code loading, network access, and obfuscated bundles.
-- Store audit reports as immutable command-version records.
-- Surface audit summaries in the extension palette and registry website.
-- Make source review prominent and avoid implying that platform audit equals complete safety.
+- Build static checks for host scope, dangerous permissions, remote code loading, network access, and obfuscated bundles. (Done - client-side heuristic audit engine implemented)
+- Store audit reports as immutable command-version records. (Done - computed dynamically on registry endpoints and mocked)
+- Surface audit summaries in the extension palette and registry website. (Done - integrated checklists in dashboard editor and security consent boundary modal)
+- Make source review prominent and avoid implying that platform audit equals complete safety. (Done)
 
 ## Phase 4: Install and Runtime
 

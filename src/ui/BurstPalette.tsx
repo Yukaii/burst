@@ -23,6 +23,8 @@ import {
   getRegistryScriptEventName,
   getRegistryScriptResultEventName,
 } from '@/src/lib/registryStorage';
+import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
+import { getMockScriptCode } from '@/src/lib/registryApi';
 
 type BurstPaletteProps = {
   pageUrl: string;
@@ -44,7 +46,14 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [statusMessage, setStatusMessage] = useState<string>();
   const [toastMessage, setToastMessage] = useState<string>();
   const [consentPendingCommand, setConsentPendingCommand] = useState<BurstCommand | null>(null);
+  const [capturedSelection, setCapturedSelection] = useState('');
   const host = useMemo(() => getHostFromUrl(pageUrl), [pageUrl]);
+
+  const consentAnalysis = useMemo(() => {
+    if (!consentPendingCommand) return null;
+    const code = getMockScriptCode(consentPendingCommand.id);
+    return analyzeScriptCode(code, consentPendingCommand.matchPatterns);
+  }, [consentPendingCommand]);
 
   const siteCommands = useMemo(
     () => [
@@ -63,7 +72,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   async function runCommand(command: BurstCommand) {
     if (command.action === 'run-local-script') {
       if (command.localScriptId) {
-        const result = await runLocalScript(command.localScriptId, setToastMessage);
+        const result = await runLocalScript(command.localScriptId, capturedSelection, setToastMessage);
         if (!result.ok) {
           setStatusMessage(result.message);
           return;
@@ -83,7 +92,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
         }
       }
 
-      const result = await runRegistryScript(command.id, setToastMessage);
+      const result = await runRegistryScript(command.id, capturedSelection, setToastMessage);
       if (!result.ok) {
         setStatusMessage(result.message);
         return;
@@ -105,7 +114,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     await saveConsentGrant(command.id);
     setConsentPendingCommand(null);
 
-    const result = await runRegistryScript(command.id, setToastMessage);
+    const result = await runRegistryScript(command.id, capturedSelection, setToastMessage);
     if (!result.ok) {
       setStatusMessage(result.message);
       return;
@@ -116,7 +125,15 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   useEffect(() => {
     function handleMessage(message: unknown) {
       if (isToggleMessage(message)) {
-        setIsOpen((current) => !current);
+        setIsOpen((current) => {
+          const next = !current;
+          if (next) {
+            // Capture selection synchronously before palette input autofocus steals focus
+            const sel = window.getSelection()?.toString() ?? '';
+            setCapturedSelection(sel);
+          }
+          return next;
+        });
       }
     }
 
@@ -280,6 +297,51 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
                     </ul>
                   </div>
 
+                  {consentAnalysis && (
+                    <div className="burst-consent-audit">
+                      <h3>Static Security Audit</h3>
+                      <div className="burst-audit-summary-box">
+                        <span className={`audit-badge is-${consentAnalysis.status}`}>
+                          {consentAnalysis.status}
+                        </span>
+                        <p>{consentAnalysis.summary}</p>
+                      </div>
+                      <ul className="burst-audit-checklist">
+                        {Object.entries(consentAnalysis.checks).map(([key, check]) => {
+                          if (check.status === 'pass') return null;
+                          return (
+                            <li key={key} className={`audit-item is-${check.status}`}>
+                              <span className="check-icon">{check.status === 'warning' ? '⚠' : '✗'}</span>
+                              <div className="check-text">
+                                <strong>
+                                  {key === 'hostScope'
+                                    ? 'Host Scope'
+                                    : key === 'permissions'
+                                    ? 'Sensitive APIs'
+                                    : key === 'remoteCode'
+                                    ? 'Remote Code'
+                                    : key === 'networkAccess'
+                                    ? 'Network Access'
+                                    : 'Obfuscation Heuristics'}
+                                </strong>
+                                <span>{check.detail}</span>
+                              </div>
+                            </li>
+                          );
+                        })}
+                        {Object.values(consentAnalysis.checks).every((c) => c.status === 'pass') && (
+                          <li className="audit-item is-pass">
+                            <span className="check-icon">✓</span>
+                            <div className="check-text">
+                              <strong>All Checks Passed</strong>
+                              <span>Static analysis found no risk signals.</span>
+                            </div>
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+
                   <div className="burst-consent-warning-box">
                     <span className="warning-icon">⚠</span>
                     <p>
@@ -352,6 +414,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
 
 async function runLocalScript(
   scriptId: string,
+  selection: string,
   onToast: (message: string) => void,
 ): Promise<{ ok: boolean; message?: string }> {
   const resultEventName = getLocalScriptResultEventName(scriptId);
@@ -385,12 +448,13 @@ async function runLocalScript(
     document.addEventListener(resultEventName, handleResult);
   });
 
-  document.dispatchEvent(new CustomEvent(getLocalScriptEventName(scriptId)));
+  document.dispatchEvent(new CustomEvent(getLocalScriptEventName(scriptId), { detail: { selection } }));
   return result;
 }
 
 async function runRegistryScript(
   commandId: string,
+  selection: string,
   onToast: (message: string) => void,
 ): Promise<{ ok: boolean; message?: string }> {
   const resultEventName = getRegistryScriptResultEventName(commandId);
@@ -424,7 +488,7 @@ async function runRegistryScript(
     document.addEventListener(resultEventName, handleResult);
   });
 
-  document.dispatchEvent(new CustomEvent(getRegistryScriptEventName(commandId)));
+  document.dispatchEvent(new CustomEvent(getRegistryScriptEventName(commandId), { detail: { selection } }));
   return result;
 }
 

@@ -15,6 +15,7 @@ import {
   saveLocalScripts,
   stripDefaultExport,
 } from '@/src/lib/localScripts';
+import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
 import './style.css';
 
 const iconOptions: Array<{ icon: CommandIcon; label: string; hint: string }> = [
@@ -110,6 +111,13 @@ function DashboardApp() {
   const detectedCapabilities = useMemo(() => {
     return selectedScript ? detectRequiredCapabilities(selectedScript.code) : [];
   }, [selectedScript?.code]);
+  const staticAuditReport = useMemo(() => {
+    if (!selectedScript) return null;
+    const patterns = selectedScript.matchPattern
+      ? selectedScript.matchPattern.split(',').map((p) => p.trim())
+      : [];
+    return analyzeScriptCode(selectedScript.code, patterns);
+  }, [selectedScript?.code, selectedScript?.matchPattern]);
   const editorTheme = useMemo(
     () => createEditorTheme(editorFontFamily, editorFontSize),
     [editorFontFamily, editorFontSize],
@@ -536,6 +544,65 @@ function DashboardApp() {
             onChange={(code) => updateSelectedScript({ code })}
           />
         </label>
+
+        {staticAuditReport && (
+          <section className="static-audit-panel" aria-label="Static security audit report">
+            <div className="audit-header">
+              <h3>Static Security Audit</h3>
+              <span className={`audit-badge is-${staticAuditReport.status}`}>
+                {staticAuditReport.status}
+              </span>
+            </div>
+            <p className="audit-summary">{staticAuditReport.summary}</p>
+            <div className="audit-checks-grid">
+              <div className="audit-check-item">
+                <span className={`check-icon is-${staticAuditReport.checks.hostScope.status}`}>
+                  {staticAuditReport.checks.hostScope.status === 'pass' ? '✓' : staticAuditReport.checks.hostScope.status === 'warning' ? '⚠' : '✗'}
+                </span>
+                <div className="check-details">
+                  <strong>Host Scope & Match Patterns</strong>
+                  <span>{staticAuditReport.checks.hostScope.detail}</span>
+                </div>
+              </div>
+              <div className="audit-check-item">
+                <span className={`check-icon is-${staticAuditReport.checks.permissions.status}`}>
+                  {staticAuditReport.checks.permissions.status === 'pass' ? '✓' : staticAuditReport.checks.permissions.status === 'warning' ? '⚠' : '✗'}
+                </span>
+                <div className="check-details">
+                  <strong>Sensitive APIs & Permissions</strong>
+                  <span>{staticAuditReport.checks.permissions.detail}</span>
+                </div>
+              </div>
+              <div className="audit-check-item">
+                <span className={`check-icon is-${staticAuditReport.checks.remoteCode.status}`}>
+                  {staticAuditReport.checks.remoteCode.status === 'pass' ? '✓' : staticAuditReport.checks.remoteCode.status === 'warning' ? '⚠' : '✗'}
+                </span>
+                <div className="check-details">
+                  <strong>Remote Code & Injection</strong>
+                  <span>{staticAuditReport.checks.remoteCode.detail}</span>
+                </div>
+              </div>
+              <div className="audit-check-item">
+                <span className={`check-icon is-${staticAuditReport.checks.networkAccess.status}`}>
+                  {staticAuditReport.checks.networkAccess.status === 'pass' ? '✓' : staticAuditReport.checks.networkAccess.status === 'warning' ? '⚠' : '✗'}
+                </span>
+                <div className="check-details">
+                  <strong>Network Access</strong>
+                  <span>{staticAuditReport.checks.networkAccess.detail}</span>
+                </div>
+              </div>
+              <div className="audit-check-item">
+                <span className={`check-icon is-${staticAuditReport.checks.obfuscation.status}`}>
+                  {staticAuditReport.checks.obfuscation.status === 'pass' ? '✓' : staticAuditReport.checks.obfuscation.status === 'warning' ? '⚠' : '✗'}
+                </span>
+                <div className="check-details">
+                  <strong>Code Quality & Obfuscation Heuristics</strong>
+                  <span>{staticAuditReport.checks.obfuscation.detail}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="test-harness" aria-label="Test harness">
           <div className="harness-header">

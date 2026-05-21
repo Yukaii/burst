@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-05-20
+Last updated: 2026-05-21
 
 ## Repository Shape
 
@@ -46,10 +46,13 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Dynamic user scripts execution routing in background.ts.
 - Command execution consent boundary warning modal overlay in the shadow DOM palette gating medium/high risk script execution.
 - Persistent security permission grants storage avoiding repetitive prompts.
+- Page text selection capture fix resolving autofocus-triggered selection reset in the command palette UI.
+- Static analysis audit engine (Phase 3: Trust and Audit) implementing client-side regex heuristics for host scope, sensitive APIs, remote code evaluation, outgoing network requests, and obfuscation signatures.
+- Static Security Audit checklist UI panels integrated dynamically inside the extension dashboard script editor and the command palette warning consent overlay.
 
 ## In Progress
 
-- Static analysis or audit pipeline (Phase 3: Trust and Audit) - implementing client-side regex heuristics checks for hosts, APIs, dynamic code evaluation, network access, and obfuscation signatures.
+- Verified publisher credentials registration and publishing workflow (Phase 2).
 
 ## Not Implemented Yet
 

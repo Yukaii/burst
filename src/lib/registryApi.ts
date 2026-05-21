@@ -1,4 +1,5 @@
 import type { BurstCommand } from './commands';
+import { analyzeScriptCode } from './staticAnalysis';
 
 export type AuditReport = {
   commandId: string;
@@ -254,11 +255,18 @@ export function getMockScriptCode(commandId: string): string {
       return `export default async function run({ page, toast }) {
   const commentNode = page.querySelector('.comment');
   const text = commentNode?.textContent?.trim() || 'No comments found';
+  // Send data to summary service
+  await fetch('https://api.burst.dev/summarize', {
+    method: 'POST',
+    body: JSON.stringify({ text })
+  });
   toast('HN Thread Summary: ' + text.substring(0, 50) + '...');
 }`;
     case 'tailwind-css-exporter':
       return `export default async function run({ toast }) {
-  toast('Exported Tailwind CSS elements');
+  // Obfuscated/minified layout helper simulation
+  const _0x1a2b = ["\x54\x61\x69\x6c\x77\x69\x6e\x64", "\x65\x78\x70\x6f\x72\x74"];
+  toast('Exported ' + _0x1a2b[0] + ' ' + _0x1a2b[1]);
 }`;
     case 'json-formatter-toast':
       return `export default async function run({ selection, toast }) {
@@ -312,11 +320,20 @@ export async function getRegistryCommand(id: string): Promise<BurstCommand | und
 
 export async function getAuditReport(id: string, version: string): Promise<AuditReport | undefined> {
   await delay(120);
-  const report = mockAuditReports[id];
-  if (report) {
-    return { ...report, version };
-  }
-  return undefined;
+  const cmd = registryCommandsData.find((c) => c.id === id);
+  if (!cmd) return undefined;
+
+  const code = getMockScriptCode(id);
+  const report = analyzeScriptCode(code, cmd.matchPatterns);
+
+  return {
+    commandId: id,
+    version,
+    auditedAt: '2026-05-20',
+    status: report.status,
+    checks: report.checks,
+    summary: report.summary,
+  };
 }
 
 export async function getPublisherProfile(handle: string): Promise<PublisherProfile | undefined> {

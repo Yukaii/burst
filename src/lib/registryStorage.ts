@@ -219,16 +219,17 @@ export function createRegistryUserScriptCode(commandId: string, code: string): s
 
   return `(() => {
   const run = ${functionSource};
-  document.addEventListener(${JSON.stringify(eventName)}, async () => {
+  document.addEventListener(${JSON.stringify(eventName)}, async (event) => {
     const emit = (detail) => document.dispatchEvent(new CustomEvent(${JSON.stringify(resultEventName)}, { detail }));
     try {
       emit({ status: 'started' });
+      const capturedSelection = (event && event.detail && event.detail.selection) || '';
       await run({
         page: document,
         window,
         location,
         navigator,
-        selection: window.getSelection()?.toString() ?? '',
+        selection: capturedSelection || (window.getSelection()?.toString() ?? ''),
         url: location.href,
         title: document.title,
         toast: (message) => emit({ status: 'toast', message: String(message) })
