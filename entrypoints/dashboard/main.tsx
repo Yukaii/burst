@@ -3,16 +3,17 @@ import ReactDOM from 'react-dom/client';
 import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { EditorView } from '@codemirror/view';
+import type { CommandIcon } from '@/src/lib/commands';
 import { LocalScript, seedLocalScripts } from '@/src/lib/localScripts';
 import './style.css';
 
-const iconOptions = [
-  { value: 'GH', label: 'GitHub' },
-  { value: 'CS', label: 'Capture' },
-  { value: 'UL', label: 'Default' },
-  { value: 'JS', label: 'Script' },
-  { value: 'AI', label: 'AI' },
-  { value: '+', label: 'Create' },
+const iconOptions: Array<{ icon: CommandIcon; label: string; hint: string }> = [
+  { icon: { type: 'favicon', host: 'github.com' }, label: 'GitHub', hint: 'github.com favicon' },
+  { icon: { type: 'initials', value: 'CS' }, label: 'Capture', hint: 'CS initials' },
+  { icon: { type: 'initials', value: 'UL' }, label: 'Default', hint: 'UL initials' },
+  { icon: { type: 'initials', value: 'JS' }, label: 'Script', hint: 'JS initials' },
+  { icon: { type: 'initials', value: 'AI' }, label: 'AI', hint: 'AI initials' },
+  { icon: { type: 'emoji', value: '+' }, label: 'Create', hint: 'Plus glyph' },
 ];
 
 const fontFamilyOptions = [
@@ -87,16 +88,18 @@ function DashboardApp() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') !== 'new') return seedLocalScripts;
 
+    const draft: LocalScript = {
+      id: 'new-script',
+      name: 'Untitled local command',
+      matchPattern: '<all_urls>',
+      icon: { type: 'initials', value: 'UL' },
+      status: 'draft',
+      updatedAt: new Date().toISOString().slice(0, 10),
+      code: `export default async function run() {\n  // Write a local command here.\n}`,
+    };
+
     return [
-      {
-          id: 'new-script',
-          name: 'Untitled local command',
-          matchPattern: '<all_urls>',
-          icon: 'UL',
-          status: 'draft' as const,
-          updatedAt: new Date().toISOString().slice(0, 10),
-          code: `export default async function run() {\n  // Write a local command here.\n}`,
-      },
+      draft,
       ...seedLocalScripts,
     ];
   }, []);
@@ -112,12 +115,12 @@ function DashboardApp() {
   );
 
   function createDraft() {
-    const draft = {
+    const draft: LocalScript = {
       id: `draft-${Date.now()}`,
       name: 'Untitled local command',
       matchPattern: '<all_urls>',
-      icon: 'UL',
-      status: 'draft' as const,
+      icon: { type: 'initials', value: 'UL' },
+      status: 'draft',
       updatedAt: new Date().toISOString().slice(0, 10),
       code: `export default async function run() {\n  // Write a local command here.\n}`,
     };
@@ -155,7 +158,7 @@ function DashboardApp() {
               type="button"
               onClick={() => setSelectedId(script.id)}
             >
-              <span className="script-icon">{script.icon}</span>
+              <LocalScriptIcon icon={script.icon} />
               <span className="script-copy">
                 <strong>{script.name}</strong>
                 <em>{script.matchPattern} · {script.status}</em>
@@ -250,22 +253,87 @@ function DashboardApp() {
   );
 }
 
-function IconSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+function IconSelect({ value, onChange }: { value: CommandIcon; onChange: (value: CommandIcon) => void }) {
+  const [open, setOpen] = useState(false);
+  const selectedOption = iconOptions.find((option) => iconsMatch(option.icon, value)) ?? iconOptions[2];
+
   return (
     <label className="icon-select">
       Icon
-      <span className="icon-control">
-        <span className="icon-preview">{value}</span>
-        <select value={value} onChange={(event) => onChange(event.target.value)}>
+      <span className="icon-menu">
+        <button
+          className="icon-trigger"
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          onClick={() => setOpen((current) => !current)}
+        >
+          <LocalScriptIcon icon={selectedOption.icon} />
+          <span>
+            <strong>{selectedOption.label}</strong>
+            <em>{selectedOption.hint}</em>
+          </span>
+        </button>
+        {open ? (
+          <span className="icon-options" role="listbox">
           {iconOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
+            <button
+              className={iconsMatch(option.icon, value) ? 'is-selected' : ''}
+              key={getIconKey(option.icon)}
+              type="button"
+              role="option"
+              aria-selected={iconsMatch(option.icon, value)}
+              onClick={() => {
+                onChange(option.icon);
+                setOpen(false);
+              }}
+            >
+              <LocalScriptIcon icon={option.icon} />
+              <span>
+                <strong>{option.label}</strong>
+                <em>{option.hint}</em>
+              </span>
+            </button>
           ))}
-        </select>
+          </span>
+        ) : null}
       </span>
     </label>
   );
+}
+
+function LocalScriptIcon({ icon }: { icon: CommandIcon }) {
+  const iconUrl = getLocalIconUrl(icon);
+
+  return (
+    <span className="script-icon">
+      {iconUrl ? <img src={iconUrl} alt="" /> : getLocalIconLabel(icon)}
+    </span>
+  );
+}
+
+function getLocalIconLabel(icon: CommandIcon): string {
+  if (icon.type === 'initials' || icon.type === 'emoji') return icon.value;
+  return 'B';
+}
+
+function getLocalIconUrl(icon: CommandIcon): string | undefined {
+  if (icon.type === 'url' || icon.type === 'asset') return icon.src;
+  if (icon.type === 'favicon' && icon.host) {
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(icon.host)}&sz=64`;
+  }
+
+  return undefined;
+}
+
+function getIconKey(icon: CommandIcon): string {
+  if (icon.type === 'favicon') return `favicon:${icon.host ?? ''}`;
+  if (icon.type === 'url' || icon.type === 'asset') return `${icon.type}:${icon.src}`;
+  return `${icon.type}:${icon.value}`;
+}
+
+function iconsMatch(left: CommandIcon, right: CommandIcon): boolean {
+  return getIconKey(left) === getIconKey(right);
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

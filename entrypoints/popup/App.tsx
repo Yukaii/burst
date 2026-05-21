@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { seedCommands } from '@/src/lib/commands';
 import './App.css';
 
@@ -6,6 +7,17 @@ const auditedCount = seedCommands.filter((command) =>
 ).length;
 
 function App() {
+  const [showRegistryNotice, setShowRegistryNotice] = useState(false);
+
+  function openOptionsPage() {
+    if (typeof browser === 'undefined' || !browser.runtime?.openOptionsPage) {
+      window.location.href = '/options.html';
+      return;
+    }
+
+    void browser.runtime.openOptionsPage();
+  }
+
   return (
     <main className="popup-shell">
       <header className="popup-header">
@@ -37,8 +49,28 @@ function App() {
       </section>
 
       <footer className="popup-actions">
-        <button type="button">Open registry</button>
-        <button type="button">Options</button>
+        <span
+          className="popup-action-popover"
+          onMouseEnter={() => setShowRegistryNotice(true)}
+          onMouseLeave={() => setShowRegistryNotice(false)}
+          onFocus={() => setShowRegistryNotice(true)}
+          onBlur={() => setShowRegistryNotice(false)}
+        >
+          <button
+            type="button"
+            aria-describedby={showRegistryNotice ? 'registry-coming-soon' : undefined}
+            data-disabled="true"
+            onClick={() => setShowRegistryNotice(true)}
+          >
+            Registry
+          </button>
+          {showRegistryNotice ? (
+            <span id="registry-coming-soon" className="coming-soon-popover" role="status">
+              Coming soon
+            </span>
+          ) : null}
+        </span>
+        <button type="button" onClick={openOptionsPage}>Options</button>
       </footer>
     </main>
   );
