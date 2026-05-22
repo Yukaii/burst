@@ -40,10 +40,29 @@ function parseCookies(cookieHeader: string | null): Record<string, string> {
   return cookies;
 }
 
-function normalizeReturnTo(value: string | null): string {
+function normalizeReturnTo(value: string | null, requestUrl: string): string {
   if (!value) return '/dashboard';
-  if (!value.startsWith('/') || value.startsWith('//')) return '/dashboard';
-  return value;
+
+  const fallback = '/dashboard';
+  const request = new URL(requestUrl);
+
+  try {
+    const parsed = new URL(value);
+    const localHosts = new Set(['localhost', '127.0.0.1', '::1']);
+
+    if (parsed.origin === request.origin) {
+      return parsed.toString();
+    }
+
+    if (localHosts.has(request.hostname) && parsed.hostname === request.hostname) {
+      return parsed.toString();
+    }
+  } catch {
+    if (value.startsWith('//')) return fallback;
+    if (value.startsWith('/')) return value;
+  }
+
+  return fallback;
 }
 
 function isSecureRequest(request: Request): boolean {
@@ -204,7 +223,7 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
         }
 
         const state = crypto.randomUUID();
-        const returnTo = normalizeReturnTo(url.searchParams.get('returnTo'));
+        const returnTo = normalizeReturnTo(url.searchParams.get('returnTo'), req.url);
         const callbackUrl = new URL('/api/auth/github/callback', url.origin).toString();
         const authorizeUrl = new URL('https://github.com/login/oauth/authorize');
         authorizeUrl.searchParams.set('client_id', normalizedAuthConfig.githubClientId);
@@ -238,7 +257,7 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
         const githubProfile = await fetchGithubUser(accessToken);
         const user = await store.upsertGitHubUser(githubProfile);
         const { sessionId } = await store.createSession(user.handle);
-        const returnTo = normalizeReturnTo(cookies[GITHUB_RETURN_TO_COOKIE] ?? '/dashboard');
+        const returnTo = normalizeReturnTo(cookies[GITHUB_RETURN_TO_COOKIE] ?? '/dashboard', req.url);
 
         return redirectResponse(returnTo, [
           buildCookie('session_id', sessionId, secureCookie, 86400),
