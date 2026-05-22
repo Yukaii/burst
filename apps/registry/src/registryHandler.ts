@@ -106,9 +106,9 @@ async function exchangeGithubCode(request: Request, config: RegistryAuthConfig, 
     method: 'POST',
     headers: {
       Accept: 'application/json',
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: JSON.stringify({
+    body: new URLSearchParams({
       client_id: config.githubClientId,
       client_secret: config.githubClientSecret,
       code,
@@ -132,7 +132,7 @@ async function fetchGithubUser(accessToken: string): Promise<GitHubUserProfile> 
   const response = await fetch('https://api.github.com/user', {
     headers: {
       Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `token ${accessToken}`,
       'X-GitHub-Api-Version': '2022-11-28',
     },
   });
