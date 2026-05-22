@@ -29,3 +29,5 @@ web-ext.config.ts
 apps/*/dist
 docs/.vitepress/dist
 docs/.vitepress/cache
+
+.env
