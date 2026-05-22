@@ -1,31 +1,44 @@
-import { spawn } from 'bun';
+import { createServer as createViteServer } from 'vite';
+import { createRegistryHandler } from './src/registryHandler';
+import { createMemoryRegistryStore } from './src/registryStore';
 
-console.log('[Dev Runner] Starting API server on port 5175...');
-const apiServer = spawn(['bun', 'run', 'apps/registry/server.ts'], {
-  stdout: 'inherit',
-  stderr: 'inherit',
-});
-
-console.log('[Dev Runner] Starting Vite dev server on port 5174...');
-const viteServer = spawn(['bun', 'run', 'vite', '--host', '127.0.0.1', '--port', '5174', '--strictPort'], {
-  cwd: 'apps/registry',
-  stdout: 'inherit',
-  stderr: 'inherit',
-});
-
-const cleanup = () => {
-  console.log('\n[Dev Runner] Shutting down servers...');
-  try {
-    apiServer.kill();
-  } catch {}
-  try {
-    viteServer.kill();
-  } catch {}
-  process.exit();
+const authConfig = {
+  githubClientId: Bun.env.GITHUB_CLIENT_ID,
+  githubClientSecret: Bun.env.GITHUB_CLIENT_SECRET,
 };
 
-process.on('SIGINT', cleanup);
-process.on('SIGTERM', cleanup);
+const apiServer = Bun.serve({
+  port: 5175,
+  fetch: createRegistryHandler(createMemoryRegistryStore(), authConfig),
+});
 
-// Wait for both to exit
-await Promise.all([apiServer.exited, viteServer.exited]);
+console.log(`[Burst Registry API] Server started at http://localhost:${apiServer.port}`);
+
+const viteServer = await createViteServer({
+  configFile: 'vite.config.ts',
+  server: {
+    host: '127.0.0.1',
+    port: 5174,
+    strictPort: true,
+  },
+});
+
+await viteServer.listen();
+console.log('[Burst Registry UI] Server started at http://localhost:5174');
+
+const cleanup = async () => {
+  console.log('\n[Dev Runner] Shutting down servers...');
+  await viteServer.close();
+  apiServer.stop(true);
+  process.exit(0);
+};
+
+process.on('SIGINT', () => {
+  void cleanup();
+});
+
+process.on('SIGTERM', () => {
+  void cleanup();
+});
+
+await new Promise(() => {});
