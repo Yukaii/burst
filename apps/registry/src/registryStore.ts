@@ -1,7 +1,7 @@
 import type { BurstCommand } from '@/src/lib/commands';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
 import type { AuditReport, PublisherProfile } from '@/src/lib/registryApi';
-import { getMockScriptCode, mockPublisherProfiles, registryCommandsData } from '@/src/lib/registryApi';
+import { getMockScriptCode, registryCommandsData } from '@/src/lib/registryApi';
 
 export type StoredRegistryCommand = BurstCommand & {
   code: string;
@@ -73,10 +73,41 @@ const seedCommands: StoredRegistryCommand[] = registryCommandsData.map((command)
   version: '1.0.0',
 }));
 
-const seedPublishers: StoredPublisherRecord[] = Object.values(mockPublisherProfiles).map((profile) => ({
-  ...profile,
-  role: profile.handle === '@burst-examples' ? 'admin' : 'publisher',
-}));
+const seedPublishers: StoredPublisherRecord[] = [
+  {
+    name: 'Burst Examples',
+    handle: '@burst-examples',
+    avatarInitials: 'BE',
+    verified: true,
+    verifiedSources: ['github.com/burst/examples'],
+    publishedCommandsCount: 2,
+    joinedAt: '2026-04-01',
+    bio: 'Official open-source command examples maintained by the Burst Core Team.',
+    role: 'admin',
+  },
+  {
+    name: 'Sarah Chen',
+    handle: '@schen',
+    avatarInitials: 'SC',
+    verified: true,
+    verifiedSources: ['github.com/schen', 'sarahchen.dev'],
+    publishedCommandsCount: 2,
+    joinedAt: '2026-04-10',
+    bio: 'Frontend engineer & developer experience enthusiast. Building productivity scripts for web workflows.',
+    role: 'publisher',
+  },
+  {
+    name: 'HN PowerUser',
+    handle: '@hn-power',
+    avatarInitials: 'HN',
+    verified: false,
+    verifiedSources: [],
+    publishedCommandsCount: 1,
+    joinedAt: '2026-05-02',
+    bio: 'Avid Hacker News reader. Automating social news interfaces and thread reading.',
+    role: 'publisher',
+  },
+];
 
 function normalizeQuery(query: string): string {
   return query.trim().toLowerCase();

@@ -2201,39 +2201,6 @@ body {
   line-height: 1.6;
 }
 
-.preview-login-grid {
-  display: grid;
-  gap: 10px;
-}
-
-.preview-login-card {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 12px;
-  align-items: center;
-  width: 100%;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 18px;
-  background: rgba(15, 23, 42, 0.03);
-  padding: 12px;
-  text-align: left;
-}
-
-.preview-login-card strong,
-.preview-login-card em {
-  display: block;
-  font-style: normal;
-}
-
-.preview-login-card strong {
-  color: #0f172a;
-}
-
-.preview-login-card em {
-  color: #64748b;
-  font-size: 12px;
-}
-
 .landing-surface {
   display: grid;
   gap: 20px;

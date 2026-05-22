@@ -68,7 +68,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 ## In Progress
 
 - Registry dashboard UI refinement: stronger workspace hierarchy, session header, and user-management polish.
-- Registry account sign-in: preview profile switching and session status endpoints are in place, but GitHub OAuth production secrets still need to be configured.
+- Registry account sign-in: GitHub OAuth session status endpoints are in place, and the registry now uses the real OAuth flow.
 
 ## Not Implemented Yet
 
@@ -81,7 +81,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Dashboard Test validates the expected export shape only. Full syntax diagnostics should come from a dedicated parser or registration dry run.
 - Local script import currently replaces the full local script list after confirmation instead of merging records.
 - The dashboard bundle is larger after adding CodeMirror 6. It is isolated to the dashboard page, not the content script.
-- GitHub OAuth secrets are not yet configured in production, so the live registry falls back to preview profiles until Cloudflare secrets are added.
+- GitHub OAuth secrets are still required in production before sign-in becomes active on the deployed Worker.
 
 ## Verification Baseline
 

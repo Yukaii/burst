@@ -25,7 +25,7 @@
 
 ## Phase 2: Identity and Publishing
 
-- Add user sign-in to the registry website. (In progress - preview profile switching and session endpoints are implemented; GitHub OAuth activation still needs secrets.)
+- Add user sign-in to the registry website. (In progress - GitHub OAuth login flow and session endpoints are implemented; production secrets still need to be configured.)
 - Add publisher profiles and verified source ownership. (Done - verified domain sources list and ownership logic implemented)
 - Build the publish use case flow. (Done - publishing wizard form UI implemented)
 - Require source URL, manifest validation, permission declaration, and package integrity metadata. (Done - wizard validation, permission checkbox, and pre-release scanner checklists implemented)

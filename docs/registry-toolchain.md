@@ -151,7 +151,9 @@ The registry API exposes HTTP endpoints for the extension client and registry we
 ### Endpoint Specifications
 
 #### 1. Authentication
-* **`POST /api/auth/login`**: Simulates publisher authentication. Validates publisher handle, sets a cookie header, and returns the session details.
+* **`GET /api/auth/config`**: Returns registry auth availability and the GitHub login URL when OAuth is configured.
+* **`GET /api/auth/github/start`**: Starts the GitHub OAuth redirect flow and stores the CSRF state plus return URL cookies.
+* **`GET /api/auth/github/callback`**: Completes the OAuth exchange, creates the registry session, and redirects back into the app.
 * **`POST /api/auth/logout`**: Clears session credentials.
 * **`GET /api/auth/me`**: Returns the current authenticated publisher profile, or `null`.
 

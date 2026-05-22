@@ -35,7 +35,6 @@ export type PublisherProfile = {
 
 export type RegistryAuthConfig = {
   githubEnabled: boolean;
-  previewEnabled: boolean;
   loginUrl?: string;
 };
 
@@ -235,7 +234,7 @@ const mockAuditReports: Record<string, AuditReport> = {
   },
 };
 
-export const mockPublisherProfiles: Record<string, PublisherProfile> = {
+const testPublisherProfiles: Record<string, PublisherProfile> = {
   '@burst-examples': {
     name: 'Burst Examples',
     handle: '@burst-examples',
@@ -270,12 +269,6 @@ export const mockPublisherProfiles: Record<string, PublisherProfile> = {
     role: 'publisher',
   },
 };
-
-export const mockProfiles = [
-  { handle: 'guest', name: 'Guest User', avatarInitials: 'G', role: 'member' as const },
-  { handle: '@schen', name: 'Sarah Chen', avatarInitials: 'SC', role: 'publisher' as const },
-  { handle: '@hn-power', name: 'HN PowerUser', avatarInitials: 'HN', role: 'publisher' as const },
-];
 
 export const publishedScriptCodes = new Map<string, string>();
 
@@ -388,7 +381,7 @@ export async function getAuditReport(id: string, version: string): Promise<Audit
     const code = getMockScriptCode(id);
     const report = analyzeScriptCode(code, cmd.matchPatterns);
 
-    const publisherProfile = mockPublisherProfiles[cmd.publisher.handle];
+    const publisherProfile = testPublisherProfiles[cmd.publisher.handle];
     const isVerified = publisherProfile?.verified ?? false;
 
     return {
@@ -416,7 +409,7 @@ export async function getAuditReport(id: string, version: string): Promise<Audit
 
 export async function getPublisherProfile(handle: string): Promise<PublisherProfile | undefined> {
   if (isCliTest) {
-    return mockPublisherProfiles[handle];
+    return testPublisherProfiles[handle];
   }
   const response = await fetch(`${API_BASE}/api/publishers/${encodeURIComponent(handle)}`);
   if (response.status === 404) return undefined;
@@ -426,7 +419,7 @@ export async function getPublisherProfile(handle: string): Promise<PublisherProf
 
 export async function getAuthConfig(): Promise<RegistryAuthConfig> {
   if (isCliTest) {
-    return { githubEnabled: false, previewEnabled: true };
+    return { githubEnabled: false };
   }
   const response = await fetch(`${API_BASE}/api/auth/config`);
   if (!response.ok) throw new Error('Failed to fetch registry auth config');
@@ -451,24 +444,6 @@ export async function getGithubLoginUrl(returnTo = '/dashboard'): Promise<string
   return url.toString();
 }
 
-export async function loginPreviewUser(handle: string): Promise<{ ok: boolean; user: { handle: string; name: string; avatarInitials: string } }> {
-  if (isCliTest) {
-    const profile = mockProfiles.find((p) => p.handle === handle) || mockProfiles[0];
-    return { ok: true, user: profile };
-  }
-  const response = await fetch(`${API_BASE}/api/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ handle }),
-  });
-  if (!response.ok) throw new Error('Failed to login');
-  return response.json();
-}
-
-export async function loginSimulatedUser(handle: string): Promise<{ ok: boolean; user: { handle: string; name: string; avatarInitials: string } }> {
-  return loginPreviewUser(handle);
-}
-
 export async function logout(): Promise<{ ok: boolean }> {
   if (isCliTest) {
     return { ok: true };
@@ -482,7 +457,7 @@ export async function logout(): Promise<{ ok: boolean }> {
 
 export async function getRegistryUsers(query = ''): Promise<PublisherProfile[]> {
   if (isCliTest) {
-    const users = Object.values(mockPublisherProfiles);
+    const users = Object.values(testPublisherProfiles);
     if (!query.trim()) {
       return users;
     }
@@ -501,7 +476,7 @@ export async function getRegistryUsers(query = ''): Promise<PublisherProfile[]> 
 
 export async function getRegistryUser(handle: string): Promise<PublisherProfile | undefined> {
   if (isCliTest) {
-    return mockPublisherProfiles[handle];
+    return testPublisherProfiles[handle];
   }
   const response = await fetch(`${API_BASE}/api/users/${encodeURIComponent(handle)}`);
   if (response.status === 404) return undefined;
@@ -511,9 +486,11 @@ export async function getRegistryUser(handle: string): Promise<PublisherProfile 
 
 export async function updateRegistryUser(handle: string, patch: RegistryUserUpdate): Promise<PublisherProfile> {
   if (isCliTest) {
-    const user = mockPublisherProfiles[handle];
+    const user = testPublisherProfiles[handle];
     if (!user) throw new Error('Registry user not found');
-    return { ...user, ...patch } as PublisherProfile;
+    const updated = { ...user, ...patch } as PublisherProfile;
+    testPublisherProfiles[handle] = updated;
+    return updated;
   }
 
   const response = await fetch(`${API_BASE}/api/users/${encodeURIComponent(handle)}`, {

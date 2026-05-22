@@ -42,5 +42,5 @@ Burst is a powerful, site-aware productivity companion designed to bring custom 
 ### Getting Started
 
 - Read the **[Extension API Guide](/api-guide)** to learn how to write custom scripts and capabilities.
-- Read the **[Registry & Toolchain Guide](/registry-toolchain)** to learn about the backend database, simulated accounts, publishing flows, and setting up custom third-party Git repositories.
+- Read the **[Registry & Toolchain Guide](/registry-toolchain)** to learn about the backend database, GitHub-authenticated publishing flows, and setting up custom third-party Git repositories.
 - Review the **[Project Status](/project-status)** and the **[Roadmap](/roadmap)** for project milestones and active phases.

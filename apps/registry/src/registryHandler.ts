@@ -179,7 +179,6 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
       if (path === '/api/auth/config' && req.method === 'GET') {
         return jsonResponse({
           githubEnabled: hasGitHubLogin,
-          previewEnabled: true,
           loginUrl: hasGitHubLogin ? new URL('/api/auth/github/start', url.origin).toString() : undefined,
         });
       }
@@ -237,29 +236,6 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
           clearCookie(GITHUB_STATE_COOKIE, secureCookie),
           clearCookie(GITHUB_RETURN_TO_COOKIE, secureCookie),
         ]);
-      }
-
-      if (path === '/api/auth/login' && req.method === 'POST') {
-        const body = (await req.json()) as { handle?: string };
-        if (!body.handle) {
-          return errorResponse('Missing handle');
-        }
-
-        if (body.handle === 'guest') {
-          const cookies = parseCookies(req.headers.get('Cookie'));
-          if (cookies.session_id) {
-            await store.deleteSession(cookies.session_id);
-          }
-
-          return jsonResponse({ ok: true, user: guestUser }, {
-            headers: appendSetCookies(undefined, [clearCookie('session_id', secureCookie)]),
-          });
-        }
-
-        const { sessionId, user } = await store.createSession(body.handle);
-        return jsonResponse({ ok: true, user }, {
-          headers: appendSetCookies(undefined, [buildCookie('session_id', sessionId, secureCookie, 86400)]),
-        });
       }
 
       if (path === '/api/auth/logout' && req.method === 'POST') {

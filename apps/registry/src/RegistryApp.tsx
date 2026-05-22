@@ -12,7 +12,6 @@ import {
   getAuditReport,
   getPublisherProfile,
   getRegistryUsers,
-  loginPreviewUser,
   logout,
   publishCommand,
   updateRegistryUser,
@@ -21,8 +20,6 @@ import {
   PublisherProfile,
   RegistrySessionUser,
   registryCommandsData,
-  mockProfiles,
-  mockPublisherProfiles,
 } from '@/src/lib/registryApi';
 
 const navItems = ['Discover', 'Publish', 'Users', 'Audits', 'Settings'];
@@ -38,6 +35,13 @@ const riskCopy: Record<BurstCommand['risk'], string> = {
   low: 'Low',
   medium: 'Medium',
   high: 'High',
+};
+
+const guestSessionUser: RegistrySessionUser = {
+  handle: 'guest',
+  name: 'Guest User',
+  avatarInitials: 'G',
+  role: 'member',
 };
 
 export function RegistryApp() {
@@ -57,7 +61,8 @@ export function RegistryApp() {
   const [inspectorLoading, setInspectorLoading] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<'details' | 'audit' | 'publisher'>('details');
 
-  const [currentUser, setCurrentUser] = useState<RegistrySessionUser>(mockProfiles[0]);
+  const [currentUser, setCurrentUser] = useState<RegistrySessionUser>(guestSessionUser);
+  const [registryUserStats, setRegistryUserStats] = useState<{ total: number; admins: number; verified: number } | null>(null);
   const [installedCommandIds, setInstalledCommandIds] = useState<string[]>([]);
   const [pinnedCommandIds, setPinnedCommandIds] = useState<string[]>([]);
 
@@ -73,8 +78,8 @@ export function RegistryApp() {
       } catch (err) {
         if (!active) return;
         console.error('Failed to bootstrap registry auth state:', err);
-        setAuthConfig({ githubEnabled: false, previewEnabled: true });
-        setCurrentUser(mockProfiles[0]);
+        setAuthConfig({ githubEnabled: false });
+        setCurrentUser(guestSessionUser);
       } finally {
         if (active) setAuthLoading(false);
       }
@@ -116,6 +121,36 @@ export function RegistryApp() {
   };
   const dashboardState = dashboardCopy[navTab];
   const currentGithubLogin = 'githubLogin' in currentUser ? currentUser.githubLogin : undefined;
+  useEffect(() => {
+    let active = true;
+
+    async function fetchUserStats() {
+      if (isGuest) {
+        setRegistryUserStats(null);
+        return;
+      }
+
+      try {
+        const users = await getRegistryUsers();
+        if (!active) return;
+        setRegistryUserStats({
+          total: users.length,
+          admins: users.filter((profile) => profile.role === 'admin').length,
+          verified: users.filter((profile) => profile.verified).length,
+        });
+      } catch (err) {
+        if (!active) return;
+        console.error('Failed to load registry user stats:', err);
+      }
+    }
+
+    void fetchUserStats();
+
+    return () => {
+      active = false;
+    };
+  }, [isGuest]);
+
   const dashboardMetrics: Record<
     'Discover' | 'Publish' | 'Users' | 'Audits' | 'Settings',
     Array<{ label: string; value: string }>
@@ -131,9 +166,9 @@ export function RegistryApp() {
       { label: 'Audit checks', value: '5' },
     ],
     Users: [
-      { label: 'Publishers', value: Object.keys(mockPublisherProfiles).length.toString() },
-      { label: 'Admins', value: Object.values(mockPublisherProfiles).filter((profile) => profile.role === 'admin').length.toString() },
-      { label: 'Verified', value: Object.values(mockPublisherProfiles).filter((profile) => profile.verified).length.toString() },
+      { label: 'Publishers', value: registryUserStats ? registryUserStats.total.toString() : '…' },
+      { label: 'Admins', value: registryUserStats ? registryUserStats.admins.toString() : '…' },
+      { label: 'Verified', value: registryUserStats ? registryUserStats.verified.toString() : '…' },
     ],
     Audits: [
       { label: 'Pass', value: registryCommandsData.filter((command) => command.trustLevel === 'verified').length.toString() },
@@ -259,34 +294,11 @@ export function RegistryApp() {
   }, []);
 
   const handleGitHubLogin = async () => {
-    const loginUrl = await getGithubLoginUrl('/dashboard');
-    window.location.assign(loginUrl);
-  };
-
-  const handlePreviewLogin = async (profile: typeof mockProfiles[number]) => {
     try {
-      const res = await loginPreviewUser(profile.handle);
-      if (res.ok) {
-        const profileDetails = mockPublisherProfiles[profile.handle];
-        setCurrentUser(
-          profileDetails
-            ? profileDetails
-            : {
-                name: res.user.name,
-                handle: res.user.handle,
-                avatarInitials: res.user.avatarInitials,
-                verified: false,
-                verifiedSources: [],
-                publishedCommandsCount: 0,
-                joinedAt: new Date().toISOString().slice(0, 10),
-                bio: '',
-                role: profile.role,
-              }
-        );
-        setNavTab('Discover');
-      }
+      const loginUrl = await getGithubLoginUrl('/dashboard');
+      window.location.assign(loginUrl);
     } catch (err) {
-      console.error('Failed to switch preview profile:', err);
+      console.error('Failed to start GitHub login:', err);
     }
   };
 
@@ -296,7 +308,7 @@ export function RegistryApp() {
     } catch (err) {
       console.error('Failed to logout:', err);
     } finally {
-      setCurrentUser(mockProfiles[0]);
+      setCurrentUser(guestSessionUser);
       setNavTab('Discover');
       setPublishSuccessToast(null);
     }
@@ -324,7 +336,6 @@ export function RegistryApp() {
         authLoading
         authConfig={authConfig}
         onGitHubLogin={handleGitHubLogin}
-        onPreviewLogin={handlePreviewLogin}
       />
     );
   }
@@ -334,7 +345,6 @@ export function RegistryApp() {
       <LandingPage
         authConfig={authConfig}
         onGitHubLogin={handleGitHubLogin}
-        onPreviewLogin={handlePreviewLogin}
       />
     );
   }
@@ -411,7 +421,7 @@ export function RegistryApp() {
               <span>{currentUser.name}</span>
               <span>{currentUser.handle}</span>
               <span>{currentUser.role || 'publisher'}</span>
-              <span>{authConfig?.githubEnabled ? 'GitHub OAuth enabled' : 'Preview login enabled'}</span>
+              <span>{authConfig?.githubEnabled ? 'GitHub OAuth enabled' : 'GitHub OAuth unavailable'}</span>
             </div>
           </div>
 
@@ -592,12 +602,10 @@ function LandingPage({
   authLoading = false,
   authConfig,
   onGitHubLogin,
-  onPreviewLogin,
 }: {
   authLoading?: boolean;
   authConfig: RegistryAuthConfig | null;
   onGitHubLogin: () => Promise<void>;
-  onPreviewLogin: (profile: typeof mockProfiles[number]) => Promise<void>;
 }) {
   const featuredCommands = registryCommandsData.slice(0, 3);
   const verifiedCount = registryCommandsData.filter((command) => command.trustLevel === 'verified').length;
@@ -642,26 +650,12 @@ function LandingPage({
 
         <div className="landing-sidecard">
           <span className="landing-sidecard-label">Login mode</span>
-          <strong>{githubEnabled ? 'GitHub OAuth' : 'Preview mode'}</strong>
+          <strong>{githubEnabled ? 'GitHub OAuth' : 'GitHub unavailable'}</strong>
           <p>
             {githubEnabled
               ? 'Production sign-in uses GitHub OAuth and stores the session in Cloudflare Workers.'
-              : 'GitHub secrets are not configured in this environment, so preview accounts remain available for local work.'}
+              : 'GitHub secrets are not configured in this environment, so sign-in stays disabled until they are added.'}
           </p>
-
-          <div className="preview-login-grid">
-            {mockProfiles
-              .filter((profile) => profile.handle !== 'guest')
-              .map((profile) => (
-                <button key={profile.handle} type="button" className="preview-login-card" onClick={() => void onPreviewLogin(profile)}>
-                  <span className="profile-avatar">{profile.avatarInitials}</span>
-                  <span>
-                    <strong>{profile.name}</strong>
-                    <em>{profile.handle}</em>
-                  </span>
-                </button>
-              ))}
-          </div>
         </div>
       </header>
 
@@ -1329,7 +1323,7 @@ function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: PublishPanel
           <span className="warning-icon">🔒</span>
           <h2>Authentication Required</h2>
           <p>You must be signed in as a verified publisher or community contributor to publish commands to the registry.</p>
-          <p className="note">Use a <strong>Preview Profile</strong> in the sidebar to sign in instantly when GitHub OAuth is not configured in this environment.</p>
+          <p className="note">Sign in with GitHub before publishing. The registry requires a real OAuth session for registry actions.</p>
         </div>
       </div>
     );
