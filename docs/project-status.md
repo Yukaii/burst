@@ -57,7 +57,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Sandbox-isolated user script runtime execution wrappers shadowing page globals (`document`, `window`, `navigator`, `location`) using parameter-bound IIFE scopes and capability-gated explicit APIs (page, selection, clipboard, toast).
 - Premium extension options settings page and syncing mechanism for Theme (Light/Dark/System), Alignment (Top/Center), Backdrop Close, Developer Logging, and Consent Revocation.
 - Stable public command API documented and capability-gated in sandboxed runtime executions.
-- Real backend registry database and Bun server endpoints using SQLite (`registry.db`) for commands, publishers, and session-based authentication.
+- Worker-compatible registry backend with shared API handlers and D1-backed persistence for commands, publishers, and session-based authentication.
 - Account sign-in on registry website (profile switcher calling backend login/logout and session status endpoints).
 - Decentralized custom Git registries list in the Extension Dashboard, stored in Chrome local storage.
 - GitHub Raw manifest parser fetching and installing commands from external git repositories.
@@ -65,7 +65,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Sleek macOS-inspired visual redesign across all user-facing pages (Popup, Options, Dashboard, Shadow DOM Command Palette, and Registry Web App) featuring dynamic light/dark/system theme propagation, CodeMirror theme synchronization, glassmorphism, and keycap badges.
 - Dashboard layout redesigned into a split-pane IDE workspace resolving editor overlapping issues.
 - Refactored dropdown controls like IconSelect and LocalScriptIcon using Tailwind CSS to emulate premium Shadcn UI select patterns.
-- Expanded VitePress documentation with comprehensive guides covering decentralized Git registries, SQLite schemas, REST API endpoints, and a new Project Architecture & Developer Guide.
+- Expanded VitePress documentation with comprehensive guides covering decentralized Git registries, D1-backed registry schemas, REST API endpoints, and a new Project Architecture & Developer Guide.
 
 ## In Progress
 
@@ -82,6 +82,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Dashboard Test validates the expected export shape only. Full syntax diagnostics should come from a dedicated parser or registration dry run.
 - Local script import currently replaces the full local script list after confirmation instead of merging records.
 - The dashboard bundle is larger after adding CodeMirror 6. It is isolated to the dashboard page, not the content script.
+- The registry Worker config is scaffolded, but the D1 database ID still needs to be replaced with a real Cloudflare database binding before deployment.
 
 ## Verification Baseline
 

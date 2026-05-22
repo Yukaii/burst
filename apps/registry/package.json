@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun run dev.ts",
+    "deploy:worker": "bun run build && bunx wrangler deploy --config wrangler.toml",
     "build": "vite build",
     "compile": "tsc --noEmit"
   },

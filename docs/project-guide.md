@@ -13,8 +13,11 @@ burst/
 ├── apps/
 │   └── registry/                 # Official Registry Web App & API Server
 │       ├── src/                  # React Front-end components & Publisher Wizard
-│       ├── server.ts             # Bun.js REST API Server
-│       ├── registry.db           # SQLite database
+│       ├── server.ts             # Local Bun dev wrapper around the registry API
+│       ├── worker.ts             # Cloudflare Worker entrypoint for the registry API
+│       ├── registryStore.ts      # Shared memory/D1 persistence abstraction
+│       ├── registryHandler.ts    # Shared HTTP request router
+│       ├── wrangler.toml         # Cloudflare Worker deployment config
 │       └── package.json
 ├── entrypoints/                  # WXT Chrome/Firefox Extension Entrypoints
 │   ├── background/               # Background Service Worker script

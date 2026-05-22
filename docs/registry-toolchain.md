@@ -1,6 +1,6 @@
 # Registry & Toolchain Guide
 
-This guide details the structure of the Burst Command Registry, how decentralized Git repositories are configured and parsed, the schema of the SQLite registry database, and the REST API toolchain used by the registry server.
+This guide details the structure of the Burst Command Registry, how decentralized Git repositories are configured and parsed, the schema of the registry database used by the Cloudflare Worker backend, and the REST API toolchain used by the registry server.
 
 ---
 
@@ -92,28 +92,30 @@ The raw address resolves based on the repository's configuration:
 
 ---
 
-## 2. Official Registry SQLite Schema
+## 2. Official Registry D1 Schema
 
-The official registry server (`apps/registry/server.ts`) is powered by `bun:sqlite` to manage users, publishers, verified domains, package releases, and cryptographic audits. The SQLite file is saved at `apps/registry/registry.db`.
+The official registry backend uses a shared HTTP handler that can run locally through `apps/registry/server.ts` and deploy through `apps/registry/worker.ts`. The persistent data layer is designed for Cloudflare D1 so the same schema can run in development and in production workers.
 
 ### Database Schema
 
 ```sql
 -- Publishers Table
 CREATE TABLE IF NOT EXISTS publishers (
-  id TEXT PRIMARY KEY,
+  handle TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  handle TEXT UNIQUE NOT NULL,
   avatar_initials TEXT NOT NULL,
-  verified_domain TEXT UNIQUE
+  verified INTEGER NOT NULL,
+  verified_sources TEXT NOT NULL,
+  joined_at TEXT NOT NULL,
+  bio TEXT
 );
 
 -- Sessions Table (Publisher login states)
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
-  publisher_id TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(publisher_id) REFERENCES publishers(id) ON DELETE CASCADE
+  user_handle TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(user_handle) REFERENCES publishers(handle)
 );
 
 -- Commands Table (Marketplace indexed entries)
@@ -122,32 +124,29 @@ CREATE TABLE IF NOT EXISTS commands (
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   website TEXT NOT NULL,
-  match_patterns TEXT NOT NULL, -- JSON string array
-  publisher_id TEXT NOT NULL,
-  icon_type TEXT NOT NULL,
-  icon_host TEXT NOT NULL,
-  permissions TEXT NOT NULL,    -- JSON string array
-  source_type TEXT NOT NULL,
-  source_url TEXT NOT NULL,
-  entrypoint TEXT NOT NULL,
-  capabilities TEXT NOT NULL,   -- JSON string array
+  match_patterns TEXT NOT NULL,
+  publisher_handle TEXT NOT NULL,
+  trust_level TEXT NOT NULL,
   risk TEXT NOT NULL,
-  version TEXT NOT NULL,
+  permissions TEXT NOT NULL,
+  source_url TEXT NOT NULL,
+  installs INTEGER NOT NULL DEFAULT 0,
+  rating REAL NOT NULL DEFAULT 5.0,
+  icon TEXT NOT NULL,
   code TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(publisher_id) REFERENCES publishers(id) ON DELETE CASCADE
+  version TEXT NOT NULL DEFAULT '1.0.0',
+  FOREIGN KEY(publisher_handle) REFERENCES publishers(handle)
 );
 ```
 
 ### Publisher Verification Policy
-Publishers can claim verified status by linking their profiles to a domain they own (e.g., `github.com` or `mycompany.dev`). Verified domains display a green badge in the Registry web application, guaranteeing that the publisher handles are officially associated with that web namespace.
+Publishers claim verified status by listing verified source domains in `verified_sources`. The registry uses those declared sources, along with the stored publisher handle, to decide whether the audit signature check can report a verified publisher badge in the web application.
 
 ---
 
 ## 3. Official Registry REST API
 
-The Bun server exposes HTTP endpoints for the extension client and registry web interface.
+The registry API exposes HTTP endpoints for the extension client and registry web interface.
 
 ### Endpoint Specifications
 
@@ -161,7 +160,7 @@ The Bun server exposes HTTP endpoints for the extension client and registry web 
 * **`GET /api/commands/:id`**: Retrieves detailed metadata and source code for a specific command ID.
 * **`POST /api/commands`**: Publishes a new command or updates an existing version.
   * *Request Body*: JSON manifest fields + script source code.
-  * *Security Gate*: Validates session token, matches publisher permissions, and triggers static analysis audit routines before saving to SQLite.
+  * *Security Gate*: Validates session token, matches publisher permissions, and triggers static analysis audit routines before saving to the registry store.
 
 #### 3. Client Integrations
 * **`GET /api/audit-reports/:commandId`**: Fetches the computed audit verification report, which lists checklist evaluations for dangerous operations, remote connections, and obfuscation.

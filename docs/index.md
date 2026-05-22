@@ -37,7 +37,7 @@ Burst is a powerful, site-aware productivity companion designed to bring custom 
 
 - **Extension (`entrypoints/`)**: WXT-based Chrome and Firefox extension.
 - **Shared Library (`src/lib/`)**: Shared logic and static analysis rules.
-- **Registry Website (`apps/registry/`)**: An audited registry marketplace built with Vite + React, backed by a real SQLite/Bun server.
+- **Registry Website (`apps/registry/`)**: An audited registry marketplace built with Vite + React, backed by a worker-compatible API and D1 storage path.
 
 ### Getting Started
 
