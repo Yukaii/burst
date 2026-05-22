@@ -10,5 +10,6 @@ not_found_handling = "single-page-application"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "burst-registry"
+database_name = "burst"
 database_id = "3a5a834b-9ce2-48a1-b2d2-8f2375536125"
+migrations_dir = "migrations"

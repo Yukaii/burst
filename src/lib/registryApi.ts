@@ -26,6 +26,32 @@ export type PublisherProfile = {
   publishedCommandsCount: number;
   joinedAt: string;
   bio: string;
+  githubLogin?: string;
+  githubId?: string;
+  avatarUrl?: string;
+  profileUrl?: string;
+  role?: 'admin' | 'publisher' | 'member';
+};
+
+export type RegistryAuthConfig = {
+  githubEnabled: boolean;
+  previewEnabled: boolean;
+  loginUrl?: string;
+};
+
+export type RegistryUserUpdate = {
+  name?: string;
+  bio?: string;
+  verified?: boolean;
+  verifiedSources?: string[];
+  role?: 'admin' | 'publisher' | 'member';
+};
+
+export type RegistrySessionUser = PublisherProfile | {
+  handle: 'guest';
+  name: string;
+  avatarInitials: string;
+  role: 'member';
 };
 
 export const registryCommandsData: BurstCommand[] = [
@@ -219,6 +245,7 @@ export const mockPublisherProfiles: Record<string, PublisherProfile> = {
     publishedCommandsCount: 2,
     joinedAt: '2026-04-01',
     bio: 'Official open-source command examples maintained by the Burst Core Team.',
+    role: 'admin',
   },
   '@schen': {
     name: 'Sarah Chen',
@@ -229,6 +256,7 @@ export const mockPublisherProfiles: Record<string, PublisherProfile> = {
     publishedCommandsCount: 2,
     joinedAt: '2026-04-10',
     bio: 'Frontend engineer & developer experience enthusiast. Building productivity scripts for web workflows.',
+    role: 'publisher',
   },
   '@hn-power': {
     name: 'HN PowerUser',
@@ -239,13 +267,14 @@ export const mockPublisherProfiles: Record<string, PublisherProfile> = {
     publishedCommandsCount: 1,
     joinedAt: '2026-05-02',
     bio: 'Avid Hacker News reader. Automating social news interfaces and thread reading.',
+    role: 'publisher',
   },
 };
 
 export const mockProfiles = [
-  { handle: 'guest', name: 'Guest User', avatarInitials: 'G' },
-  { handle: '@schen', name: 'Sarah Chen', avatarInitials: 'SC' },
-  { handle: '@hn-power', name: 'HN PowerUser', avatarInitials: 'HN' },
+  { handle: 'guest', name: 'Guest User', avatarInitials: 'G', role: 'member' as const },
+  { handle: '@schen', name: 'Sarah Chen', avatarInitials: 'SC', role: 'publisher' as const },
+  { handle: '@hn-power', name: 'HN PowerUser', avatarInitials: 'HN', role: 'publisher' as const },
 ];
 
 export const publishedScriptCodes = new Map<string, string>();
@@ -301,12 +330,15 @@ export function getMockScriptCode(commandId: string): string {
 }
 
 const processRef = typeof globalThis !== 'undefined' ? (globalThis as any).process : undefined;
-const isCliTest = typeof window === 'undefined' || (processRef && (processRef.env?.NODE_ENV === 'test' || processRef.env?.TEST === 'true' || processRef.env?.VITEST === 'true'));
+const isCliTest =
+  typeof window === 'undefined' ||
+  (processRef && (processRef.env?.NODE_ENV === 'test' || processRef.env?.TEST === 'true' || processRef.env?.VITEST === 'true'));
 
-// In non-CLI browser contexts (like extension dashboard running at chrome-extension://... or similar),
-// API requests must target the local registry website running on http://localhost:5174.
-const isRegistryHost = typeof window !== 'undefined' && (window.location.host === 'localhost:5174' || window.location.host === 'localhost:5175');
-const API_BASE = isRegistryHost ? '' : 'http://localhost:5174';
+const isHttpBrowser = typeof window !== 'undefined' && /^https?:$/.test(window.location.protocol);
+const isLocalRegistryHost =
+  typeof window !== 'undefined' &&
+  (window.location.host === 'localhost:5174' || window.location.host === 'localhost:5175');
+const API_BASE = isCliTest ? '' : isHttpBrowser ? window.location.origin : isLocalRegistryHost ? '' : 'http://localhost:5174';
 
 export async function getRegistryCommands(query = ''): Promise<BurstCommand[]> {
   if (isCliTest) {
@@ -392,16 +424,34 @@ export async function getPublisherProfile(handle: string): Promise<PublisherProf
   return response.json();
 }
 
-export async function getCurrentUser(): Promise<{ handle: string; name: string; avatarInitials: string }> {
+export async function getAuthConfig(): Promise<RegistryAuthConfig> {
   if (isCliTest) {
-    return mockProfiles[0];
+    return { githubEnabled: false, previewEnabled: true };
+  }
+  const response = await fetch(`${API_BASE}/api/auth/config`);
+  if (!response.ok) throw new Error('Failed to fetch registry auth config');
+  return response.json();
+}
+
+export async function getCurrentUser(): Promise<RegistrySessionUser> {
+  if (isCliTest) {
+    return { handle: 'guest', name: 'Guest User', avatarInitials: 'G', role: 'member' };
   }
   const response = await fetch(`${API_BASE}/api/auth/me`);
   if (!response.ok) throw new Error('Failed to fetch current user');
   return response.json();
 }
 
-export async function loginSimulatedUser(handle: string): Promise<{ ok: boolean; user: { handle: string; name: string; avatarInitials: string } }> {
+export async function getGithubLoginUrl(returnTo = '/dashboard'): Promise<string> {
+  if (isCliTest) {
+    return `/api/auth/github/start?returnTo=${encodeURIComponent(returnTo)}`;
+  }
+  const url = new URL(`${API_BASE}/api/auth/github/start`);
+  url.searchParams.set('returnTo', returnTo);
+  return url.toString();
+}
+
+export async function loginPreviewUser(handle: string): Promise<{ ok: boolean; user: { handle: string; name: string; avatarInitials: string } }> {
   if (isCliTest) {
     const profile = mockProfiles.find((p) => p.handle === handle) || mockProfiles[0];
     return { ok: true, user: profile };
@@ -415,6 +465,10 @@ export async function loginSimulatedUser(handle: string): Promise<{ ok: boolean;
   return response.json();
 }
 
+export async function loginSimulatedUser(handle: string): Promise<{ ok: boolean; user: { handle: string; name: string; avatarInitials: string } }> {
+  return loginPreviewUser(handle);
+}
+
 export async function logout(): Promise<{ ok: boolean }> {
   if (isCliTest) {
     return { ok: true };
@@ -423,6 +477,54 @@ export async function logout(): Promise<{ ok: boolean }> {
     method: 'POST',
   });
   if (!response.ok) throw new Error('Failed to logout');
+  return response.json();
+}
+
+export async function getRegistryUsers(query = ''): Promise<PublisherProfile[]> {
+  if (isCliTest) {
+    const users = Object.values(mockPublisherProfiles);
+    if (!query.trim()) {
+      return users;
+    }
+    const needle = query.trim().toLowerCase();
+    return users.filter((user) =>
+      [user.name, user.handle, user.bio, ...(user.verifiedSources || [])].join(' ').toLowerCase().includes(needle)
+    );
+  }
+
+  const url = new URL('/api/users', API_BASE || window.location.origin);
+  if (query) url.searchParams.set('q', query);
+  const response = await fetch(url.toString());
+  if (!response.ok) throw new Error('Failed to fetch registry users');
+  return response.json();
+}
+
+export async function getRegistryUser(handle: string): Promise<PublisherProfile | undefined> {
+  if (isCliTest) {
+    return mockPublisherProfiles[handle];
+  }
+  const response = await fetch(`${API_BASE}/api/users/${encodeURIComponent(handle)}`);
+  if (response.status === 404) return undefined;
+  if (!response.ok) throw new Error('Failed to fetch registry user');
+  return response.json();
+}
+
+export async function updateRegistryUser(handle: string, patch: RegistryUserUpdate): Promise<PublisherProfile> {
+  if (isCliTest) {
+    const user = mockPublisherProfiles[handle];
+    if (!user) throw new Error('Registry user not found');
+    return { ...user, ...patch } as PublisherProfile;
+  }
+
+  const response = await fetch(`${API_BASE}/api/users/${encodeURIComponent(handle)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'Failed to update registry user' }));
+    throw new Error(err.error || 'Failed to update registry user');
+  }
   return response.json();
 }
 

@@ -4,23 +4,28 @@ import { sampleManifestValidationResults } from '@/src/lib/manifest';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
 import logoUrl from '@/assets/logo.svg';
 import {
+  getAuthConfig,
+  getCurrentUser,
+  getGithubLoginUrl,
   getRegistryCommands,
   getRegistryCommand,
   getAuditReport,
   getPublisherProfile,
-  getCurrentUser,
-  loginSimulatedUser,
+  getRegistryUsers,
+  loginPreviewUser,
   logout,
   publishCommand,
+  updateRegistryUser,
   AuditReport,
+  RegistryAuthConfig,
   PublisherProfile,
+  RegistrySessionUser,
   registryCommandsData,
   mockProfiles,
-  publishedScriptCodes,
   mockPublisherProfiles,
 } from '@/src/lib/registryApi';
 
-const navItems = ['Discover', 'Audits', 'Publish', 'Settings'];
+const navItems = ['Discover', 'Publish', 'Users', 'Audits', 'Settings'];
 
 const trustCopy: Record<BurstCommand['trustLevel'], string> = {
   verified: 'Verified',
@@ -36,7 +41,9 @@ const riskCopy: Record<BurstCommand['risk'], string> = {
 };
 
 export function RegistryApp() {
-  const [navTab, setNavTab] = useState<'Discover' | 'Audits' | 'Publish' | 'Settings'>('Discover');
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authConfig, setAuthConfig] = useState<RegistryAuthConfig | null>(null);
+  const [navTab, setNavTab] = useState<'Discover' | 'Publish' | 'Users' | 'Audits' | 'Settings'>('Discover');
   const [publishSuccessToast, setPublishSuccessToast] = useState<string | null>(null);
 
   const [query, setQuery] = useState('');
@@ -50,26 +57,74 @@ export function RegistryApp() {
   const [inspectorLoading, setInspectorLoading] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<'details' | 'audit' | 'publisher'>('details');
 
-  // Authentication and sync states
-  const [currentUser, setCurrentUser] = useState(mockProfiles[0]);
+  const [currentUser, setCurrentUser] = useState<RegistrySessionUser>(mockProfiles[0]);
   const [installedCommandIds, setInstalledCommandIds] = useState<string[]>([]);
   const [pinnedCommandIds, setPinnedCommandIds] = useState<string[]>([]);
 
   useEffect(() => {
-    async function fetchUser() {
+    let active = true;
+
+    async function bootstrap() {
       try {
-        const user = await getCurrentUser();
+        const [config, user] = await Promise.all([getAuthConfig(), getCurrentUser()]);
+        if (!active) return;
+        setAuthConfig(config);
         setCurrentUser(user);
       } catch (err) {
-        console.error('Failed to fetch user session:', err);
+        if (!active) return;
+        console.error('Failed to bootstrap registry auth state:', err);
+        setAuthConfig({ githubEnabled: false, previewEnabled: true });
+        setCurrentUser(mockProfiles[0]);
+      } finally {
+        if (active) setAuthLoading(false);
       }
     }
-    void fetchUser();
+
+    void bootstrap();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const validManifests = sampleManifestValidationResults.filter((sample) => sample.result.ok).length;
+  const isGuest = currentUser.handle === 'guest';
+  const dashboardCopy: Record<
+    'Discover' | 'Publish' | 'Users' | 'Audits' | 'Settings',
+    { title: string; description: string }
+  > = {
+    Discover: {
+      title: 'Discover commands and inspect trust signals',
+      description: 'Search the registry, compare publishers, and keep the install path visible before anything reaches the extension.',
+    },
+    Publish: {
+      title: 'Publish with an explicit security review',
+      description: 'Draft a command, declare its capabilities, and validate the audit result before it gets indexed.',
+    },
+    Users: {
+      title: 'Review publisher identity and account roles',
+      description: 'Inspect publisher records, verify source claims, and keep the account graph readable for moderators.',
+    },
+    Audits: {
+      title: 'Study the static audit pipeline',
+      description: 'Use the sandbox to see why a command passes, warns, or fails before the registry publishes it.',
+    },
+    Settings: {
+      title: 'Tune the registry workspace',
+      description: 'Control the desktop feel of the registry shell and keep the operator environment predictable.',
+    },
+  };
+  const dashboardState = dashboardCopy[navTab];
+  const currentGithubLogin = 'githubLogin' in currentUser ? currentUser.githubLogin : undefined;
 
   useEffect(() => {
+    if (isGuest) {
+      setCommands([]);
+      setActiveCommandId(null);
+      setLoading(false);
+      return;
+    }
+
     let active = true;
     setLoading(true);
 
@@ -85,10 +140,11 @@ export function RegistryApp() {
         } else {
           setActiveCommandId(null);
         }
-        setLoading(false);
       } catch (err) {
         if (!active) return;
-        setLoading(false);
+        console.error('Failed to fetch registry commands:', err);
+      } finally {
+        if (active) setLoading(false);
       }
     }
 
@@ -97,9 +153,16 @@ export function RegistryApp() {
     return () => {
       active = false;
     };
-  }, [query]);
+  }, [isGuest, query]);
 
   useEffect(() => {
+    if (isGuest) {
+      setActiveCommand(null);
+      setActiveAuditReport(null);
+      setActivePublisherProfile(null);
+      return;
+    }
+
     if (!activeCommandId) {
       setActiveCommand(null);
       setActiveAuditReport(null);
@@ -119,7 +182,7 @@ export function RegistryApp() {
         if (cmd) {
           setActiveCommand(cmd);
           const [audit, profile] = await Promise.all([
-            getAuditReport(cmd.id, '1.0.0'),
+            getAuditReport(cmd.id, cmd.version || '1.0.0'),
             getPublisherProfile(cmd.publisher.handle),
           ]);
           if (!active) return;
@@ -130,10 +193,11 @@ export function RegistryApp() {
           setActiveAuditReport(null);
           setActivePublisherProfile(null);
         }
-        setInspectorLoading(false);
       } catch (err) {
         if (!active) return;
-        setInspectorLoading(false);
+        console.error('Failed to fetch command details:', err);
+      } finally {
+        if (active) setInspectorLoading(false);
       }
     }
 
@@ -142,9 +206,8 @@ export function RegistryApp() {
     return () => {
       active = false;
     };
-  }, [activeCommandId]);
+  }, [activeCommandId, isGuest]);
 
-  // Sync state message listener
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.source !== window || !event.data || typeof event.data !== 'object') return;
@@ -157,7 +220,6 @@ export function RegistryApp() {
     };
 
     window.addEventListener('message', handler);
-    // Fetch initial state
     window.postMessage({ type: 'burst:get-installed-commands' }, '*');
 
     return () => {
@@ -165,14 +227,47 @@ export function RegistryApp() {
     };
   }, []);
 
-  const handleProfileSwitch = async (profile: typeof mockProfiles[number]) => {
+  const handleGitHubLogin = async () => {
+    const loginUrl = await getGithubLoginUrl('/dashboard');
+    window.location.assign(loginUrl);
+  };
+
+  const handlePreviewLogin = async (profile: typeof mockProfiles[number]) => {
     try {
-      const res = await loginSimulatedUser(profile.handle);
+      const res = await loginPreviewUser(profile.handle);
       if (res.ok) {
-        setCurrentUser(res.user);
+        const profileDetails = mockPublisherProfiles[profile.handle];
+        setCurrentUser(
+          profileDetails
+            ? profileDetails
+            : {
+                name: res.user.name,
+                handle: res.user.handle,
+                avatarInitials: res.user.avatarInitials,
+                verified: false,
+                verifiedSources: [],
+                publishedCommandsCount: 0,
+                joinedAt: new Date().toISOString().slice(0, 10),
+                bio: '',
+                role: profile.role,
+              }
+        );
+        setNavTab('Discover');
       }
     } catch (err) {
-      console.error('Failed to switch profile:', err);
+      console.error('Failed to switch preview profile:', err);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (err) {
+      console.error('Failed to logout:', err);
+    } finally {
+      setCurrentUser(mockProfiles[0]);
+      setNavTab('Discover');
+      setPublishSuccessToast(null);
     }
   };
 
@@ -192,6 +287,27 @@ export function RegistryApp() {
     window.postMessage({ type: 'burst:unpin-command', commandId }, '*');
   };
 
+  if (authLoading) {
+    return (
+      <LandingPage
+        authLoading
+        authConfig={authConfig}
+        onGitHubLogin={handleGitHubLogin}
+        onPreviewLogin={handlePreviewLogin}
+      />
+    );
+  }
+
+  if (isGuest) {
+    return (
+      <LandingPage
+        authConfig={authConfig}
+        onGitHubLogin={handleGitHubLogin}
+        onPreviewLogin={handlePreviewLogin}
+      />
+    );
+  }
+
   return (
     <div className="registry-shell">
       <aside className="sidebar" aria-label="Registry navigation">
@@ -202,6 +318,28 @@ export function RegistryApp() {
             <em>Registry</em>
           </div>
         </div>
+
+        <div className="auth-panel auth-panel--signed-in">
+          <strong>Signed in</strong>
+          <div className="auth-profile-select">
+            <div className="auth-profile-btn is-active">
+              <span className="profile-avatar">{currentUser.avatarInitials}</span>
+              <span className="profile-details">
+                <span className="profile-name">{currentUser.name}</span>
+                <span className="profile-handle">
+                  {currentUser.handle} {currentUser.githubLogin ? `• ${currentUser.githubLogin}` : ''}
+                </span>
+              </span>
+            </div>
+          </div>
+          <div className="auth-panel-meta">
+            <span className={`role-badge role-${currentUser.role || 'publisher'}`}>{currentUser.role || 'publisher'}</span>
+            <button className="logout-btn" type="button" onClick={() => void handleLogout()}>
+              Log out
+            </button>
+          </div>
+        </div>
+
         <nav>
           {navItems.map((item) => (
             <button
@@ -209,7 +347,7 @@ export function RegistryApp() {
               type="button"
               key={item}
               onClick={() => {
-                setNavTab(item as any);
+                setNavTab(item as typeof navTab);
                 setPublishSuccessToast(null);
               }}
             >
@@ -217,27 +355,6 @@ export function RegistryApp() {
             </button>
           ))}
         </nav>
-
-        {/* Authentication selection panel */}
-        <div className="auth-panel">
-          <strong>Simulated Profile</strong>
-          <div className="auth-profile-select">
-            {mockProfiles.map((profile) => (
-              <button
-                key={profile.handle}
-                className={`auth-profile-btn ${currentUser.handle === profile.handle ? 'is-active' : ''}`}
-                onClick={() => handleProfileSwitch(profile)}
-                type="button"
-              >
-                <span className="profile-avatar">{profile.avatarInitials}</span>
-                <span className="profile-details">
-                  <span className="profile-name">{profile.name}</span>
-                  <span className="profile-handle">{profile.handle === 'guest' ? 'Not signed in' : profile.handle}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
 
         <div className="sidebar-note">
           <strong>Security model</strong>
@@ -252,6 +369,49 @@ export function RegistryApp() {
             <button className="close-toast-btn" onClick={() => setPublishSuccessToast(null)}>×</button>
           </div>
         )}
+
+        <section className="dashboard-banner" aria-label="Registry workspace summary">
+          <div className="dashboard-banner-copy">
+            <p className="eyebrow">Registry workspace</p>
+            <h1>{dashboardState.title}</h1>
+            <p>{dashboardState.description}</p>
+
+            <div className="dashboard-banner-meta">
+              <span>{currentUser.name}</span>
+              <span>{currentUser.handle}</span>
+              <span>{currentUser.role || 'publisher'}</span>
+              <span>{authConfig?.githubEnabled ? 'GitHub OAuth enabled' : 'Preview login enabled'}</span>
+            </div>
+          </div>
+
+          <div className="dashboard-banner-card">
+            <div className="dashboard-banner-session">
+              <span className="profile-avatar">{currentUser.avatarInitials}</span>
+              <div>
+                <strong>{currentUser.name}</strong>
+                <p>{currentGithubLogin ? `@${currentGithubLogin}` : currentUser.handle}</p>
+              </div>
+            </div>
+
+            <div className="dashboard-banner-actions">
+              {navTab !== 'Discover' && (
+                <button type="button" className="hero-button hero-button-secondary" onClick={() => setNavTab('Discover')}>
+                  Go to Discover
+                </button>
+              )}
+              {navTab !== 'Publish' && (
+                <button type="button" className="hero-button hero-button-primary" onClick={() => setNavTab('Publish')}>
+                  Open Publish
+                </button>
+              )}
+              {navTab === 'Discover' && (
+                <button type="button" className="hero-button hero-button-primary" onClick={() => setNavTab('Users')}>
+                  Review users
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
 
         {navTab === 'Discover' && (
           <>
@@ -378,10 +538,371 @@ export function RegistryApp() {
           />
         )}
 
+        {navTab === 'Users' && <UsersPanel currentUser={currentUser} />}
+
         {navTab === 'Audits' && <AuditsPanel />}
 
         {navTab === 'Settings' && <SettingsPanel />}
       </main>
+    </div>
+  );
+}
+
+function LandingPage({
+  authLoading = false,
+  authConfig,
+  onGitHubLogin,
+  onPreviewLogin,
+}: {
+  authLoading?: boolean;
+  authConfig: RegistryAuthConfig | null;
+  onGitHubLogin: () => Promise<void>;
+  onPreviewLogin: (profile: typeof mockProfiles[number]) => Promise<void>;
+}) {
+  const featuredCommands = registryCommandsData.slice(0, 3);
+  const verifiedCount = registryCommandsData.filter((command) => command.trustLevel === 'verified').length;
+  const reviewedCount = registryCommandsData.filter((command) => command.trustLevel === 'reviewed' || command.trustLevel === 'verified').length;
+  const commandCount = registryCommandsData.length;
+  const githubEnabled = authConfig?.githubEnabled ?? false;
+
+  return (
+    <div className="landing-shell">
+      <header className="landing-hero">
+        <div className="landing-brand">
+          <img className="brand-logo-img" src={logoUrl} alt="Burst Logo" />
+          <div>
+            <strong>Burst</strong>
+            <em>Registry</em>
+          </div>
+        </div>
+
+        <div className="landing-hero-copy">
+          <p className="eyebrow">Audited command registry</p>
+          <h1>Ship safe browser commands with GitHub-backed identity.</h1>
+          <p>
+            Burst Registry combines a public command marketplace, authenticated publisher dashboard, and user management so the
+            extension team can review, publish, and trust scripts from one place.
+          </p>
+
+          <div className="landing-actions">
+            <button className="hero-button hero-button-primary" type="button" onClick={() => void onGitHubLogin()} disabled={!githubEnabled || authLoading}>
+              {githubEnabled ? 'Continue with GitHub' : 'GitHub login unavailable'}
+            </button>
+            <a className="hero-button hero-button-secondary" href="#featured-commands">
+              Browse featured commands
+            </a>
+          </div>
+
+          <div className="landing-meta">
+            <span>{commandCount} public commands</span>
+            <span>{verifiedCount} verified publishers</span>
+            <span>{reviewedCount} audited entries</span>
+          </div>
+        </div>
+
+        <div className="landing-sidecard">
+          <span className="landing-sidecard-label">Login mode</span>
+          <strong>{githubEnabled ? 'GitHub OAuth' : 'Preview mode'}</strong>
+          <p>
+            {githubEnabled
+              ? 'Production sign-in uses GitHub OAuth and stores the session in Cloudflare Workers.'
+              : 'GitHub secrets are not configured in this environment, so preview accounts remain available for local work.'}
+          </p>
+
+          <div className="preview-login-grid">
+            {mockProfiles
+              .filter((profile) => profile.handle !== 'guest')
+              .map((profile) => (
+                <button key={profile.handle} type="button" className="preview-login-card" onClick={() => void onPreviewLogin(profile)}>
+                  <span className="profile-avatar">{profile.avatarInitials}</span>
+                  <span>
+                    <strong>{profile.name}</strong>
+                    <em>{profile.handle}</em>
+                  </span>
+                </button>
+              ))}
+          </div>
+        </div>
+      </header>
+
+      <section className="landing-surface">
+        <div className="landing-feature-grid">
+          <article className="feature-card">
+            <strong>Landing page</strong>
+            <p>Public entry point for the registry with a clear trust story and a fast path into GitHub auth.</p>
+          </article>
+          <article className="feature-card">
+            <strong>Logged-in dashboard</strong>
+            <p>Discover, publish, audit, and manage users from a single authenticated workspace.</p>
+          </article>
+          <article className="feature-card">
+            <strong>User management</strong>
+            <p>Review publisher profiles, role assignments, verified sources, and identity metadata.</p>
+          </article>
+        </div>
+
+        <div className="featured-commands" id="featured-commands">
+          <div className="section-heading">
+            <h2>Featured commands</h2>
+            <p>Public examples that show the trust labels, permissions, and publisher identity model.</p>
+          </div>
+          <div className="featured-command-list">
+            {featuredCommands.map((command) => (
+              <div key={command.id} className="featured-command-card">
+                <div>
+                  <strong>{command.title}</strong>
+                  <p>{command.description}</p>
+                </div>
+                <div className="featured-command-meta">
+                  <span className={`trust-badge trust-${command.trustLevel}`}>{trustCopy[command.trustLevel]}</span>
+                  <span className={`risk-badge risk-${command.risk}`}>{riskCopy[command.risk]}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function UsersPanel({
+  currentUser,
+  onCurrentUserUpdate,
+}: {
+  currentUser: RegistrySessionUser;
+  onCurrentUserUpdate: (user: PublisherProfile) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [users, setUsers] = useState<PublisherProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedHandle, setSelectedHandle] = useState<string>('');
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [draft, setDraft] = useState({
+    name: '',
+    bio: '',
+    verified: false,
+    verifiedSources: '',
+    role: 'publisher' as 'admin' | 'publisher' | 'member',
+  });
+
+  const selectedUser = users.find((user) => user.handle === selectedHandle) ?? null;
+  const canEditAll = currentUser.handle !== 'guest' && currentUser.role === 'admin';
+  const canEditSelected = Boolean(selectedUser) && (canEditAll || selectedUser?.handle === currentUser.handle);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+
+    async function fetchUsers() {
+      try {
+        const results = await getRegistryUsers(query);
+        if (!active) return;
+        setUsers(results);
+        setSelectedHandle((prev) => {
+          if (prev && results.some((user) => user.handle === prev)) {
+            return prev;
+          }
+          return results[0]?.handle || '';
+        });
+      } catch (err) {
+        if (!active) return;
+        console.error('Failed to fetch registry users:', err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void fetchUsers();
+
+    return () => {
+      active = false;
+    };
+  }, [query]);
+
+  useEffect(() => {
+    if (!selectedUser) return;
+    setDraft({
+      name: selectedUser.name,
+      bio: selectedUser.bio,
+      verified: selectedUser.verified,
+      verifiedSources: selectedUser.verifiedSources.join('\n'),
+      role: selectedUser.role ?? 'publisher',
+    });
+  }, [selectedUser?.handle]);
+
+  const handleSave = async () => {
+    if (!selectedUser) return;
+    setSaving(true);
+    setNotice(null);
+
+    try {
+      const updated = await updateRegistryUser(selectedUser.handle, {
+        name: draft.name.trim(),
+        bio: draft.bio.trim(),
+        verified: draft.verified,
+        verifiedSources: draft.verifiedSources
+          .split('\n')
+          .map((source) => source.trim())
+          .filter(Boolean),
+        role: draft.role,
+      });
+
+      setUsers((prev) => prev.map((user) => (user.handle === updated.handle ? updated : user)));
+      if (updated.handle === currentUser.handle) {
+        onCurrentUserUpdate(updated);
+      }
+      setNotice(`Saved ${updated.handle}`);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Failed to save user');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="users-panel">
+      <div className="dashboard-header">
+        <h1>User management</h1>
+        <p>Review publisher identity, edit profile metadata, and manage verified-source claims.</p>
+      </div>
+
+      <div className="users-workspace">
+        <section className="users-directory">
+          <div className="users-directory-head">
+            <label className="search">
+              <span>Search users</span>
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name, handle, source, or bio" />
+            </label>
+            <span>{users.length} users</span>
+          </div>
+
+          {loading ? (
+            <div className="registry-loading">
+              <div className="spinner"></div>
+              <span>Loading users...</span>
+            </div>
+          ) : (
+            <div className="user-list">
+              {users.map((user) => (
+                <button
+                  key={user.handle}
+                  type="button"
+                  className={`user-row ${selectedHandle === user.handle ? 'is-selected' : ''}`}
+                  onClick={() => setSelectedHandle(user.handle)}
+                >
+                  <span className="profile-avatar">{user.avatarInitials}</span>
+                  <span className="user-row-copy">
+                    <strong>
+                      {user.name}
+                      <span className={`role-badge role-${user.role || 'publisher'}`}>{user.role || 'publisher'}</span>
+                    </strong>
+                    <em>{user.handle}</em>
+                    <span>{user.publishedCommandsCount} commands</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="user-detail">
+          {selectedUser ? (
+            <>
+              <div className="publisher-profile-card">
+                <div className="publisher-avatar-large">{selectedUser.avatarInitials}</div>
+                <div className="publisher-profile-info">
+                  <h3>{selectedUser.name}</h3>
+                  <span className="publisher-handle">{selectedUser.handle}</span>
+                  <span className={`role-badge role-${selectedUser.role || 'publisher'}`}>{selectedUser.role || 'publisher'}</span>
+                </div>
+              </div>
+
+              <div className="user-management-grid">
+                <label className="form-field">
+                  <span>Display name</span>
+                  <input
+                    value={draft.name}
+                    onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
+                    disabled={!canEditSelected}
+                  />
+                </label>
+
+                <label className="form-field">
+                  <span>Role</span>
+                  <select
+                    value={draft.role}
+                    onChange={(event) => setDraft((prev) => ({ ...prev, role: event.target.value as typeof draft.role }))}
+                    disabled={!canEditAll}
+                  >
+                    <option value="publisher">Publisher</option>
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </label>
+
+                <label className="form-field form-field--full">
+                  <span>Bio</span>
+                  <textarea
+                    rows={4}
+                    value={draft.bio}
+                    onChange={(event) => setDraft((prev) => ({ ...prev, bio: event.target.value }))}
+                    disabled={!canEditSelected}
+                  />
+                </label>
+
+                <label className="form-field form-field--full">
+                  <span>Verified sources, one per line</span>
+                  <textarea
+                    rows={4}
+                    value={draft.verifiedSources}
+                    onChange={(event) => setDraft((prev) => ({ ...prev, verifiedSources: event.target.value }))}
+                    disabled={!canEditAll && selectedUser.handle !== currentUser.handle}
+                  />
+                </label>
+
+                <label className="permission-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={draft.verified}
+                    onChange={() => setDraft((prev) => ({ ...prev, verified: !prev.verified }))}
+                    disabled={!canEditAll}
+                  />
+                  <span>Verified publisher</span>
+                </label>
+              </div>
+
+              <div className="publisher-section">
+                <h3>Account facts</h3>
+                <div className="publisher-stats-grid">
+                  <div>
+                    <strong>{selectedUser.publishedCommandsCount}</strong>
+                    <span>Published commands</span>
+                  </div>
+                  <div>
+                    <strong>{new Date(selectedUser.joinedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}</strong>
+                    <span>Member since</span>
+                  </div>
+                </div>
+              </div>
+
+              {notice && <div className="form-error-banner user-notice">{notice}</div>}
+
+              <div className="form-actions">
+                <button className="btn-primary" type="button" onClick={() => void handleSave()} disabled={saving || !canEditSelected}>
+                  {saving ? 'Saving...' : 'Save changes'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="empty-registry">
+              <strong>No users found</strong>
+              <span>Try a different search term.</span>
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
@@ -697,7 +1218,7 @@ function ChecklistItem({
 }
 
 interface PublishPanelProps {
-  currentUser: typeof mockProfiles[number];
+  currentUser: RegistrySessionUser;
   onPublishSuccess: (newCommand: BurstCommand) => void;
   setNavTab: (tab: any) => void;
 }
@@ -712,7 +1233,7 @@ function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: PublishPanel
           <span className="warning-icon">🔒</span>
           <h2>Authentication Required</h2>
           <p>You must be signed in as a verified publisher or community contributor to publish commands to the registry.</p>
-          <p className="note">Please select a <strong>Simulated Profile</strong> in the bottom-left corner of the sidebar (e.g. Sarah Chen or HN PowerUser) to sign in instantly.</p>
+          <p className="note">Use a <strong>Preview Profile</strong> in the sidebar to sign in instantly when GitHub OAuth is not configured in this environment.</p>
         </div>
       </div>
     );
@@ -770,7 +1291,7 @@ function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: PublishPanel
       return;
     }
 
-    const profileDetails = mockPublisherProfiles[currentUser.handle];
+    const profileDetails = currentUser.handle === 'guest' ? undefined : currentUser;
     const isVerifiedSource = profileDetails?.verifiedSources?.some((source: string) =>
       sourceUrl.toLowerCase().includes(source.toLowerCase())
     ) ?? false;
@@ -1166,4 +1687,3 @@ function SettingsPanel() {
     </div>
   );
 }
-

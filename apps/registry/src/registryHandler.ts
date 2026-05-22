@@ -1,5 +1,10 @@
-import type { AuditReport, PublisherProfile } from '@/src/lib/registryApi';
-import { buildAuditReport, type PublishCommandInput, type RegistryStore } from './registryStore';
+import type { AuditReport, PublisherProfile, RegistryUserUpdate } from '@/src/lib/registryApi';
+import { buildAuditReport, type GitHubUserProfile, type PublishCommandInput, type RegistryStore } from './registryStore';
+
+type RegistryAuthConfig = {
+  githubClientId?: string;
+  githubClientSecret?: string;
+};
 
 type JsonHeaders = Record<string, string>;
 
@@ -13,7 +18,11 @@ const guestUser = {
   handle: 'guest',
   name: 'Guest User',
   avatarInitials: 'G',
+  role: 'member' as const,
 };
+
+const GITHUB_STATE_COOKIE = 'burst_github_state';
+const GITHUB_RETURN_TO_COOKIE = 'burst_github_return_to';
 
 function parseCookies(cookieHeader: string | null): Record<string, string> {
   const cookies: Record<string, string> = {};
@@ -31,38 +40,131 @@ function parseCookies(cookieHeader: string | null): Record<string, string> {
   return cookies;
 }
 
+function normalizeReturnTo(value: string | null): string {
+  if (!value) return '/dashboard';
+  if (!value.startsWith('/') || value.startsWith('//')) return '/dashboard';
+  return value;
+}
+
+function isSecureRequest(request: Request): boolean {
+  return new URL(request.url).protocol === 'https:';
+}
+
+function buildCookie(name: string, value: string, secure: boolean, maxAge: number): string {
+  return `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure ? '; Secure' : ''}`;
+}
+
+function clearCookie(name: string, secure: boolean): string {
+  return buildCookie(name, '', secure, 0);
+}
+
 function jsonResponse(body: unknown, init?: ResponseInit): Response {
+  const headers = new Headers(init?.headers);
+  headers.set('Content-Type', 'application/json');
+  headers.set('Access-Control-Allow-Origin', '*');
+  headers.set('Access-Control-Allow-Credentials', 'true');
+
   return new Response(JSON.stringify(body), {
     ...init,
-    headers: {
-      ...jsonHeaders,
-      ...(init?.headers || {}),
-    },
+    headers,
   });
+}
+
+function redirectResponse(location: string, cookies: string[] = []): Response {
+  const headers = new Headers({ Location: location });
+  for (const cookie of cookies) {
+    headers.append('Set-Cookie', cookie);
+  }
+  return new Response(null, { status: 302, headers });
 }
 
 function errorResponse(message: string, status = 400): Response {
   return jsonResponse({ error: message }, { status });
 }
 
-function sessionCookie(value: string): string {
-  return `session_id=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`;
+function appendSetCookies(headers: HeadersInit | undefined, cookies: string[]): HeadersInit {
+  const next = new Headers(headers);
+  for (const cookie of cookies) {
+    next.append('Set-Cookie', cookie);
+  }
+  return next;
 }
 
-function expiredSessionCookie(): string {
-  return 'session_id=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0';
+async function exchangeGithubCode(request: Request, config: RegistryAuthConfig, code: string): Promise<string> {
+  if (!config.githubClientId || !config.githubClientSecret) {
+    throw new Error('GitHub login is not configured');
+  }
+
+  const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      client_id: config.githubClientId,
+      client_secret: config.githubClientSecret,
+      code,
+      redirect_uri: new URL('/api/auth/github/callback', request.url).toString(),
+    }),
+  });
+
+  if (!tokenResponse.ok) {
+    throw new Error('Failed to exchange GitHub authorization code');
+  }
+
+  const tokenData = (await tokenResponse.json()) as { access_token?: string; error?: string; error_description?: string };
+  if (!tokenData.access_token) {
+    throw new Error(tokenData.error_description || tokenData.error || 'Failed to obtain GitHub access token');
+  }
+
+  return tokenData.access_token;
 }
 
-export function createRegistryHandler(store: RegistryStore) {
+async function fetchGithubUser(accessToken: string): Promise<GitHubUserProfile> {
+  const response = await fetch('https://api.github.com/user', {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${accessToken}`,
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch GitHub profile');
+  }
+
+  const profile = (await response.json()) as {
+    id: number;
+    login: string;
+    name: string | null;
+    avatar_url: string;
+    html_url: string;
+    bio: string | null;
+  };
+
+  return {
+    id: String(profile.id),
+    login: profile.login,
+    name: profile.name,
+    avatar_url: profile.avatar_url,
+    html_url: profile.html_url,
+    bio: profile.bio,
+  };
+}
+
+export function createRegistryHandler(store: RegistryStore, authConfig: RegistryAuthConfig = {}) {
   return async function handleRequest(req: Request): Promise<Response> {
     const url = new URL(req.url);
     const path = url.pathname;
+    const secureCookie = isSecureRequest(req);
+    const hasGitHubLogin = Boolean(authConfig.githubClientId && authConfig.githubClientSecret);
 
     if (req.method === 'OPTIONS') {
       return new Response(null, {
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, PUT, DELETE',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, PUT, DELETE, PATCH',
           'Access-Control-Allow-Headers': 'Content-Type, Cookie',
           'Access-Control-Allow-Credentials': 'true',
         },
@@ -74,10 +176,67 @@ export function createRegistryHandler(store: RegistryStore) {
     }
 
     try {
+      if (path === '/api/auth/config' && req.method === 'GET') {
+        return jsonResponse({
+          githubEnabled: hasGitHubLogin,
+          previewEnabled: true,
+          loginUrl: hasGitHubLogin ? new URL('/api/auth/github/start', url.origin).toString() : undefined,
+        });
+      }
+
       if (path === '/api/auth/me' && req.method === 'GET') {
         const cookies = parseCookies(req.headers.get('Cookie'));
         const user = await store.getCurrentUser(cookies.session_id ?? null);
         return jsonResponse(user ?? guestUser);
+      }
+
+      if (path === '/api/auth/github/start' && req.method === 'GET') {
+        if (!hasGitHubLogin) {
+          return errorResponse('GitHub login is not configured', 503);
+        }
+
+        const state = crypto.randomUUID();
+        const returnTo = normalizeReturnTo(url.searchParams.get('returnTo'));
+        const callbackUrl = new URL('/api/auth/github/callback', url.origin).toString();
+        const authorizeUrl = new URL('https://github.com/login/oauth/authorize');
+        authorizeUrl.searchParams.set('client_id', authConfig.githubClientId!);
+        authorizeUrl.searchParams.set('redirect_uri', callbackUrl);
+        authorizeUrl.searchParams.set('state', state);
+
+        return redirectResponse(authorizeUrl.toString(), [
+          buildCookie(GITHUB_STATE_COOKIE, state, secureCookie, 600),
+          buildCookie(GITHUB_RETURN_TO_COOKIE, returnTo, secureCookie, 600),
+        ]);
+      }
+
+      if (path === '/api/auth/github/callback' && req.method === 'GET') {
+        if (!hasGitHubLogin) {
+          return errorResponse('GitHub login is not configured', 503);
+        }
+
+        const error = url.searchParams.get('error');
+        if (error) {
+          return errorResponse(error, 401);
+        }
+
+        const cookies = parseCookies(req.headers.get('Cookie'));
+        const state = url.searchParams.get('state');
+        const code = url.searchParams.get('code');
+        if (!code || !state || cookies[GITHUB_STATE_COOKIE] !== state) {
+          return errorResponse('Invalid GitHub login state', 400);
+        }
+
+        const accessToken = await exchangeGithubCode(req, authConfig, code);
+        const githubProfile = await fetchGithubUser(accessToken);
+        const user = await store.upsertGitHubUser(githubProfile);
+        const { sessionId } = await store.createSession(user.handle);
+        const returnTo = normalizeReturnTo(cookies[GITHUB_RETURN_TO_COOKIE] ?? '/dashboard');
+
+        return redirectResponse(returnTo, [
+          buildCookie('session_id', sessionId, secureCookie, 86400),
+          clearCookie(GITHUB_STATE_COOKIE, secureCookie),
+          clearCookie(GITHUB_RETURN_TO_COOKIE, secureCookie),
+        ]);
       }
 
       if (path === '/api/auth/login' && req.method === 'POST') {
@@ -93,17 +252,13 @@ export function createRegistryHandler(store: RegistryStore) {
           }
 
           return jsonResponse({ ok: true, user: guestUser }, {
-            headers: {
-              'Set-Cookie': expiredSessionCookie(),
-            },
+            headers: appendSetCookies(undefined, [clearCookie('session_id', secureCookie)]),
           });
         }
 
         const { sessionId, user } = await store.createSession(body.handle);
         return jsonResponse({ ok: true, user }, {
-          headers: {
-            'Set-Cookie': sessionCookie(sessionId),
-          },
+          headers: appendSetCookies(undefined, [buildCookie('session_id', sessionId, secureCookie, 86400)]),
         });
       }
 
@@ -114,10 +269,14 @@ export function createRegistryHandler(store: RegistryStore) {
         }
 
         return jsonResponse({ ok: true }, {
-          headers: {
-            'Set-Cookie': expiredSessionCookie(),
-          },
+          headers: appendSetCookies(undefined, [clearCookie('session_id', secureCookie)]),
         });
+      }
+
+      if (path === '/api/users' && req.method === 'GET') {
+        const q = url.searchParams.get('q')?.trim() || '';
+        const users = await store.listUsers(q);
+        return jsonResponse(users);
       }
 
       if (path === '/api/commands' && req.method === 'GET') {
@@ -170,9 +329,43 @@ export function createRegistryHandler(store: RegistryStore) {
         return jsonResponse(report);
       }
 
-      const publisherMatch = path.match(/^\/api\/publishers\/(@[a-zA-Z0-9_-]+)$/);
+      const userMatch = path.match(/^\/api\/users\/([^/]+)$/);
+      if (userMatch) {
+        const handle = decodeURIComponent(userMatch[1]);
+
+        if (req.method === 'GET') {
+          const profile = await store.getUser(handle);
+          if (!profile) {
+            return errorResponse('Publisher profile not found', 404);
+          }
+
+          return jsonResponse(profile);
+        }
+
+        if (req.method === 'PATCH') {
+          const currentUser = await store.getCurrentUser(parseCookies(req.headers.get('Cookie')).session_id ?? null);
+          if (!currentUser) {
+            return errorResponse('Unauthorized', 401);
+          }
+
+          const profile = await store.getUser(handle);
+          if (!profile) {
+            return errorResponse('Publisher profile not found', 404);
+          }
+
+          if (currentUser.handle !== handle && currentUser.role !== 'admin') {
+            return errorResponse('Forbidden', 403);
+          }
+
+          const patch = (await req.json()) as RegistryUserUpdate;
+          const updated = await store.updateUser(handle, patch);
+          return jsonResponse(updated);
+        }
+      }
+
+      const publisherMatch = path.match(/^\/api\/publishers\/([^/]+)$/);
       if (publisherMatch && req.method === 'GET') {
-        const profile = await store.getPublisherProfile(publisherMatch[1]);
+        const profile = await store.getPublisherProfile(decodeURIComponent(publisherMatch[1]));
         if (!profile) {
           return errorResponse('Publisher profile not found', 404);
         }

@@ -23,9 +23,9 @@
 - Decide how commands declare runtime capabilities.
 - Add registry API read endpoints for search, command detail, audit report, and publisher profile.
 
-## Phase 2: Identity and Publishing (Done)
+## Phase 2: Identity and Publishing
 
-- Add user sign-in to the registry website. (Done - simulated profile switcher implemented)
+- Add user sign-in to the registry website. (In progress - preview profile switching and session endpoints are implemented; GitHub OAuth activation still needs secrets.)
 - Add publisher profiles and verified source ownership. (Done - verified domain sources list and ownership logic implemented)
 - Build the publish use case flow. (Done - publishing wizard form UI implemented)
 - Require source URL, manifest validation, permission declaration, and package integrity metadata. (Done - wizard validation, permission checkbox, and pre-release scanner checklists implemented)
@@ -69,4 +69,3 @@
 - Unify all user-facing extension and web panels under a modern macOS design system. (Done)
 - Enforce full Light/Dark/System theme support across the dashboard, options settings, command palette, and popup. (Done)
 - Synchronize editor theme context within CodeMirror based on selected setting preferences. (Done)
-

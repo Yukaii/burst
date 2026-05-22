@@ -40,7 +40,6 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Manifest package checks for HTTPS source URLs, safe relative entrypoints, archive integrity metadata, and semantic versions.
 - Bun test coverage for host matching, local script match conversion, user script code generation, palette ordering, management command discovery, script capabilities detection, and mock Registry API calls.
 - Root scripts for separate extension and registry development/build flows.
-- Simulated publisher authentication/profile switcher panel on the registry website with mock publisher credentials.
 - Bidirectional registry-to-extension postMessage sync relay bridge for installing, uninstalling, pinning, and unpinning registry scripts.
 - Installed registry command persistence in extension local storage, integrated into Chrome's userScripts API dynamically.
 - Dynamic user scripts execution routing in background.ts.
@@ -58,7 +57,6 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Premium extension options settings page and syncing mechanism for Theme (Light/Dark/System), Alignment (Top/Center), Backdrop Close, Developer Logging, and Consent Revocation.
 - Stable public command API documented and capability-gated in sandboxed runtime executions.
 - Worker-compatible registry backend with shared API handlers and D1-backed persistence for commands, publishers, and session-based authentication.
-- Account sign-in on registry website (profile switcher calling backend login/logout and session status endpoints).
 - Decentralized custom Git registries list in the Extension Dashboard, stored in Chrome local storage.
 - GitHub Raw manifest parser fetching and installing commands from external git repositories.
 - Unified Update Checker dashboard panel checking versions and providing one-click updates for official and custom Git registry scripts.
@@ -69,7 +67,8 @@ The registry website should live outside WXT entrypoints because it is a normal 
 
 ## In Progress
 
-- None.
+- Registry dashboard UI refinement: stronger workspace hierarchy, session header, and user-management polish.
+- Registry account sign-in: preview profile switching and session status endpoints are in place, but GitHub OAuth production secrets still need to be configured.
 
 ## Not Implemented Yet
 
@@ -82,7 +81,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Dashboard Test validates the expected export shape only. Full syntax diagnostics should come from a dedicated parser or registration dry run.
 - Local script import currently replaces the full local script list after confirmation instead of merging records.
 - The dashboard bundle is larger after adding CodeMirror 6. It is isolated to the dashboard page, not the content script.
-- The registry Worker config is scaffolded, but the D1 database ID still needs to be replaced with a real Cloudflare database binding before deployment.
+- GitHub OAuth secrets are not yet configured in production, so the live registry falls back to preview profiles until Cloudflare secrets are added.
 
 ## Verification Baseline
 

@@ -3,15 +3,18 @@ import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
 import type { AuditReport, PublisherProfile } from '@/src/lib/registryApi';
 import { getMockScriptCode, mockPublisherProfiles, registryCommandsData } from '@/src/lib/registryApi';
 
-type RegistryUser = {
-  handle: string;
-  name: string;
-  avatarInitials: string;
-};
-
 export type StoredRegistryCommand = BurstCommand & {
   code: string;
   version: string;
+};
+
+export type GitHubUserProfile = {
+  id: string;
+  login: string;
+  name: string | null;
+  avatar_url: string;
+  html_url: string;
+  bio: string | null;
 };
 
 export type PublishCommandInput = {
@@ -31,6 +34,12 @@ export type PublishCommandInput = {
 };
 
 type StoredPublisherProfile = PublisherProfile;
+type StoredPublisherRecord = StoredPublisherProfile & {
+  githubId?: string;
+  githubLogin?: string;
+  avatarUrl?: string;
+  profileUrl?: string;
+};
 
 type D1BindTarget = {
   run(): Promise<unknown>;
@@ -45,13 +54,17 @@ export type D1DatabaseLike = {
 };
 
 export type RegistryStore = {
-  getCurrentUser(sessionId: string | null): Promise<RegistryUser | null>;
-  createSession(handle: string): Promise<{ sessionId: string; user: RegistryUser }>;
+  getCurrentUser(sessionId: string | null): Promise<StoredPublisherRecord | null>;
+  createSession(handle: string): Promise<{ sessionId: string; user: StoredPublisherRecord }>;
   deleteSession(sessionId: string): Promise<void>;
   listCommands(query: string): Promise<StoredRegistryCommand[]>;
   getCommand(id: string): Promise<StoredRegistryCommand | undefined>;
   createCommand(input: PublishCommandInput): Promise<StoredRegistryCommand>;
-  getPublisherProfile(handle: string): Promise<StoredPublisherProfile | undefined>;
+  getPublisherProfile(handle: string): Promise<StoredPublisherRecord | undefined>;
+  listUsers(query: string): Promise<StoredPublisherRecord[]>;
+  getUser(handle: string): Promise<StoredPublisherRecord | undefined>;
+  updateUser(handle: string, patch: Partial<StoredPublisherRecord>): Promise<StoredPublisherRecord>;
+  upsertGitHubUser(profile: GitHubUserProfile): Promise<StoredPublisherRecord>;
 };
 
 const seedCommands: StoredRegistryCommand[] = registryCommandsData.map((command) => ({
@@ -60,8 +73,9 @@ const seedCommands: StoredRegistryCommand[] = registryCommandsData.map((command)
   version: '1.0.0',
 }));
 
-const seedPublishers: PublisherProfile[] = Object.values(mockPublisherProfiles).map((profile) => ({
+const seedPublishers: StoredPublisherRecord[] = Object.values(mockPublisherProfiles).map((profile) => ({
   ...profile,
+  role: profile.handle === '@burst-examples' ? 'admin' : 'publisher',
 }));
 
 function normalizeQuery(query: string): string {
@@ -88,11 +102,11 @@ function matchesSearch(command: StoredRegistryCommand, query: string): boolean {
   return searchable.includes(normalized);
 }
 
-function getSeedPublisherProfile(handle: string): StoredPublisherProfile | undefined {
+function getSeedPublisherProfile(handle: string): StoredPublisherRecord | undefined {
   return seedPublishers.find((profile) => profile.handle === handle);
 }
 
-function buildPublisherProfile(handle: string, commandCount: number): StoredPublisherProfile | undefined {
+function buildPublisherProfile(handle: string, commandCount: number): StoredPublisherRecord | undefined {
   const profile = getSeedPublisherProfile(handle);
   if (!profile) return undefined;
 
@@ -102,15 +116,7 @@ function buildPublisherProfile(handle: string, commandCount: number): StoredPubl
   };
 }
 
-function buildSessionUser(profile: StoredPublisherProfile): RegistryUser {
-  return {
-    handle: profile.handle,
-    name: profile.name,
-    avatarInitials: profile.avatarInitials,
-  };
-}
-
-function buildStoredCommand(input: PublishCommandInput, publisher: StoredPublisherProfile): StoredRegistryCommand {
+function buildStoredCommand(input: PublishCommandInput, publisher: StoredPublisherRecord): StoredRegistryCommand {
   return {
     id: input.id,
     title: input.title,
@@ -154,35 +160,48 @@ function parseJsonObject<T extends object>(value: string | null | undefined, fal
   }
 }
 
+function deriveAvatarInitials(value: string): string {
+  const compact = value.replace(/[^a-z0-9]/gi, '').trim();
+  if (!compact) return 'GH';
+  return compact.slice(0, 2).toUpperCase();
+}
+
+function normalizeStoredPublisher(profile: StoredPublisherRecord): StoredPublisherRecord {
+  return {
+    ...profile,
+    role: profile.role ?? 'publisher',
+  };
+}
+
 class MemoryRegistryStore implements RegistryStore {
-  private readonly publishers = new Map<string, StoredPublisherProfile>();
+  private readonly publishers = new Map<string, StoredPublisherRecord>();
   private readonly commands = new Map<string, StoredRegistryCommand>();
   private readonly sessions = new Map<string, string>();
 
   constructor() {
     for (const profile of seedPublishers) {
-      this.publishers.set(profile.handle, { ...profile });
+      this.publishers.set(profile.handle, normalizeStoredPublisher({ ...profile }));
     }
     for (const command of seedCommands) {
       this.commands.set(command.id, { ...command });
     }
   }
 
-  async getCurrentUser(sessionId: string | null): Promise<RegistryUser | null> {
+  async getCurrentUser(sessionId: string | null): Promise<StoredPublisherRecord | null> {
     if (!sessionId) return null;
     const handle = this.sessions.get(sessionId);
     if (!handle) return null;
     const publisher = this.publishers.get(handle);
-    return publisher ? buildSessionUser(publisher) : null;
+    return publisher ? this.attachCommandCount(publisher) : null;
   }
 
-  async createSession(handle: string): Promise<{ sessionId: string; user: RegistryUser }> {
+  async createSession(handle: string): Promise<{ sessionId: string; user: StoredPublisherRecord }> {
     const publisher = this.publishers.get(handle);
     if (!publisher) throw new Error('Publisher profile not found');
 
     const sessionId = crypto.randomUUID();
     this.sessions.set(sessionId, handle);
-    return { sessionId, user: buildSessionUser(publisher) };
+    return { sessionId, user: this.attachCommandCount(publisher) };
   }
 
   async deleteSession(sessionId: string): Promise<void> {
@@ -213,12 +232,89 @@ class MemoryRegistryStore implements RegistryStore {
     return { ...command };
   }
 
-  async getPublisherProfile(handle: string): Promise<StoredPublisherProfile | undefined> {
-    const profile = this.publishers.get(handle);
-    if (!profile) return undefined;
+  async getPublisherProfile(handle: string): Promise<StoredPublisherRecord | undefined> {
+    return this.getUser(handle);
+  }
 
-    const commandCount = [...this.commands.values()].filter((command) => command.publisher.handle === handle).length;
-    return buildPublisherProfile(handle, commandCount);
+  async listUsers(query: string): Promise<StoredPublisherRecord[]> {
+    const normalized = normalizeQuery(query);
+    return [...this.publishers.values()]
+      .map((profile) => this.attachCommandCount(profile))
+      .filter((profile) => {
+        if (!normalized) return true;
+        return [
+          profile.name,
+          profile.handle,
+          profile.bio,
+          profile.githubLogin,
+          profile.profileUrl,
+          ...(profile.verifiedSources || []),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(normalized);
+      })
+      .sort((a, b) => b.publishedCommandsCount - a.publishedCommandsCount);
+  }
+
+  async getUser(handle: string): Promise<StoredPublisherRecord | undefined> {
+    const profile = this.publishers.get(handle);
+    return profile ? this.attachCommandCount(profile) : undefined;
+  }
+
+  async updateUser(handle: string, patch: Partial<StoredPublisherRecord>): Promise<StoredPublisherRecord> {
+    const profile = this.publishers.get(handle);
+    if (!profile) throw new Error('Publisher profile not found');
+
+    const next: StoredPublisherRecord = normalizeStoredPublisher({
+      ...profile,
+      ...patch,
+      verifiedSources: patch.verifiedSources ?? profile.verifiedSources,
+      publishedCommandsCount: profile.publishedCommandsCount,
+    });
+    this.publishers.set(handle, next);
+    return this.attachCommandCount(next);
+  }
+
+  async upsertGitHubUser(profile: GitHubUserProfile): Promise<StoredPublisherRecord> {
+    const handle = `@${profile.login}`;
+    const existing =
+      [...this.publishers.values()].find((item) => item.githubId === profile.id || item.githubLogin === profile.login || item.handle === handle) ??
+      this.publishers.get(handle);
+
+    const merged: StoredPublisherRecord = normalizeStoredPublisher({
+      ...(existing ?? {
+        name: profile.name || profile.login,
+        handle,
+        avatarInitials: deriveAvatarInitials(profile.name || profile.login),
+        verified: false,
+        verifiedSources: [],
+        publishedCommandsCount: 0,
+        joinedAt: new Date().toISOString().slice(0, 10),
+        bio: profile.bio || '',
+        role: 'publisher',
+      }),
+      name: profile.name || existing?.name || profile.login,
+      handle,
+      avatarInitials: existing?.avatarInitials || deriveAvatarInitials(profile.name || profile.login),
+      githubId: profile.id,
+      githubLogin: profile.login,
+      avatarUrl: profile.avatar_url,
+      profileUrl: profile.html_url,
+      bio: profile.bio ?? existing?.bio ?? '',
+    });
+
+    this.publishers.set(handle, merged);
+    return this.attachCommandCount(merged);
+  }
+
+  private attachCommandCount(profile: StoredPublisherRecord): StoredPublisherRecord {
+    const commandCount = [...this.commands.values()].filter((command) => command.publisher.handle === profile.handle).length;
+    return {
+      ...profile,
+      publishedCommandsCount: commandCount,
+    };
   }
 }
 
@@ -229,7 +325,7 @@ class D1RegistryStore implements RegistryStore {
     this.initPromise = this.initialize();
   }
 
-  async getCurrentUser(sessionId: string | null): Promise<RegistryUser | null> {
+  async getCurrentUser(sessionId: string | null): Promise<StoredPublisherRecord | null> {
     if (!sessionId) return null;
     await this.initPromise;
 
@@ -239,27 +335,13 @@ class D1RegistryStore implements RegistryStore {
       .first<{ user_handle: string }>();
     if (!session) return null;
 
-    const publisher = await this.db
-      .prepare('SELECT handle, name, avatar_initials FROM publishers WHERE handle = ?')
-      .bind(session.user_handle)
-      .first<{ handle: string; name: string; avatar_initials: string }>();
-
-    return publisher
-      ? {
-          handle: publisher.handle,
-          name: publisher.name,
-          avatarInitials: publisher.avatar_initials,
-        }
-      : null;
+    return this.getUser(session.user_handle);
   }
 
-  async createSession(handle: string): Promise<{ sessionId: string; user: RegistryUser }> {
+  async createSession(handle: string): Promise<{ sessionId: string; user: StoredPublisherRecord }> {
     await this.initPromise;
 
-    const publisher = await this.db
-      .prepare('SELECT handle, name, avatar_initials FROM publishers WHERE handle = ?')
-      .bind(handle)
-      .first<{ handle: string; name: string; avatar_initials: string }>();
+    const publisher = await this.getUser(handle);
     if (!publisher) throw new Error('Publisher profile not found');
 
     const sessionId = crypto.randomUUID();
@@ -270,11 +352,7 @@ class D1RegistryStore implements RegistryStore {
 
     return {
       sessionId,
-      user: {
-        handle: publisher.handle,
-        name: publisher.name,
-        avatarInitials: publisher.avatar_initials,
-      },
+      user: publisher,
     };
   }
 
@@ -445,10 +523,61 @@ class D1RegistryStore implements RegistryStore {
     return command;
   }
 
-  async getPublisherProfile(handle: string): Promise<StoredPublisherProfile | undefined> {
-    await this.initPromise;
+  async getPublisherProfile(handle: string): Promise<StoredPublisherRecord | undefined> {
+    return this.getUser(handle);
+  }
 
-    const publisher = await this.db
+  async listUsers(query: string): Promise<StoredPublisherRecord[]> {
+    await this.initPromise;
+    const rows = await this.db
+      .prepare(`
+        SELECT
+          p.*,
+          COUNT(c.id) AS published_count
+        FROM publishers p
+        LEFT JOIN commands c ON c.publisher_handle = p.handle
+        GROUP BY p.handle
+      `)
+      .all<{
+        handle: string;
+        name: string;
+        avatar_initials: string;
+        verified: number;
+        verified_sources: string;
+        joined_at: string;
+        bio: string | null;
+        github_id: string | null;
+        github_login: string | null;
+        avatar_url: string | null;
+        profile_url: string | null;
+        role: 'admin' | 'publisher' | 'member' | null;
+        published_count: number;
+      }>();
+
+    const normalized = normalizeQuery(query);
+    return rows.results
+      .map((row) => this.mapPublisherRow(row, row.published_count))
+      .filter((profile) => {
+        if (!normalized) return true;
+        return [
+          profile.name,
+          profile.handle,
+          profile.bio,
+          profile.githubLogin,
+          profile.profileUrl,
+          ...(profile.verifiedSources || []),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(normalized);
+      })
+      .sort((a, b) => b.publishedCommandsCount - a.publishedCommandsCount);
+  }
+
+  async getUser(handle: string): Promise<StoredPublisherRecord | undefined> {
+    await this.initPromise;
+    const row = await this.db
       .prepare('SELECT * FROM publishers WHERE handle = ?')
       .bind(handle)
       .first<{
@@ -459,24 +588,165 @@ class D1RegistryStore implements RegistryStore {
         verified_sources: string;
         joined_at: string;
         bio: string | null;
+        github_id: string | null;
+        github_login: string | null;
+        avatar_url: string | null;
+        profile_url: string | null;
+        role: 'admin' | 'publisher' | 'member' | null;
       }>();
-    if (!publisher) return undefined;
+    if (!row) return undefined;
 
     const count = await this.db
       .prepare('SELECT COUNT(*) AS count FROM commands WHERE publisher_handle = ?')
       .bind(handle)
       .first<{ count: number }>();
 
-    return {
-      name: publisher.name,
-      handle: publisher.handle,
-      avatarInitials: publisher.avatar_initials,
-      verified: publisher.verified === 1,
-      verifiedSources: parseJsonArray<string>(publisher.verified_sources, []),
-      publishedCommandsCount: count?.count ?? 0,
-      joinedAt: publisher.joined_at,
-      bio: publisher.bio ?? '',
-    };
+    return this.mapPublisherRow(row, count?.count ?? 0);
+  }
+
+  async updateUser(handle: string, patch: Partial<StoredPublisherRecord>): Promise<StoredPublisherRecord> {
+    await this.initPromise;
+    const existing = await this.getUser(handle);
+    if (!existing) throw new Error('Publisher profile not found');
+
+    await this.db
+      .prepare(`
+        UPDATE publishers
+        SET
+          name = ?,
+          avatar_initials = ?,
+          verified = ?,
+          verified_sources = ?,
+          joined_at = ?,
+          bio = ?,
+          github_id = ?,
+          github_login = ?,
+          avatar_url = ?,
+          profile_url = ?,
+          role = ?
+        WHERE handle = ?
+      `)
+      .bind(
+        patch.name ?? existing.name,
+        patch.avatarInitials ?? existing.avatarInitials,
+        typeof patch.verified === 'boolean' ? (patch.verified ? 1 : 0) : existing.verified ? 1 : 0,
+        JSON.stringify(patch.verifiedSources ?? existing.verifiedSources),
+        patch.joinedAt ?? existing.joinedAt,
+        patch.bio ?? existing.bio,
+        patch.githubId ?? existing.githubId ?? null,
+        patch.githubLogin ?? existing.githubLogin ?? null,
+        patch.avatarUrl ?? existing.avatarUrl ?? null,
+        patch.profileUrl ?? existing.profileUrl ?? null,
+        patch.role ?? existing.role ?? 'publisher',
+        handle
+      )
+      .run();
+
+    const updated = await this.getUser(handle);
+    if (!updated) throw new Error('Failed to update publisher profile');
+    return updated;
+  }
+
+  async upsertGitHubUser(profile: GitHubUserProfile): Promise<StoredPublisherRecord> {
+    await this.initPromise;
+    const existing = await this.db
+      .prepare('SELECT * FROM publishers WHERE github_id = ? OR github_login = ? OR handle = ?')
+      .bind(profile.id, profile.login, `@${profile.login}`)
+      .first<{
+        handle: string;
+        name: string;
+        avatar_initials: string;
+        verified: number;
+        verified_sources: string;
+        joined_at: string;
+        bio: string | null;
+        github_id: string | null;
+        github_login: string | null;
+        avatar_url: string | null;
+        profile_url: string | null;
+        role: 'admin' | 'publisher' | 'member' | null;
+      }>();
+
+    const handle = existing?.handle ?? `@${profile.login}`;
+    const avatarInitials = existing?.avatar_initials ?? deriveAvatarInitials(profile.name || profile.login);
+    const joinedAt = existing?.joined_at ?? new Date().toISOString().slice(0, 10);
+    const bio = profile.bio ?? existing?.bio ?? '';
+    const role = existing?.role ?? 'publisher';
+    const verified = existing?.verified ?? 0;
+    const verifiedSources = existing?.verified_sources ?? JSON.stringify([]);
+
+    if (existing) {
+      await this.db
+        .prepare(`
+          UPDATE publishers
+          SET
+            name = ?,
+            avatar_initials = ?,
+            verified = ?,
+            verified_sources = ?,
+            joined_at = ?,
+            bio = ?,
+            github_id = ?,
+            github_login = ?,
+            avatar_url = ?,
+            profile_url = ?,
+            role = ?
+          WHERE handle = ?
+        `)
+        .bind(
+          profile.name || existing.name || profile.login,
+          avatarInitials,
+          verified,
+          verifiedSources,
+          joinedAt,
+          bio,
+          profile.id,
+          profile.login,
+          profile.avatar_url,
+          profile.html_url,
+          role,
+          handle
+        )
+        .run();
+    } else {
+      await this.db
+        .prepare(`
+          INSERT INTO publishers (
+            handle,
+            name,
+            avatar_initials,
+            verified,
+            verified_sources,
+            joined_at,
+            bio,
+            github_id,
+            github_login,
+            avatar_url,
+            profile_url,
+            role
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `)
+        .bind(
+          handle,
+          profile.name || profile.login,
+          avatarInitials,
+          0,
+          JSON.stringify([]),
+          joinedAt,
+          bio,
+          profile.id,
+          profile.login,
+          profile.avatar_url,
+          profile.html_url,
+          'publisher'
+        )
+        .run();
+    }
+
+    const updated = await this.getUser(handle);
+    if (!updated) throw new Error('Failed to load GitHub user');
+    return updated;
   }
 
   private async initialize(): Promise<void> {
@@ -488,7 +758,12 @@ class D1RegistryStore implements RegistryStore {
         verified INTEGER NOT NULL,
         verified_sources TEXT NOT NULL,
         joined_at TEXT NOT NULL,
-        bio TEXT
+        bio TEXT,
+        github_id TEXT,
+        github_login TEXT,
+        avatar_url TEXT,
+        profile_url TEXT,
+        role TEXT NOT NULL DEFAULT 'publisher'
       )
     `).run();
 
@@ -530,8 +805,8 @@ class D1RegistryStore implements RegistryStore {
       for (const profile of seedPublishers) {
         await this.db
           .prepare(`
-            INSERT INTO publishers (handle, name, avatar_initials, verified, verified_sources, joined_at, bio)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO publishers (handle, name, avatar_initials, verified, verified_sources, joined_at, bio, role)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           `)
           .bind(
             profile.handle,
@@ -540,7 +815,8 @@ class D1RegistryStore implements RegistryStore {
             profile.verified ? 1 : 0,
             JSON.stringify(profile.verifiedSources),
             profile.joinedAt,
-            profile.bio
+            profile.bio,
+            profile.role ?? 'publisher'
           )
           .run();
       }
@@ -634,6 +910,40 @@ class D1RegistryStore implements RegistryStore {
       icon: parseJsonObject<BurstCommand['icon']>(row.icon, { type: 'initials', value: '??' }),
       code: row.code,
       version: row.version,
+    };
+  }
+
+  private mapPublisherRow(
+    row: {
+      handle: string;
+      name: string;
+      avatar_initials: string;
+      verified: number;
+      verified_sources: string;
+      joined_at: string;
+      bio: string | null;
+      github_id: string | null;
+      github_login: string | null;
+      avatar_url: string | null;
+      profile_url: string | null;
+      role: 'admin' | 'publisher' | 'member' | null;
+    },
+    publishedCommandsCount: number
+  ): StoredPublisherRecord {
+    return {
+      name: row.name,
+      handle: row.handle,
+      avatarInitials: row.avatar_initials,
+      verified: row.verified === 1,
+      verifiedSources: parseJsonArray<string>(row.verified_sources, []),
+      publishedCommandsCount,
+      joinedAt: row.joined_at,
+      bio: row.bio ?? '',
+      githubId: row.github_id ?? undefined,
+      githubLogin: row.github_login ?? undefined,
+      avatarUrl: row.avatar_url ?? undefined,
+      profileUrl: row.profile_url ?? undefined,
+      role: row.role ?? 'publisher',
     };
   }
 }
