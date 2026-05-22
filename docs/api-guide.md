@@ -118,6 +118,7 @@ type SandboxedRuntimeContext = {
   url: string;
   title: string;
   toast: (message: string | ToastOptions, options?: ToastOptions) => void;
+  list: (definition: ListDefinition) => void;
 };
 
 type ToastOptions = {
@@ -130,6 +131,34 @@ type ToastOptions = {
   duration?: number | false;
   dismissible?: boolean;
   showProgress?: boolean;
+};
+
+type ListDefinition = {
+  id?: string;
+  title: string;
+  subtitle?: string;
+  searchPlaceholder?: string;
+  emptyState?: string;
+  items: ListItem[];
+};
+
+type ListItem = {
+  id?: string;
+  title: string;
+  subtitle?: string;
+  accessories?: string[];
+  keywords?: string[];
+  icon?: CommandIcon;
+  actions?: ListAction[];
+};
+
+type ListAction = {
+  id?: string;
+  title: string;
+  subtitle?: string;
+  icon?: CommandIcon;
+  style?: 'default' | 'destructive';
+  onAction?: (item: ListItem) => void | Promise<void>;
 };
 ```
 
@@ -177,6 +206,14 @@ type ToastOptions = {
      - `dismissible`: shows or hides the close button.
      - `showProgress`: shows or hides the timeout progress bar.
 
+5. **`list` Capability**:
+   - Required to show a command-owned result list in the palette.
+   - Methods:
+     - `list(definition)`: replaces the command results with a searchable custom list.
+   - List items support title, subtitle, icon, accessories, keywords, and actions.
+   - Pressing Enter on a list item runs the first action in `actions`.
+   - Action callbacks stay inside the sandboxed command listener; the palette only sends `listId`, `itemId`, and `actionId` back to the command runtime.
+
 ### Example Sandboxed Script
 
 ```ts
@@ -193,9 +230,48 @@ export default async function run({ page, navigator, toast }) {
 }
 ```
 
+### Example Custom List
+
+```ts
+export default async function run({ page, clipboard, toast, list }) {
+  const links = page.querySelectorAll('a')
+    .slice(0, 20)
+    .map((link, index) => {
+      const label = link.innerText?.trim() || link.getAttribute('href') || 'Untitled link';
+      const href = link.getAttribute('href') || '';
+
+      return {
+        id: String(index),
+        title: label,
+        subtitle: href,
+        accessories: [href],
+        keywords: [href],
+        actions: [
+          {
+            id: 'copy-url',
+            title: 'Copy URL',
+            async onAction() {
+              await clipboard.writeText(href);
+              toast({ title: 'Copied', message: label, variant: 'success' });
+            },
+          },
+        ],
+      };
+    });
+
+  list({
+    id: 'page-links',
+    title: 'Page links',
+    searchPlaceholder: 'Search links',
+    emptyState: 'No links found.',
+    items: links,
+  });
+}
+```
+
 ## Runtime Direction
 
 - Run only after explicit install and user consent.
 - Separate registry discovery from local execution.
-- Expose narrow APIs for page DOM reads, selected text, clipboard writes, toast notifications, captures, and connector calls.
+- Expose narrow APIs for page DOM reads, selected text, clipboard writes, toast notifications, custom lists, captures, and connector calls.
 - Show permissions, source, publisher identity, and audit state before install.

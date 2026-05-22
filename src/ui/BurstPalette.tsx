@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import * as LucideIcons from 'lucide-react';
 import {
   BurstCommand,
+  BurstCustomList,
+  BurstListItem,
   commandMatchesHost,
   getCommandIconLabel,
   getCommandIconUrl,
@@ -9,6 +11,7 @@ import {
   managementCommands,
   orderPaletteCommands,
   searchCommands,
+  searchListItems,
 } from '@/src/lib/commands';
 import {
   getLocalScriptEventName,
@@ -71,6 +74,8 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [capturedSelection, setCapturedSelection] = useState('');
   const [capturedSelectionSnapshot, setCapturedSelectionSnapshot] = useState<SelectionSnapshot | null>(null);
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
+  const [customList, setCustomList] = useState<BurstCustomList | null>(null);
+  const [listCommand, setListCommand] = useState<BurstCommand | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const host = useMemo(() => getHostFromUrl(pageUrl), [pageUrl]);
   const isMacPlatform = useMemo(() => /Mac|iPhone|iPad|iPod/.test(navigator.platform), []);
@@ -93,11 +98,18 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     return searchCommands(orderPaletteCommands(siteCommands), query);
   }, [query, siteCommands]);
 
+  const filteredListItems = useMemo(() => {
+    return customList ? searchListItems(customList.items, query) : [];
+  }, [customList, query]);
+
   const activeCommand = filteredCommands[activeIndex] ?? filteredCommands[0];
+  const activeListItem = filteredListItems[activeIndex] ?? filteredListItems[0];
 
   function closePalette() {
     restoreSelectionSnapshot(capturedSelectionSnapshot);
     setConsentPendingCommand(null);
+    setCustomList(null);
+    setListCommand(null);
     setIsOpen(false);
   }
 
@@ -121,6 +133,13 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
           setStatusMessage(result.message);
           return;
         }
+        if (result.list) {
+          setCustomList(result.list);
+          setListCommand(command);
+          setQuery('');
+          setActiveIndex(0);
+          return;
+        }
       }
 
       closePalette();
@@ -142,6 +161,13 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
       }
       if (!result.ok) {
         setStatusMessage(result.message);
+        return;
+      }
+      if (result.list) {
+        setCustomList(result.list);
+        setListCommand(command);
+        setQuery('');
+        setActiveIndex(0);
         return;
       }
       closePalette();
@@ -260,6 +286,13 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault();
+        if (customList) {
+          setCustomList(null);
+          setListCommand(null);
+          setQuery('');
+          setActiveIndex(0);
+          return;
+        }
         closePalette();
         return;
       }
@@ -277,13 +310,26 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
 
       if (isDown) {
         event.preventDefault();
-        setActiveIndex((index) => Math.min(index + 1, filteredCommands.length - 1));
+        const maxIndex = customList ? filteredListItems.length - 1 : filteredCommands.length - 1;
+        setActiveIndex((index) => Math.min(index + 1, maxIndex));
         return;
       }
 
       if (isUp) {
         event.preventDefault();
         setActiveIndex((index) => Math.max(index - 1, 0));
+        return;
+      }
+
+      if (event.key === 'Enter' && customList && activeListItem && listCommand) {
+        event.preventDefault();
+        void runListItemAction(listCommand, customList, activeListItem, setToast).then((result) => {
+          if (!result.ok) {
+            setStatusMessage(result.message);
+            return;
+          }
+          closePalette();
+        });
         return;
       }
 
@@ -295,7 +341,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
 
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [activeCommand, filteredCommands.length, isOpen, consentPendingCommand]);
+  }, [activeCommand, activeListItem, customList, filteredCommands.length, filteredListItems.length, isOpen, listCommand, consentPendingCommand]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -490,18 +536,61 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
             ) : (
               <>
                 <label className="burst-search">
-                  <span>{host}</span>
+                  <span>{customList ? customList.subtitle ?? listCommand?.title ?? host : host}</span>
                   <input
                     ref={searchInputRef}
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder={`Search ${pageTitle || host}`}
+                    placeholder={customList?.searchPlaceholder ?? `Search ${pageTitle || host}`}
                   />
                 </label>
 
-                <div className="burst-results" role="listbox" aria-label="Available commands">
+                <div className="burst-results" role="listbox" aria-label={customList ? customList.title : 'Available commands'}>
                   {statusMessage ? <div className="burst-status">{statusMessage}</div> : null}
-                  {filteredCommands.length > 0 ? (
+                  {customList ? (
+                    filteredListItems.length > 0 ? (
+                      filteredListItems.map((item, index) => {
+                        const shortcutHint = getShortcutHint(index, showNumberHints, isMacPlatform);
+
+                        return (
+                          <button
+                            className={`burst-command burst-list-item ${index === activeIndex ? 'is-active' : ''}`}
+                            key={item.id}
+                            type="button"
+                            role="option"
+                            aria-selected={index === activeIndex}
+                            onMouseEnter={() => setActiveIndex(index)}
+                            onClick={() => {
+                              if (!listCommand || !customList) return;
+                              void runListItemAction(listCommand, customList, item, setToast).then((result) => {
+                                if (!result.ok) {
+                                  setStatusMessage(result.message);
+                                  return;
+                                }
+                                closePalette();
+                              });
+                            }}
+                          >
+                            <CommandIcon icon={item.icon} fallbackLabel={item.title.slice(0, 2).toUpperCase()} />
+                            <span className="burst-command-copy">
+                              <span className="burst-command-title">
+                                <strong>{item.title}</strong>
+                                {item.subtitle ? <span className="burst-command-subtitle">{item.subtitle}</span> : null}
+                              </span>
+                            </span>
+                            <span className="burst-list-accessory">
+                              {item.accessories?.[0] ?? item.actions?.[0]?.title ?? ''}
+                            </span>
+                            <kbd className={shortcutHint ? '' : 'is-hidden'} aria-hidden={!shortcutHint}>
+                              {shortcutHint ?? '↵'}
+                            </kbd>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="burst-empty">{customList.emptyState ?? 'No items found.'}</div>
+                    )
+                  ) : filteredCommands.length > 0 ? (
                     filteredCommands.map((command, index) => {
                       const shortcutHint = getShortcutHint(index, showNumberHints, isMacPlatform);
 
@@ -571,10 +660,10 @@ async function runLocalScript(
   scriptId: string,
   selection: string,
   onToast: (toast: BurstToast) => void,
-): Promise<{ ok: boolean; message?: string }> {
+): Promise<{ ok: boolean; message?: string; list?: BurstCustomList }> {
   const resultEventName = getLocalScriptResultEventName(scriptId);
 
-  const result = new Promise<{ ok: boolean; message?: string }>((resolve) => {
+  const result = new Promise<{ ok: boolean; message?: string; list?: BurstCustomList }>((resolve) => {
     const timeout = window.setTimeout(() => {
       document.removeEventListener(resultEventName, handleResult);
       resolve({
@@ -584,11 +673,18 @@ async function runLocalScript(
     }, 700);
 
     function handleResult(event: Event) {
-      const detail = event instanceof CustomEvent ? event.detail as { status?: string; message?: unknown; toast?: unknown } : {};
+      const detail = event instanceof CustomEvent ? event.detail as { status?: string; message?: unknown; toast?: unknown; list?: unknown } : {};
       if (detail.status === 'started') return;
 
       if (detail.status === 'toast') {
         onToast(normalizeToastPayload(detail.toast ?? detail.message));
+        return;
+      }
+
+      if (detail.status === 'list' && isBurstCustomList(detail.list)) {
+        document.removeEventListener(resultEventName, handleResult);
+        window.clearTimeout(timeout);
+        resolve({ ok: true, list: detail.list });
         return;
       }
 
@@ -611,10 +707,10 @@ async function runRegistryScript(
   commandId: string,
   selection: string,
   onToast: (toast: BurstToast) => void,
-): Promise<{ ok: boolean; message?: string }> {
+): Promise<{ ok: boolean; message?: string; list?: BurstCustomList }> {
   const resultEventName = getRegistryScriptResultEventName(commandId);
 
-  const result = new Promise<{ ok: boolean; message?: string }>((resolve) => {
+  const result = new Promise<{ ok: boolean; message?: string; list?: BurstCustomList }>((resolve) => {
     const timeout = window.setTimeout(() => {
       document.removeEventListener(resultEventName, handleResult);
       resolve({
@@ -624,11 +720,18 @@ async function runRegistryScript(
     }, 700);
 
     function handleResult(event: Event) {
-      const detail = event instanceof CustomEvent ? event.detail as { status?: string; message?: unknown; toast?: unknown } : {};
+      const detail = event instanceof CustomEvent ? event.detail as { status?: string; message?: unknown; toast?: unknown; list?: unknown } : {};
       if (detail.status === 'started') return;
 
       if (detail.status === 'toast') {
         onToast(normalizeToastPayload(detail.toast ?? detail.message));
+        return;
+      }
+
+      if (detail.status === 'list' && isBurstCustomList(detail.list)) {
+        document.removeEventListener(resultEventName, handleResult);
+        window.clearTimeout(timeout);
+        resolve({ ok: true, list: detail.list });
         return;
       }
 
@@ -644,6 +747,66 @@ async function runRegistryScript(
   });
 
   document.dispatchEvent(new CustomEvent(getRegistryScriptEventName(commandId), { detail: { selection } }));
+  return result;
+}
+
+async function runListItemAction(
+  command: BurstCommand,
+  list: BurstCustomList,
+  item: BurstListItem,
+  onToast: (toast: BurstToast) => void,
+): Promise<{ ok: boolean; message?: string }> {
+  const action = item.actions?.[0];
+  if (!action) return { ok: false, message: 'This list item has no action.' };
+
+  const isRegistry = command.action === 'run-registry-script';
+  const resultEventName = isRegistry
+    ? getRegistryScriptResultEventName(command.id)
+    : command.localScriptId
+    ? getLocalScriptResultEventName(command.localScriptId)
+    : '';
+  const eventName = isRegistry
+    ? getRegistryScriptEventName(command.id)
+    : command.localScriptId
+    ? getLocalScriptEventName(command.localScriptId)
+    : '';
+
+  if (!eventName || !resultEventName) return { ok: false, message: 'List action source is unavailable.' };
+
+  const result = new Promise<{ ok: boolean; message?: string }>((resolve) => {
+    const timeout = window.setTimeout(() => {
+      document.removeEventListener(resultEventName, handleResult);
+      resolve({ ok: false, message: 'List action timed out. Try running the command again.' });
+    }, 1200);
+
+    function handleResult(event: Event) {
+      const detail = event instanceof CustomEvent ? event.detail as { status?: string; message?: unknown; toast?: unknown } : {};
+
+      if (detail.status === 'toast') {
+        onToast(normalizeToastPayload(detail.toast ?? detail.message));
+        return;
+      }
+
+      document.removeEventListener(resultEventName, handleResult);
+      window.clearTimeout(timeout);
+      resolve({
+        ok: detail.status === 'action-complete' || detail.status === 'complete',
+        message: typeof detail.message === 'string' ? detail.message : 'List action failed.',
+      });
+    }
+
+    document.addEventListener(resultEventName, handleResult);
+  });
+
+  document.dispatchEvent(new CustomEvent(eventName, {
+    detail: {
+      kind: 'list-action',
+      listId: list.id,
+      itemId: item.id,
+      actionId: action.id,
+    },
+  }));
+
   return result;
 }
 
@@ -680,6 +843,14 @@ function normalizeToastPayload(payload: unknown): BurstToast {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isBurstCustomList(value: unknown): value is BurstCustomList {
+  if (!isRecord(value)) return false;
+  return typeof value.id === 'string'
+    && typeof value.title === 'string'
+    && Array.isArray(value.items)
+    && value.items.every((item) => isRecord(item) && typeof item.id === 'string' && typeof item.title === 'string');
 }
 
 function readOneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
@@ -735,9 +906,17 @@ function writePaletteQuery(query: string): void {
   }
 }
 
-function CommandIcon({ command }: { command: BurstCommand }) {
-  if (command.icon.type === 'lucide') {
-    const IconComponent = (LucideIcons as any)[command.icon.name];
+function CommandIcon({
+  command,
+  icon = command?.icon,
+  fallbackLabel,
+}: {
+  command?: BurstCommand;
+  icon?: BurstCommand['icon'];
+  fallbackLabel?: string;
+}) {
+  if (icon?.type === 'lucide') {
+    const IconComponent = (LucideIcons as any)[icon.name];
     return (
       <span className="burst-command-icon">
         {IconComponent ? <IconComponent size={18} /> : <LucideIcons.Code size={18} />}
@@ -745,7 +924,7 @@ function CommandIcon({ command }: { command: BurstCommand }) {
     );
   }
 
-  const iconUrl = getCommandIconUrl(command);
+  const iconUrl = command ? getCommandIconUrl(command) : icon && (icon.type === 'url' || icon.type === 'asset') ? icon.src : undefined;
 
   if (iconUrl) {
     return (
@@ -755,7 +934,9 @@ function CommandIcon({ command }: { command: BurstCommand }) {
     );
   }
 
-  return <span className="burst-command-icon">{getCommandIconLabel(command)}</span>;
+  if (command) return <span className="burst-command-icon">{getCommandIconLabel(command)}</span>;
+  if (icon?.type === 'emoji' || icon?.type === 'initials') return <span className="burst-command-icon">{icon.value}</span>;
+  return <span className="burst-command-icon">{fallbackLabel ?? 'LI'}</span>;
 }
 
 function isToggleMessage(message: unknown): message is { type: 'burst:toggle-palette' } {

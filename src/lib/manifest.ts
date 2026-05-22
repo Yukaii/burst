@@ -21,7 +21,7 @@ export type BurstCommandManifest = {
   };
   runtime: {
     entrypoint: string;
-    capabilities: Array<'page-dom' | 'selection' | 'clipboard-write' | 'toast'>;
+    capabilities: Array<'page-dom' | 'selection' | 'clipboard-write' | 'toast' | 'list'>;
   };
   version: string;
   risk: CommandRisk;
@@ -119,7 +119,7 @@ export const burstCommandManifestSchema = {
         entrypoint: { type: 'string', minLength: 1 },
         capabilities: {
           type: 'array',
-          items: { enum: ['page-dom', 'selection', 'clipboard-write', 'toast'] },
+          items: { enum: ['page-dom', 'selection', 'clipboard-write', 'toast', 'list'] },
         },
       },
     },
@@ -244,7 +244,7 @@ function validateRuntime(value: unknown, errors: string[]) {
   expectStringArray(value.capabilities, 'runtime.capabilities', errors);
   if (Array.isArray(value.capabilities)) {
     value.capabilities.forEach((capability, index) => {
-      expectOneOf(capability, ['page-dom', 'selection', 'clipboard-write', 'toast'], `runtime.capabilities[${index}]`, errors);
+      expectOneOf(capability, ['page-dom', 'selection', 'clipboard-write', 'toast', 'list'], `runtime.capabilities[${index}]`, errors);
     });
   }
 }

@@ -105,6 +105,24 @@
   transition: all 0.15s ease;
 }
 
+.burst-list-item {
+  grid-template-columns: 34px minmax(0, 1fr) minmax(0, auto) auto;
+}
+
+.burst-list-accessory {
+  overflow: hidden;
+  max-width: 14ch;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.burst-command.is-active .burst-list-accessory {
+  color: rgba(15, 23, 42, 0.72);
+}
+
 .burst-command-icon {
   display: grid;
   width: 34px;

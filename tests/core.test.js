@@ -88,9 +88,12 @@ describe('local script registration', () => {
     expect(source).toContain(getLocalScriptEventName(localScript.id));
     expect(source).toContain(getLocalScriptResultEventName(localScript.id));
     expect(source).toContain('toast = (message, options = {}) =>');
+    expect(source).toContain('const list = (input) =>');
     expect(source).toContain("status: 'toast'");
+    expect(source).toContain("status: 'list'");
+    expect(source).toContain("eventDetail.kind === 'list-action'");
     expect(source).toContain('position: typeof input.position === \'string\' ? input.position : undefined');
-    expect(source).toContain('const capturedSelection = (event && event.detail && event.detail.selection) || \'\';');
+    expect(source).toContain("const capturedSelection = eventDetail.selection || '';");
     expect(source).toContain('selection: selectionText');
     expect(source).not.toContain('export default');
     expect(source).not.toContain('new Function');
@@ -152,6 +155,7 @@ describe('capability detection', () => {
         const title = context.title;
         const sel = context.selection;
         context.toast("Hello");
+        context.list({ title: "Branches", items: [] });
         await context.navigator.clipboard.writeText("Copy me");
         const doc = context.page.querySelector("div");
       }
@@ -161,6 +165,7 @@ describe('capability detection', () => {
     expect(capabilities).toContain('selection');
     expect(capabilities).toContain('clipboard-write');
     expect(capabilities).toContain('toast');
+    expect(capabilities).toContain('list');
   });
 
   test('returns empty array when no capabilities match', () => {
@@ -230,7 +235,7 @@ describe('registry storage and consent', () => {
     expect(wrapped).toContain('burst:run-registry-script:test-cmd');
     expect(wrapped).toContain('burst:registry-script-result:test-cmd');
     expect(wrapped).toContain('async function run({ page })');
-    expect(wrapped).toContain('const capturedSelection = (event && event.detail && event.detail.selection) || \'\';');
+    expect(wrapped).toContain("const capturedSelection = eventDetail.selection || '';");
     expect(wrapped).toContain('selection: selectionText');
     expect(wrapped).not.toContain('export default');
   });

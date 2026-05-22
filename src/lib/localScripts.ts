@@ -63,6 +63,50 @@ export const seedLocalScripts: LocalScript[] = [
 }`,
     version: '1.0.0',
   },
+  {
+    id: 'local-list-page-links',
+    name: 'List page links',
+    matchPatterns: ['<all_urls>'],
+    icon: { type: 'lucide', name: 'List' },
+    status: 'draft',
+    updatedAt: '2026-05-22',
+    code: `export default async function run({ page, clipboard, toast, list }) {
+  const links = page.querySelectorAll('a')
+    .slice(0, 25)
+    .map((link, index) => {
+      const rawHref = link.getAttribute('href') || '';
+      const href = new URL(rawHref, location.href).href;
+      const title = link.innerText?.trim() || href;
+
+      return {
+        id: String(index),
+        title,
+        subtitle: href,
+        accessories: [new URL(href).host],
+        keywords: [href],
+        actions: [
+          {
+            id: 'copy-url',
+            title: 'Copy URL',
+            async onAction() {
+              await clipboard.writeText(href);
+              toast({ title: 'Copied URL', message: title, variant: 'success' });
+            },
+          },
+        ],
+      };
+    });
+
+  list({
+    id: 'page-links',
+    title: 'Page links',
+    searchPlaceholder: 'Search links',
+    emptyState: 'No links found.',
+    items: links,
+  });
+}`,
+    version: '1.0.0',
+  },
 ];
 
 export function createLocalScriptDraft(): LocalScript {
@@ -193,13 +237,26 @@ export function createSandboxedUserScriptCode(code: string, eventName: string, r
   return `(() => {
   const capabilities = ${JSON.stringify(capabilities)};
   const hasCap = (c) => capabilities.includes(c);
+  const listActionHandlers = new Map();
 
   document.addEventListener(${JSON.stringify(eventName)}, async (event) => {
     const emit = (detail) => document.dispatchEvent(new CustomEvent(${JSON.stringify(resultEventName)}, { detail }));
     
     try {
+      const eventDetail = (event && event.detail) || {};
+      if (eventDetail.kind === 'list-action') {
+        const actionKey = [eventDetail.listId, eventDetail.itemId, eventDetail.actionId].join(':');
+        const handler = listActionHandlers.get(actionKey);
+        if (!handler) {
+          throw new Error('List action is no longer available.');
+        }
+        await handler();
+        emit({ status: 'action-complete' });
+        return;
+      }
+
       emit({ status: 'started' });
-      const capturedSelection = (event && event.detail && event.detail.selection) || '';
+      const capturedSelection = eventDetail.selection || '';
 
       // 1. Wrapped Page DOM reads
       const page = {
@@ -290,6 +347,57 @@ export function createSandboxedUserScriptCode(code: string, eventName: string, r
         });
       };
 
+      const list = (input) => {
+        if (!hasCap('list')) {
+          throw new Error("SecurityError: Script lacks 'list' capability.");
+        }
+        if (!input || typeof input !== 'object') {
+          throw new Error('ListError: list() requires a list definition object.');
+        }
+
+        const listId = String(input.id || 'list');
+        const items = Array.isArray(input.items) ? input.items : [];
+        const safeItems = items.map((item, itemIndex) => {
+          const itemId = String(item && item.id ? item.id : itemIndex);
+          const actions = Array.isArray(item && item.actions) ? item.actions : [];
+          const safeActions = actions.map((action, actionIndex) => {
+            const actionId = String(action && action.id ? action.id : actionIndex);
+            if (typeof action?.onAction === 'function') {
+              listActionHandlers.set([listId, itemId, actionId].join(':'), () => action.onAction(item));
+            }
+            return {
+              id: actionId,
+              title: String(action && action.title ? action.title : 'Run action'),
+              subtitle: typeof action?.subtitle === 'string' ? action.subtitle : undefined,
+              icon: action?.icon,
+              style: action?.style === 'destructive' ? 'destructive' : 'default'
+            };
+          });
+
+          return {
+            id: itemId,
+            title: String(item && item.title ? item.title : 'Untitled item'),
+            subtitle: typeof item?.subtitle === 'string' ? item.subtitle : undefined,
+            accessories: Array.isArray(item?.accessories) ? item.accessories.map(String) : undefined,
+            keywords: Array.isArray(item?.keywords) ? item.keywords.map(String) : undefined,
+            icon: item?.icon,
+            actions: safeActions
+          };
+        });
+
+        emit({
+          status: 'list',
+          list: {
+            id: listId,
+            title: String(input.title || 'List'),
+            subtitle: typeof input.subtitle === 'string' ? input.subtitle : undefined,
+            searchPlaceholder: typeof input.searchPlaceholder === 'string' ? input.searchPlaceholder : undefined,
+            emptyState: typeof input.emptyState === 'string' ? input.emptyState : undefined,
+            items: safeItems
+          }
+        });
+      };
+
       // Wrapped location & navigator
       const wrappedLocation = {
         get href() {
@@ -344,7 +452,8 @@ export function createSandboxedUserScriptCode(code: string, eventName: string, r
         clipboard,
         url: hasCap('page-dom') ? location.href : '',
         title: hasCap('page-dom') ? document.title : '',
-        toast
+        toast,
+        list
       };
 
       // Shadow the globals by wrapping the user script in an IIFE parameter binding
@@ -478,8 +587,8 @@ function getWebStorage(): WebStorage | undefined {
   return runtime.localStorage;
 }
 
-export function detectRequiredCapabilities(code: string): Array<'page-dom' | 'selection' | 'clipboard-write' | 'toast'> {
-  const capabilities: Array<'page-dom' | 'selection' | 'clipboard-write' | 'toast'> = [];
+export function detectRequiredCapabilities(code: string): Array<'page-dom' | 'selection' | 'clipboard-write' | 'toast' | 'list'> {
+  const capabilities: Array<'page-dom' | 'selection' | 'clipboard-write' | 'toast' | 'list'> = [];
 
   if (/page\b|document\b|querySelector|querySelectorAll|createElement/i.test(code)) {
     capabilities.push('page-dom');
@@ -492,6 +601,9 @@ export function detectRequiredCapabilities(code: string): Array<'page-dom' | 'se
   }
   if (/toast\b/i.test(code)) {
     capabilities.push('toast');
+  }
+  if (/\blist\b|createList|showList/i.test(code)) {
+    capabilities.push('list');
   }
 
   return capabilities;

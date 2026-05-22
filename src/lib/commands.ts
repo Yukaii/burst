@@ -10,6 +10,33 @@ export type CommandIcon =
   | { type: 'asset'; src: string }
   | { type: 'lucide'; name: string };
 
+export type BurstListAction = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  icon?: CommandIcon;
+  style?: 'default' | 'destructive';
+};
+
+export type BurstListItem = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  accessories?: string[];
+  keywords?: string[];
+  icon?: CommandIcon;
+  actions?: BurstListAction[];
+};
+
+export type BurstCustomList = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  searchPlaceholder?: string;
+  emptyState?: string;
+  items: BurstListItem[];
+};
+
 export type BurstCommand = {
   id: string;
   title: string;
@@ -177,6 +204,25 @@ export function searchCommands(commands: BurstCommand[], query: string): BurstCo
       command.trustLevel,
       command.risk,
       ...command.permissions,
+    ]
+      .join(' ')
+      .toLowerCase();
+
+    return searchable.includes(normalized);
+  });
+}
+
+export function searchListItems(items: BurstListItem[], query: string): BurstListItem[] {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return items;
+
+  return items.filter((item) => {
+    const searchable = [
+      item.title,
+      item.subtitle,
+      ...(item.accessories ?? []),
+      ...(item.keywords ?? []),
+      ...(item.actions ?? []).flatMap((action) => [action.title, action.subtitle]),
     ]
       .join(' ')
       .toLowerCase();
