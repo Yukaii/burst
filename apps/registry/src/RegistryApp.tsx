@@ -116,6 +116,37 @@ export function RegistryApp() {
   };
   const dashboardState = dashboardCopy[navTab];
   const currentGithubLogin = 'githubLogin' in currentUser ? currentUser.githubLogin : undefined;
+  const dashboardMetrics: Record<
+    'Discover' | 'Publish' | 'Users' | 'Audits' | 'Settings',
+    Array<{ label: string; value: string }>
+  > = {
+    Discover: [
+      { label: 'Commands', value: registryCommandsData.length.toString() },
+      { label: 'Audited', value: registryCommandsData.filter((command) => command.trustLevel !== 'community').length.toString() },
+      { label: 'Sensitive', value: registryCommandsData.filter((command) => command.risk === 'high').length.toString() },
+    ],
+    Publish: [
+      { label: 'Verified sources', value: currentUser.handle === 'guest' ? '0' : currentUser.verifiedSources.length.toString() },
+      { label: 'Role', value: currentUser.role || 'publisher' },
+      { label: 'Audit checks', value: '5' },
+    ],
+    Users: [
+      { label: 'Publishers', value: Object.keys(mockPublisherProfiles).length.toString() },
+      { label: 'Admins', value: Object.values(mockPublisherProfiles).filter((profile) => profile.role === 'admin').length.toString() },
+      { label: 'Verified', value: Object.values(mockPublisherProfiles).filter((profile) => profile.verified).length.toString() },
+    ],
+    Audits: [
+      { label: 'Pass', value: registryCommandsData.filter((command) => command.trustLevel === 'verified').length.toString() },
+      { label: 'Review', value: registryCommandsData.filter((command) => command.trustLevel === 'reviewed').length.toString() },
+      { label: 'Warnings', value: registryCommandsData.filter((command) => command.risk !== 'low').length.toString() },
+    ],
+    Settings: [
+      { label: 'Theme', value: 'Adaptive' },
+      { label: 'Session', value: currentUser.handle === 'guest' ? 'Guest' : 'Signed in' },
+      { label: 'Storage', value: 'Local sync' },
+    ],
+  };
+  const workspaceMetrics = dashboardMetrics[navTab];
 
   useEffect(() => {
     if (isGuest) {
@@ -391,6 +422,15 @@ export function RegistryApp() {
                 <strong>{currentUser.name}</strong>
                 <p>{currentGithubLogin ? `@${currentGithubLogin}` : currentUser.handle}</p>
               </div>
+            </div>
+
+            <div className="dashboard-banner-metrics" aria-label="Workspace metrics">
+              {workspaceMetrics.map((metric) => (
+                <div key={metric.label} className="dashboard-metric">
+                  <span>{metric.label}</span>
+                  <strong>{metric.value}</strong>
+                </div>
+              ))}
             </div>
 
             <div className="dashboard-banner-actions">
@@ -690,6 +730,8 @@ function UsersPanel({
   const selectedUser = users.find((user) => user.handle === selectedHandle) ?? null;
   const canEditAll = currentUser.handle !== 'guest' && currentUser.role === 'admin';
   const canEditSelected = Boolean(selectedUser) && (canEditAll || selectedUser?.handle === currentUser.handle);
+  const selectedRole = selectedUser?.role ?? 'publisher';
+  const selectedAccess = canEditAll ? 'Admin access' : canEditSelected ? 'Self edit' : 'Read only';
 
   useEffect(() => {
     let active = true;
@@ -810,86 +852,140 @@ function UsersPanel({
         <section className="user-detail">
           {selectedUser ? (
             <>
-              <div className="publisher-profile-card">
-                <div className="publisher-avatar-large">{selectedUser.avatarInitials}</div>
-                <div className="publisher-profile-info">
-                  <h3>{selectedUser.name}</h3>
-                  <span className="publisher-handle">{selectedUser.handle}</span>
-                  <span className={`role-badge role-${selectedUser.role || 'publisher'}`}>{selectedUser.role || 'publisher'}</span>
+              <div className="user-detail-header">
+                <div className="publisher-profile-card user-profile-hero">
+                  <div className="publisher-avatar-large">{selectedUser.avatarInitials}</div>
+                  <div className="publisher-profile-info">
+                    <h3>{selectedUser.name}</h3>
+                    <span className="publisher-handle">{selectedUser.handle}</span>
+                    <div className="user-profile-tags">
+                      <span className={`role-badge role-${selectedRole}`}>{selectedRole}</span>
+                      <span className={`user-access-badge access-${canEditAll ? 'admin' : canEditSelected ? 'self' : 'read'}`}>{selectedAccess}</span>
+                      <span className="user-verified-count">{selectedUser.verifiedSources.length} verified sources</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="user-detail-summary">
+                  <div>
+                    <span>Published commands</span>
+                    <strong>{selectedUser.publishedCommandsCount}</strong>
+                  </div>
+                  <div>
+                    <span>Member since</span>
+                    <strong>{new Date(selectedUser.joinedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}</strong>
+                  </div>
+                  <div>
+                    <span>Verified</span>
+                    <strong>{selectedUser.verified ? 'Yes' : 'No'}</strong>
+                  </div>
                 </div>
               </div>
 
               <div className="user-management-grid">
-                <label className="form-field">
-                  <span>Display name</span>
-                  <input
-                    value={draft.name}
-                    onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
-                    disabled={!canEditSelected}
-                  />
-                </label>
+                <div className="user-management-column">
+                  <label className="form-field">
+                    <span>Display name</span>
+                    <input
+                      value={draft.name}
+                      onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
+                      disabled={!canEditSelected}
+                    />
+                  </label>
 
-                <label className="form-field">
-                  <span>Role</span>
-                  <select
-                    value={draft.role}
-                    onChange={(event) => setDraft((prev) => ({ ...prev, role: event.target.value as typeof draft.role }))}
-                    disabled={!canEditAll}
-                  >
-                    <option value="publisher">Publisher</option>
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </label>
+                  <label className="form-field">
+                    <span>Role</span>
+                    <select
+                      value={draft.role}
+                      onChange={(event) => setDraft((prev) => ({ ...prev, role: event.target.value as typeof draft.role }))}
+                      disabled={!canEditAll}
+                    >
+                      <option value="publisher">Publisher</option>
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </label>
 
-                <label className="form-field form-field--full">
-                  <span>Bio</span>
-                  <textarea
-                    rows={4}
-                    value={draft.bio}
-                    onChange={(event) => setDraft((prev) => ({ ...prev, bio: event.target.value }))}
-                    disabled={!canEditSelected}
-                  />
-                </label>
+                  <label className="form-field form-field--full">
+                    <span>Bio</span>
+                    <textarea
+                      rows={4}
+                      value={draft.bio}
+                      onChange={(event) => setDraft((prev) => ({ ...prev, bio: event.target.value }))}
+                      disabled={!canEditSelected}
+                    />
+                  </label>
 
-                <label className="form-field form-field--full">
-                  <span>Verified sources, one per line</span>
-                  <textarea
-                    rows={4}
-                    value={draft.verifiedSources}
-                    onChange={(event) => setDraft((prev) => ({ ...prev, verifiedSources: event.target.value }))}
-                    disabled={!canEditAll && selectedUser.handle !== currentUser.handle}
-                  />
-                </label>
+                  <label className="form-field form-field--full">
+                    <span>Verified sources, one per line</span>
+                    <textarea
+                      rows={4}
+                      value={draft.verifiedSources}
+                      onChange={(event) => setDraft((prev) => ({ ...prev, verifiedSources: event.target.value }))}
+                      disabled={!canEditAll && selectedUser.handle !== currentUser.handle}
+                    />
+                  </label>
 
-                <label className="permission-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={draft.verified}
-                    onChange={() => setDraft((prev) => ({ ...prev, verified: !prev.verified }))}
-                    disabled={!canEditAll}
-                  />
-                  <span>Verified publisher</span>
-                </label>
-              </div>
+                  <label className="permission-checkbox-label user-verify-toggle">
+                    <input
+                      type="checkbox"
+                      checked={draft.verified}
+                      onChange={() => setDraft((prev) => ({ ...prev, verified: !prev.verified }))}
+                      disabled={!canEditAll}
+                    />
+                    <span>Verified publisher</span>
+                  </label>
+                </div>
 
-              <div className="publisher-section">
-                <h3>Account facts</h3>
-                <div className="publisher-stats-grid">
-                  <div>
-                    <strong>{selectedUser.publishedCommandsCount}</strong>
-                    <span>Published commands</span>
+                <div className="user-management-column user-context-panel">
+                  <div className="publisher-section">
+                    <h3>Identity context</h3>
+                    <div className="user-context-list">
+                      <div>
+                        <span>GitHub login</span>
+                        <strong>{selectedUser.githubLogin ?? 'Not linked'}</strong>
+                      </div>
+                      <div>
+                        <span>Profile URL</span>
+                        <strong>{selectedUser.profileUrl ?? 'Unavailable'}</strong>
+                      </div>
+                      <div>
+                        <span>Primary access</span>
+                        <strong>{selectedAccess}</strong>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <strong>{new Date(selectedUser.joinedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}</strong>
-                    <span>Member since</span>
+
+                  <div className="publisher-section">
+                    <h3>Account facts</h3>
+                    <div className="publisher-stats-grid">
+                      <div>
+                        <strong>{selectedUser.publishedCommandsCount}</strong>
+                        <span>Published commands</span>
+                      </div>
+                      <div>
+                        <strong>{new Date(selectedUser.joinedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}</strong>
+                        <span>Member since</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="publisher-section">
+                    <h3>Verification state</h3>
+                    <div className="user-verification-note">
+                      <strong>{selectedUser.verified ? 'Verified publisher' : 'Community publisher'}</strong>
+                      <p>
+                        {selectedUser.verified
+                          ? 'This account is eligible for verified-source publishing and should stay tightly reviewed.'
+                          : 'This account can still publish, but the identity record should be treated as a community profile.'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {notice && <div className="form-error-banner user-notice">{notice}</div>}
 
-              <div className="form-actions">
+              <div className="form-actions user-form-actions">
                 <button className="btn-primary" type="button" onClick={() => void handleSave()} disabled={saving || !canEditSelected}>
                   {saving ? 'Saving...' : 'Save changes'}
                 </button>
