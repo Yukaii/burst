@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import type { BurstCommand } from '@/src/lib/commands';
-import { sampleManifestValidationResults } from '@/src/lib/manifest';
 import { CheckCircle2 } from 'lucide-react';
 import {
   getAuthConfig,
@@ -26,7 +25,6 @@ import { SettingsPanel } from './components/SettingsPanel';
 
 // Extracted Sub-Components
 import { Sidebar } from './components/Sidebar';
-import { WorkspaceSummary } from './components/WorkspaceSummary';
 import { BridgeLogsConsole } from './components/BridgeLogsConsole';
 import type { HandshakeLog } from './components/BridgeLogsConsole';
 import { DiscoverPanel } from './components/DiscoverPanel';
@@ -97,7 +95,6 @@ export function RegistryApp() {
     };
   }, []);
 
-  const validManifests = sampleManifestValidationResults.filter((sample) => sample.result.ok).length;
   const isGuest = currentUser.handle === 'guest';
   
   const dashboardCopy: Record<
@@ -190,13 +187,6 @@ export function RegistryApp() {
   const workspaceMetrics = dashboardMetrics[navTab];
 
   useEffect(() => {
-    if (isGuest) {
-      setCommands([]);
-      setActiveCommandId(null);
-      setLoading(false);
-      return;
-    }
-
     let active = true;
     setLoading(true);
 
@@ -225,16 +215,9 @@ export function RegistryApp() {
     return () => {
       active = false;
     };
-  }, [isGuest, query]);
+  }, [query]);
 
   useEffect(() => {
-    if (isGuest) {
-      setActiveCommand(null);
-      setActiveAuditReport(null);
-      setActivePublisherProfile(null);
-      return;
-    }
-
     if (!activeCommandId) {
       setActiveCommand(null);
       setActiveAuditReport(null);
@@ -278,7 +261,7 @@ export function RegistryApp() {
     return () => {
       active = false;
     };
-  }, [activeCommandId, isGuest]);
+  }, [activeCommandId]);
 
   // Hook Handshake Event Logging
   const sendBridgeMessage = (message: { type: string; [key: string]: any }) => {
@@ -501,7 +484,7 @@ export function RegistryApp() {
   }
 
   return (
-    <div className="min-h-screen grid grid-cols-[250px_1fr] bg-slate-50 dark:bg-slate-950 font-sans antialiased text-slate-900 dark:text-slate-100 transition-colors duration-200">
+    <div className="registry-app-shell dark">
       <Sidebar
         navTab={navTab}
         setNavTab={setNavTab}
@@ -511,33 +494,36 @@ export function RegistryApp() {
         onClearPublishToast={() => setPublishSuccessToast(null)}
       />
 
-      <main className="p-6 lg:p-8 flex flex-col gap-6 lg:gap-8 max-w-[1400px] mx-auto w-full min-w-0 relative">
-        {/* Navigation Breadcrumbs */}
-        <nav className="flex items-center gap-2 text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1 select-none" aria-label="Breadcrumb">
-          <span className="hover:text-slate-700 dark:hover:text-slate-350 cursor-pointer transition-colors" onClick={() => setView('landing')}>Registry</span>
-          <span className="text-slate-300 dark:text-slate-800">/</span>
-          <span className="text-slate-800 dark:text-slate-200">{navTab}</span>
-        </nav>
+      <main className="registry-workspace">
+        <header className="registry-toolbar">
+          <div className="min-w-0">
+            <div className="registry-toolbar-title">
+              <button type="button" onClick={() => setView('landing')}>Registry</button>
+              <span>/</span>
+              <strong>{navTab}</strong>
+            </div>
+            <h1>{dashboardState.title}</h1>
+            <p>{dashboardState.description}</p>
+          </div>
+          <div className="registry-toolbar-metrics" aria-label="Workspace metrics">
+            {workspaceMetrics.map((metric) => (
+              <span key={metric.label}>
+                <strong>{metric.value}</strong>
+                <em>{metric.label}</em>
+              </span>
+            ))}
+          </div>
+        </header>
 
         {publishSuccessToast && (
-          <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-lg flex items-center justify-between text-sm animate-in fade-in slide-in-from-top-4 duration-200 shrink-0">
+          <div className="registry-toast-success">
             <span className="font-semibold flex items-center gap-2">
               <CheckCircle2 className="size-4 text-emerald-500" />
               {publishSuccessToast}
             </span>
-            <button className="text-emerald-500 hover:text-emerald-400 font-bold bg-transparent border-0 cursor-pointer text-lg p-1" onClick={() => setPublishSuccessToast(null)}>×</button>
+            <button type="button" onClick={() => setPublishSuccessToast(null)}>×</button>
           </div>
         )}
-
-        <WorkspaceSummary
-          navTab={navTab}
-          setNavTab={setNavTab}
-          currentUser={currentUser}
-          authConfig={authConfig}
-          workspaceMetrics={workspaceMetrics}
-          title={dashboardState.title}
-          description={dashboardState.description}
-        />
 
         {navTab === 'Discover' && (
           <DiscoverPanel
@@ -562,7 +548,6 @@ export function RegistryApp() {
             filterCategory={filterCategory}
             setFilterCategory={setFilterCategory}
             setNavTab={setNavTab}
-            validManifests={validManifests}
           />
         )}
 

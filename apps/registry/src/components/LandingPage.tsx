@@ -195,11 +195,9 @@ export function LandingPage({
                 Continue with GitHub
               </Button>
             )}
-            <Button variant="outline" asChild>
-              <a href="#featured-commands">
-                Browse Catalog
-                <ArrowRight className="size-4" />
-              </a>
+            <Button variant="outline" onClick={onGoToDashboard}>
+              Browse Catalog
+              <ArrowRight className="size-4" />
             </Button>
           </div>
           {isGuest && !githubEnabled && (

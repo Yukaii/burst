@@ -1,8 +1,6 @@
 import { Search, Plus, RefreshCw } from 'lucide-react';
 import type { BurstCommand } from '@/src/lib/commands';
 import type { AuditReport, PublisherProfile } from '@/src/lib/registryApi';
-import { registryCommandsData } from '@/src/lib/registryApi';
-import { sampleManifestValidationResults } from '@/src/lib/manifest';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -43,7 +41,6 @@ interface DiscoverPanelProps {
   filterCategory: 'all' | 'verified' | 'high_risk' | 'installed';
   setFilterCategory: (cat: 'all' | 'verified' | 'high_risk' | 'installed') => void;
   setNavTab: (tab: 'Discover' | 'Publish' | 'Users' | 'Audits' | 'Settings') => void;
-  validManifests: number;
 }
 
 export function DiscoverPanel({
@@ -67,63 +64,51 @@ export function DiscoverPanel({
   handleUnpin,
   filterCategory,
   setFilterCategory,
-  setNavTab,
-  validManifests
+  setNavTab
 }: DiscoverPanelProps) {
   return (
-    <>
-      <header className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between shrink-0">
-        <div className="relative flex-1 max-w-md flex items-center">
+    <section className="registry-discover">
+      <header className="registry-discover-controls">
+        <div className="relative flex-1 min-w-0 flex items-center">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 size-4 pointer-events-none" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search website, publisher, permission, or use case"
-            className="pl-10 pr-12 h-10 w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl shadow-sm text-sm focus-visible:ring-sky-500"
+            className="pl-10 pr-12 h-9 w-full bg-background border-border rounded-lg text-xs font-semibold focus-visible:ring-ring"
           />
-          <kbd className="absolute right-3.5 top-1/2 -translate-y-1/2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[10px] text-slate-400 dark:text-slate-500 px-1.5 py-0.5 rounded font-mono shadow-[0_1px_1px_rgba(0,0,0,0.05)] pointer-events-none select-none">
+          <kbd className="registry-control-kbd">
             ⌘K
           </kbd>
         </div>
         <Button
-          className="h-10 px-4 rounded-xl font-bold bg-slate-900 dark:bg-sky-500 text-white dark:text-slate-950 hover:opacity-90 flex items-center gap-2 text-sm shadow-sm transition-all cursor-pointer border-none shrink-0"
+          className="h-9 px-3 rounded-md font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 text-xs shadow-sm transition-colors cursor-pointer border-none shrink-0"
           type="button"
           onClick={() => {
             setNavTab('Publish');
           }}
         >
           <Plus className="size-4" />
-          Publish use case
+          Publish
         </Button>
       </header>
 
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0" aria-label="Registry summary">
-        <SummaryStat label="Commands" value={registryCommandsData.length.toString()} />
-        <SummaryStat label="Manifests" value={`${validManifests}/${sampleManifestValidationResults.length}`} />
-        <SummaryStat
-          label="Audited"
-          value={registryCommandsData.filter((command) => command.trustLevel === 'verified' || command.trustLevel === 'reviewed').length.toString()}
-        />
-        <SummaryStat label="Sensitive" value={registryCommandsData.filter((command) => command.risk === 'high').length.toString()} />
-      </section>
-
-      <section className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start w-full min-w-0">
-        <div className="xl:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden flex flex-col" aria-label="Registry commands">
-          <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-4">
+      <section className="registry-discover-workspace">
+        <div className="registry-command-table" aria-label="Registry commands">
+          <div className="registry-panel-header">
             <div>
-              <h1 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">Discover commands</h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Find actions that match the current website, then inspect trust signals before installing.</p>
+              <h2>Discover commands</h2>
+              <p>Find actions that match the current website, then inspect trust signals before installing.</p>
             </div>
-            <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 shrink-0">{filteredCommands.length} results</span>
+            <span>{filteredCommands.length} results</span>
           </div>
 
-          {/* Category Filters Bar */}
-          <div className="px-6 py-2.5 border-b border-slate-100 dark:border-slate-800/40 bg-slate-50/30 dark:bg-slate-950/20 flex flex-wrap gap-1.5 items-center">
+          <div className="registry-filter-row">
             {(
               [
-                { id: 'all', label: 'All Scopes' },
-                { id: 'verified', label: 'Verified Publishers' },
-                { id: 'high_risk', label: 'High-Risk Flags' },
+                { id: 'all', label: 'All' },
+                { id: 'verified', label: 'Verified' },
+                { id: 'high_risk', label: 'High risk' },
                 { id: 'installed', label: 'Installed' },
               ] as const
             ).map((cat) => {
@@ -133,11 +118,7 @@ export function DiscoverPanel({
                   key={cat.id}
                   type="button"
                   onClick={() => setFilterCategory(cat.id)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
-                    isActive
-                      ? 'bg-sky-500/10 text-sky-500 border-sky-500/20'
-                      : 'bg-transparent text-slate-400 dark:text-slate-500 border-transparent hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`}
+                  className={isActive ? 'is-active' : ''}
                 >
                   {cat.label}
                 </button>
@@ -145,7 +126,7 @@ export function DiscoverPanel({
             })}
           </div>
 
-          <div className="px-6 py-3 bg-slate-50/50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800/40 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider grid grid-cols-[1.5fr_1.2fr_0.8fr_0.8fr_0.8fr] gap-4 items-center animate-none">
+          <div className="registry-table-head">
             <span>Command</span>
             <span>Website</span>
             <span>Trust</span>
@@ -154,12 +135,12 @@ export function DiscoverPanel({
           </div>
 
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400 dark:text-slate-500">
+            <div className="registry-loading-state">
               <RefreshCw className="size-6 animate-spin text-sky-500" />
               <span className="text-sm font-semibold">Searching registry...</span>
             </div>
           ) : filteredCommands.length > 0 ? (
-            <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800/50">
+            <div className="registry-command-rows">
               {filteredCommands.map((command) => {
                 const isSelected = activeCommandId === command.id;
                 
@@ -179,11 +160,7 @@ export function DiscoverPanel({
                 return (
                   <button
                     data-command-id={command.id}
-                    className={`px-6 py-4 border-none transition-all duration-150 grid grid-cols-[1.5fr_1.2fr_0.8fr_0.8fr_0.8fr] gap-4 items-center text-left cursor-pointer w-full ${
-                      isSelected 
-                        ? 'bg-sky-500/5 dark:bg-sky-500/10 shadow-[inset_3px_0_0_0_#0ea5e9]' 
-                        : 'bg-white dark:bg-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-950/40'
-                    }`}
+                    className={`registry-command-row ${isSelected ? 'is-selected' : ''}`}
                     key={command.id}
                     type="button"
                     onClick={() => setActiveCommandId(command.id)}
@@ -219,7 +196,7 @@ export function DiscoverPanel({
               })}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 px-6 text-center gap-2 border-t border-slate-100 dark:border-slate-800/40">
+            <div className="registry-empty-state">
               <Search className="size-8 text-slate-300 dark:text-slate-700" />
               <strong className="text-sm font-bold text-slate-900 dark:text-white mt-1">No registry commands match</strong>
               <span className="text-xs text-slate-400 dark:text-slate-500 max-w-sm leading-relaxed">Try searching for a different website matching pattern or publisher name.</span>
@@ -227,7 +204,7 @@ export function DiscoverPanel({
           )}
 
           {filteredCommands.length > 0 && (
-            <div className="px-6 py-3 bg-slate-50/50 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800/40 text-[10px] text-slate-400 dark:text-slate-500 font-semibold flex flex-wrap items-center justify-between gap-2 select-none shrink-0">
+            <div className="registry-table-footer">
               <div className="flex flex-wrap gap-x-4 gap-y-1">
                 <span className="flex items-center gap-1.5">
                   <kbd className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-1 py-0.2 rounded shadow-sm font-mono text-[9px]">↑</kbd>
@@ -272,15 +249,6 @@ export function DiscoverPanel({
           <EmptyInspector />
         )}
       </section>
-    </>
-  );
-}
-
-function SummaryStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm flex flex-col gap-1.5 transition-all duration-200 hover:shadow-md">
-      <strong className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">{value}</strong>
-      <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mt-0.5">{label}</span>
-    </div>
+    </section>
   );
 }
