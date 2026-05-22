@@ -137,6 +137,7 @@ export function localScriptToCommand(script: LocalScript): BurstCommand {
     id: `local-script:${script.id}`,
     title: script.name,
     description: 'Local dashboard script stored in this browser.',
+    subtitle: 'Local script',
     website: matchPatterns.includes('<all_urls>')
       ? 'all sites'
       : matchPatterns.map((pattern) => pattern.replace(/^\*:\/\/|\/\*$/g, '')).join(', '),

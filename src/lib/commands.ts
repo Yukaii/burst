@@ -14,6 +14,7 @@ export type BurstCommand = {
   id: string;
   title: string;
   description: string;
+  subtitle?: string;
   website: string;
   matchPatterns: string[];
   publisher: {
@@ -45,6 +46,7 @@ export const managementCommands: BurstCommand[] = [
     id: 'burst-install-script',
     title: 'Install script from registry',
     description: 'Open the local install manager.',
+    subtitle: 'Install manager',
     website: 'Burst',
     matchPatterns: ['<all_urls>'],
     publisher: {
@@ -65,6 +67,7 @@ export const managementCommands: BurstCommand[] = [
     id: 'burst-open-dashboard',
     title: 'Manage installed scripts',
     description: 'Open the local Burst dashboard.',
+    subtitle: 'Dashboard',
     website: 'Burst',
     matchPatterns: ['<all_urls>'],
     publisher: {
@@ -85,6 +88,7 @@ export const managementCommands: BurstCommand[] = [
     id: 'burst-create-local-script',
     title: 'Create local script',
     description: 'Open the editor with a new local command.',
+    subtitle: 'New command',
     website: 'Burst',
     matchPatterns: ['<all_urls>'],
     publisher: {
@@ -105,6 +109,7 @@ export const managementCommands: BurstCommand[] = [
     id: 'burst-list-installed',
     title: 'List installed scripts',
     description: 'Review enabled scripts and their website matches.',
+    subtitle: 'Installed scripts',
     website: 'Burst',
     matchPatterns: ['<all_urls>'],
     publisher: {
@@ -165,6 +170,7 @@ export function searchCommands(commands: BurstCommand[], query: string): BurstCo
     const searchable = [
       command.title,
       command.description,
+      command.subtitle,
       command.website,
       command.publisher.name,
       command.publisher.handle,

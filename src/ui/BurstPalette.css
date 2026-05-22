@@ -139,25 +139,33 @@
 
 .burst-command-copy {
   display: grid;
-  gap: 4px;
   min-width: 0;
 }
 
-.burst-command-copy strong {
+.burst-command-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.burst-command-title strong {
   overflow: hidden;
+  min-width: 0;
   color: #ffffff;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex-shrink: 1;
 }
 
-.burst-command.is-active .burst-command-copy strong {
+.burst-command.is-active .burst-command-title strong {
   color: #0f172a;
 }
 
-.burst-command-copy span {
+.burst-command-subtitle {
   overflow: hidden;
   color: #94a3b8;
   font-size: 12px;
@@ -165,9 +173,10 @@
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.burst-command.is-active .burst-command-copy span {
+.burst-command.is-active .burst-command-subtitle {
   color: rgba(15, 23, 42, 0.7);
 }
 
@@ -178,7 +187,7 @@
 }
 
 .burst-command kbd {
-  min-width: 24px;
+  min-width: 7ch;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-bottom-color: rgba(255, 255, 255, 0.2);
   border-radius: 5px;
@@ -190,6 +199,10 @@
   padding: 4px 6px;
   text-align: center;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.burst-command kbd.is-hidden {
+  visibility: hidden;
 }
 
 .burst-command.is-active kbd {

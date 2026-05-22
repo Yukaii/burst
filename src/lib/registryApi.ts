@@ -33,6 +33,7 @@ export const registryCommandsData: BurstCommand[] = [
     id: 'copy-github-branch',
     title: 'Copy GitHub branch name',
     description: 'Copies the active GitHub branch name to the clipboard.',
+    subtitle: 'GitHub branch',
     website: 'github.com',
     matchPatterns: ['github.com/*'],
     publisher: {
@@ -52,6 +53,7 @@ export const registryCommandsData: BurstCommand[] = [
     id: 'markdown-link-builder',
     title: 'Copy as Markdown link',
     description: 'Copies the current page title and URL as a formatted Markdown link.',
+    subtitle: 'Markdown link',
     website: 'all sites',
     matchPatterns: ['<all_urls>'],
     publisher: {
@@ -71,6 +73,7 @@ export const registryCommandsData: BurstCommand[] = [
     id: 'hn-comments-summarizer',
     title: 'Summarize Hacker News thread',
     description: 'Fetches comments from the active Hacker News thread and builds a summary.',
+    subtitle: 'Hacker News summary',
     website: 'news.ycombinator.com',
     matchPatterns: ['news.ycombinator.com/item*'],
     publisher: {
@@ -90,6 +93,7 @@ export const registryCommandsData: BurstCommand[] = [
     id: 'tailwind-css-exporter',
     title: 'Tailwind CSS Exporter',
     description: 'Extracts the Tailwind HTML snippet under the cursor and copies it to clipboard.',
+    subtitle: 'Tailwind snippet',
     website: 'tailwindplay.com',
     matchPatterns: ['play.tailwindcss.com/*'],
     publisher: {
@@ -109,6 +113,7 @@ export const registryCommandsData: BurstCommand[] = [
     id: 'json-formatter-toast',
     title: 'Format Selected JSON',
     description: 'Parses the selected text as JSON, formats it, and displays a formatted snippet in a toast.',
+    subtitle: 'Format JSON',
     website: 'all sites',
     matchPatterns: ['<all_urls>'],
     publisher: {

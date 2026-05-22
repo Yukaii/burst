@@ -63,6 +63,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState(() => readPaletteQuery());
   const [activeIndex, setActiveIndex] = useState(0);
+  const [showNumberHints, setShowNumberHints] = useState(false);
   const [localCommands, setLocalCommands] = useState<BurstCommand[]>([]);
   const [statusMessage, setStatusMessage] = useState<string>();
   const [toast, setToast] = useState<BurstToast>();
@@ -72,6 +73,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const host = useMemo(() => getHostFromUrl(pageUrl), [pageUrl]);
+  const isMacPlatform = useMemo(() => /Mac|iPhone|iPad|iPod/.test(navigator.platform), []);
 
   const consentAnalysis = useMemo(() => {
     if (!consentPendingCommand) return null;
@@ -296,6 +298,42 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   }, [activeCommand, filteredCommands.length, isOpen, consentPendingCommand]);
 
   useEffect(() => {
+    if (!isOpen) {
+      setShowNumberHints(false);
+      return;
+    }
+
+    const modifierKey = isMacPlatform ? 'Meta' : 'Control';
+
+    function updateShortcutHints(event: KeyboardEvent) {
+      const modifierHeld = isMacPlatform ? event.metaKey : event.ctrlKey;
+
+      if (event.key === modifierKey) {
+        setShowNumberHints(event.type === 'keydown');
+        return;
+      }
+
+      setShowNumberHints(modifierHeld);
+    }
+
+    function resetShortcutHints() {
+      setShowNumberHints(false);
+    }
+
+    window.addEventListener('keydown', updateShortcutHints, true);
+    window.addEventListener('keyup', updateShortcutHints, true);
+    window.addEventListener('blur', resetShortcutHints);
+    document.addEventListener('visibilitychange', resetShortcutHints);
+
+    return () => {
+      window.removeEventListener('keydown', updateShortcutHints, true);
+      window.removeEventListener('keyup', updateShortcutHints, true);
+      window.removeEventListener('blur', resetShortcutHints);
+      document.removeEventListener('visibilitychange', resetShortcutHints);
+    };
+  }, [isMacPlatform, isOpen]);
+
+  useEffect(() => {
     writePaletteQuery(query);
     setActiveIndex(0);
     setStatusMessage(undefined);
@@ -464,26 +502,32 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
                 <div className="burst-results" role="listbox" aria-label="Available commands">
                   {statusMessage ? <div className="burst-status">{statusMessage}</div> : null}
                   {filteredCommands.length > 0 ? (
-                    filteredCommands.map((command, index) => (
-                      <button
-                        className={`burst-command ${index === activeIndex ? 'is-active' : ''}`}
-                        key={command.id}
-                        type="button"
-                        role="option"
-                        aria-selected={index === activeIndex}
-                        onMouseEnter={() => setActiveIndex(index)}
-                        onClick={() => void runCommand(command)}
-                      >
-                        <CommandIcon command={command} />
-                        <span className="burst-command-copy">
-                          <strong>{command.title}</strong>
-                          <span>
-                            {command.website} · {trustLabels[command.trustLevel]} · {command.publisher.handle}
+                    filteredCommands.map((command, index) => {
+                      const shortcutHint = getShortcutHint(index, showNumberHints, isMacPlatform);
+
+                      return (
+                        <button
+                          className={`burst-command ${index === activeIndex ? 'is-active' : ''}`}
+                          key={command.id}
+                          type="button"
+                          role="option"
+                          aria-selected={index === activeIndex}
+                          onMouseEnter={() => setActiveIndex(index)}
+                          onClick={() => void runCommand(command)}
+                        >
+                          <CommandIcon command={command} />
+                          <span className="burst-command-copy">
+                            <span className="burst-command-title">
+                              <strong>{command.title}</strong>
+                              {command.subtitle ? <span className="burst-command-subtitle">{command.subtitle}</span> : null}
+                            </span>
                           </span>
-                        </span>
-                        <kbd>{command.shortcut ?? '↵'}</kbd>
-                      </button>
-                    ))
+                          <kbd className={shortcutHint ? '' : 'is-hidden'} aria-hidden={!shortcutHint}>
+                            {shortcutHint ?? '↵'}
+                          </kbd>
+                        </button>
+                      );
+                    })
                   ) : (
                     <div className="burst-empty">No commands found.</div>
                   )}
@@ -658,6 +702,17 @@ function getToastIcon(variant: ToastVariant): string {
   if (variant === 'error') return '×';
   if (variant === 'info') return 'i';
   return '•';
+}
+
+function getShortcutHint(index: number, showNumberHints: boolean, isMacPlatform: boolean): string | null {
+  if (!showNumberHints) {
+    return index === 0 ? '↵' : null;
+  }
+
+  const shortcutNumber = index <= 8 ? String(index + 1) : index === 9 ? '0' : null;
+  if (!shortcutNumber) return null;
+
+  return `${isMacPlatform ? '⌘' : 'Ctrl+'}${shortcutNumber}`;
 }
 
 function readPaletteQuery(): string {

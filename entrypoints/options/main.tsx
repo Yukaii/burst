@@ -1,9 +1,34 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import logoUrl from '@/assets/logo.svg';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/src/components/ui/select';
 import { ExtensionSettings, loadSettings, saveSettings } from '@/src/lib/settings';
 import { clearConsentGrants } from '@/src/lib/registryStorage';
 import './style.css';
+
+const THEME_OPTIONS: Array<{
+  value: ExtensionSettings['theme'];
+  label: string;
+}> = [
+  { value: 'dark', label: 'Dark Theme' },
+  { value: 'light', label: 'Light Theme' },
+  { value: 'system', label: 'System Theme' },
+];
+
+const POSITION_OPTIONS: Array<{
+  value: ExtensionSettings['position'];
+  label: string;
+}> = [
+  { value: 'top', label: 'Top (Fixed 14vh)' },
+  { value: 'center', label: 'Centered (Middle of Page)' },
+];
 
 function OptionsApp() {
   const [settings, setSettings] = useState<ExtensionSettings | null>(null);
@@ -148,15 +173,23 @@ function OptionsApp() {
               <p>Set the color scheme for the command palette overlay.</p>
             </div>
             <div className="setting-control">
-              <select
+              <Select
                 value={settings.theme}
-                onChange={(e) => updateSetting('theme', e.target.value as any)}
-                className="select-control"
+                onValueChange={(value) => updateSetting('theme', value as ExtensionSettings['theme'])}
               >
-                <option value="dark">Dark Theme</option>
-                <option value="light">Light Theme</option>
-                <option value="system">System Theme</option>
-              </select>
+                <SelectTrigger className="w-full sm:w-[220px]" aria-label="Appearance theme">
+                  <SelectValue placeholder="Select theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {THEME_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -167,14 +200,23 @@ function OptionsApp() {
               <p>Choose where the command palette overlay positions itself on screen.</p>
             </div>
             <div className="setting-control">
-              <select
+              <Select
                 value={settings.position}
-                onChange={(e) => updateSetting('position', e.target.value as any)}
-                className="select-control"
+                onValueChange={(value) => updateSetting('position', value as ExtensionSettings['position'])}
               >
-                <option value="top">Top (Fixed 14vh)</option>
-                <option value="center">Centered (Middle of Page)</option>
-              </select>
+                <SelectTrigger className="w-full sm:w-[220px]" aria-label="Palette alignment">
+                  <SelectValue placeholder="Select alignment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {POSITION_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -259,7 +301,19 @@ function OptionsApp() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const optionsRootEl = document.getElementById('root');
+
+if (!optionsRootEl) {
+  throw new Error('Root element not found');
+}
+
+const optionsWindow = window as Window & {
+  __burstOptionsRoot?: ReturnType<typeof ReactDOM.createRoot>;
+};
+
+const optionsRoot = optionsWindow.__burstOptionsRoot ?? ReactDOM.createRoot(optionsRootEl);
+optionsWindow.__burstOptionsRoot = optionsRoot;
+optionsRoot.render(
   <React.StrictMode>
     <OptionsApp />
   </React.StrictMode>,
