@@ -6,7 +6,6 @@ import logoUrl from '@/assets/logo.svg';
 import {
   getAuthConfig,
   getCurrentUser,
-  getGithubLoginUrl,
   getRegistryCommands,
   getRegistryCommand,
   getAuditReport,
@@ -293,13 +292,9 @@ export function RegistryApp() {
     };
   }, []);
 
-  const handleGitHubLogin = async () => {
-    try {
-      const loginUrl = await getGithubLoginUrl('/dashboard');
-      window.location.assign(loginUrl);
-    } catch (err) {
-      console.error('Failed to start GitHub login:', err);
-    }
+  const handleGitHubLogin = () => {
+    const loginUrl = authConfig?.loginUrl ?? '/api/auth/github/start?returnTo=%2Fdashboard';
+    window.location.assign(loginUrl);
   };
 
   const handleLogout = async () => {

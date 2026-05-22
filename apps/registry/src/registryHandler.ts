@@ -90,6 +90,13 @@ function appendSetCookies(headers: HeadersInit | undefined, cookies: string[]): 
   return next;
 }
 
+function normalizeAuthConfig(config: RegistryAuthConfig): Required<RegistryAuthConfig> {
+  return {
+    githubClientId: config.githubClientId?.trim() ?? '',
+    githubClientSecret: config.githubClientSecret?.trim() ?? '',
+  };
+}
+
 async function exchangeGithubCode(request: Request, config: RegistryAuthConfig, code: string): Promise<string> {
   if (!config.githubClientId || !config.githubClientSecret) {
     throw new Error('GitHub login is not configured');
@@ -154,11 +161,13 @@ async function fetchGithubUser(accessToken: string): Promise<GitHubUserProfile> 
 }
 
 export function createRegistryHandler(store: RegistryStore, authConfig: RegistryAuthConfig = {}) {
+  const normalizedAuthConfig = normalizeAuthConfig(authConfig);
+
   return async function handleRequest(req: Request): Promise<Response> {
     const url = new URL(req.url);
     const path = url.pathname;
     const secureCookie = isSecureRequest(req);
-    const hasGitHubLogin = Boolean(authConfig.githubClientId && authConfig.githubClientSecret);
+    const hasGitHubLogin = Boolean(normalizedAuthConfig.githubClientId && normalizedAuthConfig.githubClientSecret);
 
     if (req.method === 'OPTIONS') {
       return new Response(null, {
@@ -198,7 +207,7 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
         const returnTo = normalizeReturnTo(url.searchParams.get('returnTo'));
         const callbackUrl = new URL('/api/auth/github/callback', url.origin).toString();
         const authorizeUrl = new URL('https://github.com/login/oauth/authorize');
-        authorizeUrl.searchParams.set('client_id', authConfig.githubClientId!);
+        authorizeUrl.searchParams.set('client_id', normalizedAuthConfig.githubClientId);
         authorizeUrl.searchParams.set('redirect_uri', callbackUrl);
         authorizeUrl.searchParams.set('state', state);
 
@@ -225,7 +234,7 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
           return errorResponse('Invalid GitHub login state', 400);
         }
 
-        const accessToken = await exchangeGithubCode(req, authConfig, code);
+        const accessToken = await exchangeGithubCode(req, normalizedAuthConfig, code);
         const githubProfile = await fetchGithubUser(accessToken);
         const user = await store.upsertGitHubUser(githubProfile);
         const { sessionId } = await store.createSession(user.handle);
