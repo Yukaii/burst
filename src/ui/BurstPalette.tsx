@@ -77,6 +77,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [customList, setCustomList] = useState<BurstCustomList | null>(null);
   const [listCommand, setListCommand] = useState<BurstCommand | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const host = useMemo(() => getHostFromUrl(pageUrl), [pageUrl]);
   const isMacPlatform = useMemo(() => /Mac|iPhone|iPad|iPod/.test(navigator.platform), []);
 
@@ -397,6 +398,12 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     searchInputRef.current?.focus();
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const activeOption = resultsRef.current?.querySelector<HTMLElement>('.burst-command.is-active');
+    activeOption?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex, customList, filteredCommands.length, filteredListItems.length, isOpen]);
+
   const activeTheme = settings.theme === 'system'
     ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
     : settings.theme;
@@ -545,12 +552,17 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
                   />
                 </label>
 
-                <div className="burst-results" role="listbox" aria-label={customList ? customList.title : 'Available commands'}>
+                <div
+                  ref={resultsRef}
+                  className="burst-results"
+                  role="listbox"
+                  aria-label={customList ? customList.title : 'Available commands'}
+                >
                   {statusMessage ? <div className="burst-status">{statusMessage}</div> : null}
                   {customList ? (
                     filteredListItems.length > 0 ? (
                       filteredListItems.map((item, index) => {
-                        const shortcutHint = getShortcutHint(index, showNumberHints, isMacPlatform);
+                        const shortcutHint = getShortcutHint(index, activeIndex, showNumberHints, isMacPlatform);
 
                         return (
                           <button
@@ -592,7 +604,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
                     )
                   ) : filteredCommands.length > 0 ? (
                     filteredCommands.map((command, index) => {
-                      const shortcutHint = getShortcutHint(index, showNumberHints, isMacPlatform);
+                      const shortcutHint = getShortcutHint(index, activeIndex, showNumberHints, isMacPlatform);
 
                       return (
                         <button
@@ -875,9 +887,14 @@ function getToastIcon(variant: ToastVariant): string {
   return '•';
 }
 
-function getShortcutHint(index: number, showNumberHints: boolean, isMacPlatform: boolean): string | null {
+function getShortcutHint(
+  index: number,
+  activeIndex: number,
+  showNumberHints: boolean,
+  isMacPlatform: boolean,
+): string | null {
   if (!showNumberHints) {
-    return index === 0 ? '↵' : null;
+    return index === activeIndex ? '↵' : null;
   }
 
   const shortcutNumber = index <= 8 ? String(index + 1) : index === 9 ? '0' : null;
