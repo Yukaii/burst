@@ -104,26 +104,6 @@ export const registryCommandsData: BurstCommand[] = [
     version: '1.0.1',
   },
   {
-    id: 'hn-comments-summarizer',
-    title: 'Summarize Hacker News thread',
-    description: 'Fetches comments from the active Hacker News thread and builds a summary.',
-    subtitle: 'Hacker News summary',
-    website: 'news.ycombinator.com',
-    matchPatterns: ['news.ycombinator.com/item*'],
-    publisher: {
-      name: 'HN PowerUser',
-      handle: '@hn-power',
-      avatarInitials: 'HN',
-    },
-    trustLevel: 'reviewed',
-    risk: 'medium',
-    permissions: ['Read page DOM', 'Write clipboard', 'Network access to api.burst.dev'],
-    sourceUrl: 'https://github.com/hn-power/burst-tools/tree/main/hn-summarizer',
-    installs: 890,
-    rating: 4.5,
-    icon: { type: 'favicon', host: 'news.ycombinator.com' },
-  },
-  {
     id: 'tailwind-css-exporter',
     title: 'Tailwind CSS Exporter',
     description: 'Extracts the Tailwind HTML snippet under the cursor and copies it to clipboard.',
@@ -196,21 +176,6 @@ const mockAuditReports: Record<string, AuditReport> = {
     },
     summary: 'A clean global utility command. Fully audited and recommended for general use.',
   },
-  'hn-comments-summarizer': {
-    commandId: 'hn-comments-summarizer',
-    version: '0.5.1',
-    auditedAt: '2026-05-15',
-    status: 'warning',
-    checks: {
-      hostScope: { status: 'pass', detail: 'Properly restricted to news.ycombinator.com/item* thread view.' },
-      permissions: { status: 'warning', detail: 'Requests Network Access to api.burst.dev to summarize comments. Use with caution.' },
-      remoteCode: { status: 'pass', detail: 'Source code does not use eval() or load any third-party external scripts.' },
-      networkAccess: { status: 'warning', detail: 'Makes POST requests to api.burst.dev containing thread contents.' },
-      obfuscation: { status: 'pass', detail: 'Webpack build is cleanly formatted; verified main logic is clear.' },
-      signature: { status: 'warning', detail: 'Community package signature is self-signed/unverified. Review manifest content before installing.' },
-    },
-    summary: 'Matches host scope but performs outgoing network requests to pass comment data to a summary backend. Verify backend data processing privacy before using.',
-  },
   'tailwind-css-exporter': {
     commandId: 'tailwind-css-exporter',
     version: '0.2.0',
@@ -266,17 +231,6 @@ const testPublisherProfiles: Record<string, PublisherProfile> = {
     bio: 'Frontend engineer & developer experience enthusiast. Building productivity scripts for web workflows.',
     role: 'publisher',
   },
-  '@hn-power': {
-    name: 'HN PowerUser',
-    handle: '@hn-power',
-    avatarInitials: 'HN',
-    verified: false,
-    verifiedSources: [],
-    publishedCommandsCount: 1,
-    joinedAt: '2026-05-02',
-    bio: 'Avid Hacker News reader. Automating social news interfaces and thread reading.',
-    role: 'publisher',
-  },
 };
 
 export const publishedScriptCodes = new Map<string, string>();
@@ -297,17 +251,6 @@ export function getMockScriptCode(commandId: string): string {
   const link = \`[\${title}](\${url})\`;
   await navigator.clipboard.writeText(link);
   toast('Copied Markdown link: ' + link);
-}`;
-    case 'hn-comments-summarizer':
-      return `export default async function run({ page, toast }) {
-  const commentNode = page.querySelector('.comment');
-  const text = commentNode?.textContent?.trim() || 'No comments found';
-  // Send data to summary service
-  await fetch('https://api.burst.dev/summarize', {
-    method: 'POST',
-    body: JSON.stringify({ text })
-  });
-  toast('HN Thread Summary: ' + text.substring(0, 50) + '...');
 }`;
     case 'tailwind-css-exporter':
       return `export default async function run({ toast }) {

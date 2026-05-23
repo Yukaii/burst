@@ -96,17 +96,6 @@ const seedPublishers: StoredPublisherRecord[] = [
     bio: 'Frontend engineer & developer experience enthusiast. Building productivity scripts for web workflows.',
     role: 'publisher',
   },
-  {
-    name: 'HN PowerUser',
-    handle: '@hn-power',
-    avatarInitials: 'HN',
-    verified: false,
-    verifiedSources: [],
-    publishedCommandsCount: 1,
-    joinedAt: '2026-05-02',
-    bio: 'Avid Hacker News reader. Automating social news interfaces and thread reading.',
-    role: 'publisher',
-  },
 ];
 
 function normalizeQuery(query: string): string {

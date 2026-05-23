@@ -14,6 +14,7 @@
 
 ## Next Up
 
+- Add an AI API capability for commands, including explicit user consent, key handling, request scoping, and audit visibility.
 - Add browser tests for the content palette and registry website (Phase 5: Quality Loop).
 - Apply the extension dashboard baseline to remaining registry panels: Users, Audits, and Settings.
 - Validate production Worker/D1/OAuth/admin allowlist deployment with real secrets and session cookies.
