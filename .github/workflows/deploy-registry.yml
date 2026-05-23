@@ -38,6 +38,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: bun
+          wranglerVersion: 3.114.14
           workingDirectory: 'apps/registry'
           command: d1 migrations apply burst --remote
 
@@ -46,5 +48,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: bun
+          wranglerVersion: 3.114.14
           workingDirectory: 'apps/registry'
           command: deploy
