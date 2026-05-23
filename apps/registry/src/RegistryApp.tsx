@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import type { BurstCommand } from '@/src/lib/commands';
 import { CheckCircle2 } from 'lucide-react';
 import {
@@ -19,7 +19,6 @@ import {
 
 import { LandingPage } from './components/LandingPage';
 import { UsersPanel } from './components/UsersPanel';
-import { PublishPanel } from './components/PublishPanel';
 import { AuditsPanel } from './components/AuditsPanel';
 import { SettingsPanel } from './components/SettingsPanel';
 
@@ -30,6 +29,7 @@ import type { HandshakeLog } from './components/BridgeLogsConsole';
 import { DiscoverPanel } from './components/DiscoverPanel';
 
 const navItems = ['Discover', 'Publish', 'Users', 'Audits', 'Settings'] as const;
+const PublishPanel = lazy(() => import('./components/PublishPanel').then((module) => ({ default: module.PublishPanel })));
 
 const guestSessionUser: RegistrySessionUser = {
   handle: 'guest',
@@ -462,6 +462,7 @@ export function RegistryApp() {
         onLogout={handleLogout}
         setView={setView}
         onClearPublishToast={() => setPublishSuccessToast(null)}
+        onOpenBridgeLogs={() => setIsConsoleOpen(true)}
       />
 
       <main className="registry-workspace">
@@ -517,16 +518,18 @@ export function RegistryApp() {
         )}
 
         {navTab === 'Publish' && (
-          <PublishPanel
-            currentUser={currentUser}
-            onPublishSuccess={(newCmd) => {
-              setCommands((prev) => [newCmd, ...prev]);
-              setActiveCommandId(newCmd.id);
-              setNavTab('Discover');
-              setPublishSuccessToast(`Successfully published "${newCmd.title}"!`);
-            }}
-            setNavTab={setNavTab}
-          />
+          <Suspense fallback={<div className="registry-card text-sm text-muted-foreground">Loading publish workspace...</div>}>
+            <PublishPanel
+              currentUser={currentUser}
+              onPublishSuccess={(newCmd) => {
+                setCommands((prev) => [newCmd, ...prev]);
+                setActiveCommandId(newCmd.id);
+                setNavTab('Discover');
+                setPublishSuccessToast(`Successfully published "${newCmd.title}"!`);
+              }}
+              setNavTab={setNavTab}
+            />
+          </Suspense>
         )}
 
         {navTab === 'Users' && canManageRegistry && (

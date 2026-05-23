@@ -611,21 +611,35 @@ input {
   padding: 9px 14px;
 }
 
+.registry-inspector-modal {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+}
+
+.registry-inspector-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: hsl(222 47% 8% / 0.28);
+  backdrop-filter: blur(8px);
+  cursor: default;
+}
+
 .registry-inspector-overlay {
   position: absolute;
-  z-index: 20;
-  top: 8px;
-  right: 8px;
-  bottom: 8px;
+  top: 14px;
+  right: 14px;
+  bottom: 14px;
   display: flex;
-  width: min(520px, calc(100% - 16px));
+  width: min(760px, calc(100vw - 308px));
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
   border: 1px solid hsl(var(--border));
   border-radius: 8px;
   background: hsl(var(--card));
-  box-shadow: 0 24px 70px hsl(var(--foreground) / 0.16);
+  box-shadow: 0 24px 90px hsl(var(--foreground) / 0.22);
 }
 
 .registry-inspector-header {
@@ -636,6 +650,24 @@ input {
   border-bottom: 1px solid hsl(var(--border));
   background: hsl(var(--background));
   padding: 16px;
+}
+
+.registry-inspector-close {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid hsl(var(--border));
+  border-radius: 7px;
+  background: hsl(var(--card));
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+}
+
+.registry-inspector-close:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
 }
 
 .registry-inspector-tabs {
@@ -659,9 +691,12 @@ input {
   border-radius: 7px;
   background: hsl(var(--background));
   padding: 3px;
+  overflow: hidden;
 }
 
 .registry-tab-trigger {
+  width: 100%;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -674,6 +709,9 @@ input {
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
@@ -750,12 +788,15 @@ input {
   font-size: 11px;
   line-height: 1.7;
   padding: 14px;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .registry-code-preview code {
   display: block;
-  min-width: max-content;
+  min-width: 0;
+  white-space: inherit;
 }
 
 .syntax-comment {
@@ -790,6 +831,41 @@ input {
   border-top: 1px solid hsl(var(--border));
   background: hsl(var(--background));
   padding: 12px;
+}
+
+.registry-publish-page {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 24px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+@media (max-width: 900px) {
+  .registry-inspector-overlay {
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+    width: calc(100vw - 20px);
+  }
+}
+
+.registry-publish-editor {
+  overflow: hidden;
+  border: 1px solid hsl(222 36% 18%);
+  border-radius: 8px;
+  background: hsl(222 47% 8%);
+}
+
+.registry-publish-editor .cm-editor {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
+.registry-publish-editor .cm-scroller {
+  line-height: 1.6;
 }
 
 .registry-secondary-page {

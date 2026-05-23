@@ -18,7 +18,8 @@ import {
   Copy, 
   Check,
   Terminal,
-  Code
+  Code,
+  X
 } from 'lucide-react';
 
 const trustCopy: Record<BurstCommand['trustLevel'], string> = {
@@ -178,6 +179,9 @@ export function CommandInspector({
   onUninstall,
   onPin,
   onUnpin,
+  onClose,
+  onPointerDown,
+  onClick,
 }: {
   command: BurstCommand;
   auditReport: AuditReport | null;
@@ -191,6 +195,9 @@ export function CommandInspector({
   onUninstall: (commandId: string) => void;
   onPin: (commandId: string) => void;
   onUnpin: (commandId: string) => void;
+  onClose: () => void;
+  onPointerDown?: React.PointerEventHandler<HTMLElement>;
+  onClick?: React.MouseEventHandler<HTMLElement>;
 }) {
   const [copiedCli, setCopiedCli] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
@@ -226,7 +233,12 @@ export function CommandInspector({
   };
 
   return (
-    <aside className="registry-inspector-overlay" aria-label="Selected command audit details">
+    <aside
+      className="registry-inspector-overlay"
+      aria-label="Selected command audit details"
+      onPointerDown={onPointerDown}
+      onClick={onClick}
+    >
       <div className="registry-inspector-header">
         <div className="size-11 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center font-extrabold text-sm border border-sky-500/20 shrink-0">
           {command.publisher.avatarInitials}
@@ -235,6 +247,15 @@ export function CommandInspector({
           <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight truncate">{command.title}</h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal mt-1.5">{command.description}</p>
         </div>
+        <button
+          type="button"
+          className="registry-inspector-close"
+          onClick={onClose}
+          aria-label="Close command details"
+          title="Close"
+        >
+          <X className="size-4" />
+        </button>
       </div>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'audit' | 'publisher')} className="registry-inspector-tabs">

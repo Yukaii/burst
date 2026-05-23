@@ -22,6 +22,7 @@ interface SidebarProps {
   onLogout: () => void | Promise<void>;
   setView: (view: 'landing' | 'app') => void;
   onClearPublishToast?: () => void;
+  onOpenBridgeLogs?: () => void;
 }
 
 export function Sidebar({
@@ -30,10 +31,12 @@ export function Sidebar({
   currentUser,
   onLogout,
   setView,
-  onClearPublishToast
+  onClearPublishToast,
+  onOpenBridgeLogs
 }: SidebarProps) {
   const canManageRegistry = currentUser.role === 'admin';
   const visibleNavItems = navItems.filter((item) => canManageRegistry || !['Users', 'Audits'].includes(item));
+  const displayHandle = currentUser.handle.startsWith('@') ? currentUser.handle : `@${currentUser.handle}`;
 
   return (
     <aside className="registry-sidebar" aria-label="Registry navigation">
@@ -84,7 +87,7 @@ export function Sidebar({
           <div>
             <strong>{currentUser.name}</strong>
             <span>
-              @{currentUser.handle} {currentUser.githubLogin ? `• ${currentUser.githubLogin}` : ''}
+              {displayHandle} {currentUser.githubLogin ? `• ${currentUser.githubLogin}` : ''}
             </span>
           </div>
           <ChevronUp className="registry-session-chevron" />
@@ -93,6 +96,14 @@ export function Sidebar({
           <span>
             {currentUser.role || 'publisher'}
           </span>
+          {onOpenBridgeLogs && (
+            <button
+              type="button"
+              onClick={onOpenBridgeLogs}
+            >
+              Bridge logs
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void onLogout()}

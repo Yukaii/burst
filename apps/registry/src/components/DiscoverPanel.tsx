@@ -4,7 +4,7 @@ import type { AuditReport, PublisherProfile } from '@/src/lib/registryApi';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { CommandInspector, EmptyInspector } from './CommandInspector';
+import { CommandInspector } from './CommandInspector';
 
 const trustCopy: Record<BurstCommand['trustLevel'], string> = {
   verified: 'Verified',
@@ -201,24 +201,36 @@ export function DiscoverPanel({
           )}
         </div>
 
-        {activeCommand ? (
-          <CommandInspector
-            command={activeCommand}
-            auditReport={activeAuditReport}
-            publisherProfile={activePublisherProfile}
-            loading={inspectorLoading}
-            activeTab={inspectorTab}
-            setActiveTab={setInspectorTab}
-            installedCommandIds={installedCommandIds}
-            pinnedCommandIds={pinnedCommandIds}
-            onInstall={handleInstall}
-            onUninstall={handleUninstall}
-            onPin={handlePin}
-            onUnpin={handleUnpin}
-          />
-        ) : (
-          <EmptyInspector />
-        )}
+        {(activeCommand || inspectorLoading) && activeCommand ? (
+          <div
+            className="registry-inspector-modal"
+            onClick={() => setActiveCommandId(null)}
+          >
+            <button
+              type="button"
+              className="registry-inspector-backdrop"
+              onClick={() => setActiveCommandId(null)}
+              aria-label="Close command details"
+            />
+            <CommandInspector
+              command={activeCommand}
+              auditReport={activeAuditReport}
+              publisherProfile={activePublisherProfile}
+              loading={inspectorLoading}
+              activeTab={inspectorTab}
+              setActiveTab={setInspectorTab}
+              installedCommandIds={installedCommandIds}
+              pinnedCommandIds={pinnedCommandIds}
+              onInstall={handleInstall}
+              onUninstall={handleUninstall}
+              onPin={handlePin}
+              onUnpin={handleUnpin}
+              onClose={() => setActiveCommandId(null)}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
+            />
+          </div>
+        ) : null}
       </section>
     </section>
   );

@@ -82,16 +82,7 @@ export function BridgeLogsConsole({
             )}
           </div>
         </div>
-      ) : (
-        <button
-          onClick={() => onToggle(true)}
-          className="h-10 px-4 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-800/80 text-white flex items-center gap-2.5 text-xs font-bold shadow-2xl transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
-          type="button"
-        >
-          <Terminal className="size-4 text-sky-500" />
-          <span>Bridge Logs</span>
-        </button>
-      )}
+      ) : null}
     </div>
   );
 }

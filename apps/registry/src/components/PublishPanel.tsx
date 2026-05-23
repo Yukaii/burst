@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import CodeMirror from '@uiw/react-codemirror';
+import { javascript } from '@codemirror/lang-javascript';
+import { EditorView } from '@codemirror/view';
 import type { BurstCommand } from '@/src/lib/commands';
 import type { RegistrySessionUser } from '@/src/lib/registryApi';
 import { publishCommand } from '@/src/lib/registryApi';
@@ -7,7 +10,7 @@ import { ChecklistItem } from './CommandInspector';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
-import { Lock } from 'lucide-react';
+import { Lock, RotateCcw, Save } from 'lucide-react';
 
 interface PublishPanelProps {
   currentUser: RegistrySessionUser;
@@ -17,6 +20,86 @@ interface PublishPanelProps {
 
 export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: PublishPanelProps) {
   const isGuest = currentUser.handle === 'guest';
+  const draftKey = currentUser.handle === 'guest' ? null : `burst.registry.publishDraft.${currentUser.handle}.v1`;
+
+  const [title, setTitle] = useState('');
+  const [id, setId] = useState('');
+  const [description, setDescription] = useState('');
+  const [website, setWebsite] = useState('');
+  const [matchPattern, setMatchPattern] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [code, setCode] = useState(`export default async function run({ page, toast }) {\n  // Write your command code here\n  toast("Hello from " + page.title);\n}`);
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [draftStatus, setDraftStatus] = useState<'idle' | 'saved' | 'restored'>('idle');
+
+  const editorExtensions = useMemo(() => [
+    javascript({ jsx: true, typescript: true }),
+    EditorView.lineWrapping,
+  ], []);
+
+  useEffect(() => {
+    if (!draftKey) return;
+    const rawDraft = localStorage.getItem(draftKey);
+    if (!rawDraft) return;
+
+    try {
+      const draft = JSON.parse(rawDraft) as {
+        title?: string;
+        id?: string;
+        description?: string;
+        website?: string;
+        matchPattern?: string;
+        sourceUrl?: string;
+        code?: string;
+        permissions?: string[];
+      };
+      setTitle(draft.title ?? '');
+      setId(draft.id ?? '');
+      setDescription(draft.description ?? '');
+      setWebsite(draft.website ?? '');
+      setMatchPattern(draft.matchPattern ?? '');
+      setSourceUrl(draft.sourceUrl ?? '');
+      setCode(draft.code ?? code);
+      setPermissions(Array.isArray(draft.permissions) ? draft.permissions : []);
+      setDraftStatus('restored');
+    } catch {
+      localStorage.removeItem(draftKey);
+    }
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftKey || isGuest) return;
+    const timeout = window.setTimeout(() => {
+      localStorage.setItem(draftKey, JSON.stringify({
+        title,
+        id,
+        description,
+        website,
+        matchPattern,
+        sourceUrl,
+        code,
+        permissions,
+      }));
+      setDraftStatus('saved');
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [draftKey, isGuest, title, id, description, website, matchPattern, sourceUrl, code, permissions]);
+
+  const clearDraft = () => {
+    if (draftKey) localStorage.removeItem(draftKey);
+    setTitle('');
+    setId('');
+    setDescription('');
+    setWebsite('');
+    setMatchPattern('');
+    setSourceUrl('');
+    setCode(`export default async function run({ page, toast }) {\n  // Write your command code here\n  toast("Hello from " + page.title);\n}`);
+    setPermissions([]);
+    setErrors({});
+    setDraftStatus('idle');
+  };
 
   if (isGuest) {
     return (
@@ -38,16 +121,6 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
       </div>
     );
   }
-
-  const [title, setTitle] = useState('');
-  const [id, setId] = useState('');
-  const [description, setDescription] = useState('');
-  const [website, setWebsite] = useState('');
-  const [matchPattern, setMatchPattern] = useState('');
-  const [sourceUrl, setSourceUrl] = useState('');
-  const [code, setCode] = useState(`export default async function run({ page, toast }) {\n  // Write your command code here\n  toast("Hello from " + page.title);\n}`);
-  const [permissions, setPermissions] = useState<string[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
@@ -144,6 +217,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
         version: '1.0.0',
       };
       const newCommand = await publishCommand(payload);
+      if (draftKey) localStorage.removeItem(draftKey);
       onPublishSuccess(newCommand);
     } catch (err) {
       setErrors({ form: err instanceof Error ? err.message : 'Failed to publish command' });
@@ -151,10 +225,24 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="registry-publish-page">
       <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-slate-800/60 pb-4">
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Publish a New Command</h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Define manifest capabilities, declare host scopes, and write the execution block.</p>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Publish a New Command</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Define manifest capabilities, declare host scopes, and write the execution block.</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-800 px-2.5 py-1 text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">
+              <Save className="size-3" />
+              {draftStatus === 'restored' ? 'Draft restored' : draftStatus === 'saved' ? 'Draft saved' : 'Draft ready'}
+            </span>
+            <Button type="button" variant="outline" className="h-8 px-2 text-xs font-bold" onClick={clearDraft}>
+              <RotateCcw className="size-3.5" />
+              Reset
+            </Button>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={(e) => void handleSubmit(e)} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -257,13 +345,24 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Source Code (ES Module)</label>
-              <Textarea
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="export default async function run(context) { ... }"
-                rows={12}
-                className="font-mono text-xs p-4 bg-slate-950 text-slate-100 dark:bg-slate-950/80 rounded-xl border-slate-800"
-              />
+              <div className="registry-publish-editor">
+                <CodeMirror
+                  value={code}
+                  basicSetup={{
+                    bracketMatching: true,
+                    closeBrackets: true,
+                    defaultKeymap: true,
+                    foldGutter: false,
+                    highlightActiveLine: true,
+                    highlightActiveLineGutter: true,
+                    lineNumbers: true,
+                  }}
+                  extensions={editorExtensions}
+                  height="360px"
+                  theme="dark"
+                  onChange={(value) => setCode(value)}
+                />
+              </div>
               {errors.code && <span className="text-[10px] font-bold text-rose-500">{errors.code}</span>}
             </div>
           </div>
