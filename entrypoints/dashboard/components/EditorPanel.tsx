@@ -11,6 +11,9 @@ import {
   PanelRightClose,
   PanelRightOpen,
   ChevronDown,
+  ExternalLink,
+  RotateCcw,
+  Unlink,
 } from 'lucide-react';
 import type { LocalScript } from '@/src/lib/localScripts';
 import { prepareLocalScriptForSave, stripDefaultExport } from '@/src/lib/localScripts';
@@ -33,6 +36,8 @@ export function EditorPanel({
   onSave,
   onDelete,
   onUpdateScript,
+  onResetFork,
+  onUnlinkFork,
   onOpenTestHarness,
   onOpenEditorPrefs,
   editorFontFamily,
@@ -55,6 +60,8 @@ export function EditorPanel({
   onSave: () => void;
   onDelete: () => void;
   onUpdateScript: (patch: Partial<LocalScript>) => void;
+  onResetFork: () => void;
+  onUnlinkFork: () => void;
   onOpenTestHarness: () => void;
   onOpenEditorPrefs: () => void;
   editorFontFamily: string;
@@ -72,6 +79,10 @@ export function EditorPanel({
   const [nameInputWidth, setNameInputWidth] = React.useState(180);
 
   const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
+  const isRegistryFork = selectedScript.originRegistryKind === 'official' && Boolean(selectedScript.originCommandId);
+  const storeHref = selectedScript.originCommandId
+    ? `${selectedScript.originRegistryUrl || 'http://localhost:5174'}/#/discover/${encodeURIComponent(selectedScript.originCommandId)}`
+    : undefined;
 
   React.useEffect(() => {
     const measuredWidth = nameMeasureRef.current?.offsetWidth ?? 0;
@@ -228,6 +239,39 @@ export function EditorPanel({
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setNavbarMenuOpen(false)} />
                 <div className="absolute right-0 top-full mt-1.5 z-20 w-40 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md animate-fade-in" role="menu">
+                  {isRegistryFork && storeHref && (
+                    <>
+                      <a
+                        role="menuitem"
+                        href={storeHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => setNavbarMenuOpen(false)}
+                        className="w-full flex items-center gap-2 p-2 rounded text-xs hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors text-left"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+                        Open store
+                      </a>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => { onResetFork(); setNavbarMenuOpen(false); }}
+                        className="w-full flex items-center gap-2 p-2 rounded text-xs hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors text-left"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-muted-foreground" />
+                        Reset to registry
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => { onUnlinkFork(); setNavbarMenuOpen(false); }}
+                        className="w-full flex items-center gap-2 p-2 rounded text-xs hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors text-left"
+                      >
+                        <Unlink className="w-3.5 h-3.5 text-muted-foreground" />
+                        Unlink fork
+                      </button>
+                    </>
+                  )}
                   <button
                     type="button"
                     role="menuitem"
@@ -259,6 +303,30 @@ export function EditorPanel({
 
       <div className="flex-1 flex min-h-0 overflow-hidden">
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-background">
+          {isRegistryFork && (
+            <div className="flex items-center justify-between gap-3 border-b border-border bg-sky-500/5 px-4 py-2 text-xs">
+              <div className="min-w-0">
+                <span className="font-semibold text-sky-400">Linked registry fork</span>
+                <span className="text-muted-foreground"> · {selectedScript.originCommandId} · v{selectedScript.version || '1.0.0'}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {storeHref && (
+                  <a href={storeHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md border border-input px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-accent">
+                    <ExternalLink className="w-3 h-3" />
+                    Store
+                  </a>
+                )}
+                <button type="button" onClick={onResetFork} className="inline-flex items-center gap-1 rounded-md border border-input px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-accent">
+                  <RotateCcw className="w-3 h-3" />
+                  Reset
+                </button>
+                <button type="button" onClick={onUnlinkFork} className="inline-flex items-center gap-1 rounded-md border border-input px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-accent hover:text-foreground">
+                  <Unlink className="w-3 h-3" />
+                  Unlink
+                </button>
+              </div>
+            </div>
+          )}
           <div className="p-4 border-b border-border bg-card/20 shrink-0">
             <label className="flex flex-col gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               Match Patterns

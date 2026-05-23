@@ -8,16 +8,46 @@ import {
   prepareLocalScriptForSave,
   saveLocalScripts,
 } from '@/src/lib/localScripts';
-import { loadInstalledRegistryCommands, saveInstalledRegistryCommands } from '@/src/lib/registryStorage';
+import { loadInstalledRegistryCommands, saveInstalledRegistryCommands, uninstallRegistryCommand } from '@/src/lib/registryStorage';
 import { getRegistryCommand } from '@/src/lib/registryApi';
 import type { BurstCommand } from '@/src/lib/commands';
-import { ExtensionSettings, DEFAULT_SETTINGS, loadSettings, saveSettings } from '@/src/lib/settings';
+import { ExtensionSettings, DEFAULT_SETTINGS, getRegistryServerBaseUrl, loadSettings, saveSettings } from '@/src/lib/settings';
 import { parseGitUrl, loadGitRegistries, saveGitRegistries } from './utils';
 import type { GitRegistry, ScriptUpdate } from './types';
+
+type DashboardRoute =
+  | { view: 'script'; id?: string }
+  | { view: 'registry'; id?: string }
+  | { view: 'updates' }
+  | { view: 'git'; id: string };
+
+function parseDashboardHash(): DashboardRoute {
+  const raw = window.location.hash.replace(/^#\/?/, '');
+  const [view, id] = raw.split('/').map(decodeURIComponent);
+  if (view === 'registry') return { view: 'registry', id };
+  if (view === 'updates') return { view: 'updates' };
+  if (view === 'git' && id) return { view: 'git', id };
+  return { view: 'script', id: view === 'script' ? id : undefined };
+}
+
+function writeDashboardHash(route: DashboardRoute) {
+  const next = route.view === 'script' && route.id
+    ? `#/script/${encodeURIComponent(route.id)}`
+    : route.view === 'registry' && route.id
+    ? `#/registry/${encodeURIComponent(route.id)}`
+    : route.view === 'git'
+    ? `#/git/${encodeURIComponent(route.id)}`
+    : '#/updates';
+  if (window.location.hash !== next) {
+    window.history.pushState(null, '', `${window.location.pathname}${window.location.search}${next}`);
+  }
+}
 
 export function useDashboard() {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const [scripts, setScripts] = useState<LocalScript[]>([]);
+  const [installedRegistryCommands, setInstalledRegistryCommands] = useState<BurstCommand[]>([]);
+  const [selectedRegistryCommandId, setSelectedRegistryCommandId] = useState<string>();
   const [selectedId, setSelectedId] = useState<string>();
   const [editorFontFamily, setEditorFontFamily] = useState('"SFMono-Regular", Consolas, "Liberation Mono", monospace');
   const [editorFontSize, setEditorFontSize] = useState(13);
@@ -75,6 +105,7 @@ export function useDashboard() {
   }>({ open: false, title: '', message: '' });
 
   const selectedScript = scripts.find((script) => script.id === selectedId) ?? scripts[0];
+  const selectedRegistryCommand = installedRegistryCommands.find((command) => command.id === selectedRegistryCommandId);
 
   useEffect(() => {
     if (settings.editorFontFamily) setEditorFontFamily(settings.editorFontFamily);
@@ -130,6 +161,7 @@ export function useDashboard() {
     async function hydrate() {
       try {
         const storedScripts = await loadLocalScripts();
+        const storedRegistryCommands = await loadInstalledRegistryCommands();
         const storedRegistries = await loadGitRegistries();
         const params = new URLSearchParams(window.location.search);
         const shouldCreateDraft = params.get('mode') === 'new' || params.has('new');
@@ -141,8 +173,12 @@ export function useDashboard() {
           window.history.replaceState(null, '', `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`);
         }
         if (cancelled) return;
-        setScripts(nextScripts); setSelectedId(nextScripts[0]?.id);
-        setGitRegistries(storedRegistries); setLoadState('ready');
+        const route = parseDashboardHash();
+        setScripts(nextScripts);
+        setInstalledRegistryCommands(storedRegistryCommands);
+        setGitRegistries(storedRegistries);
+        applyDashboardRoute(route, nextScripts, storedRegistryCommands, storedRegistries);
+        setLoadState('ready');
         setSaveState(shouldCreateDraft ? 'Draft saved' : '');
       } catch (error) {
         if (cancelled) return;
@@ -153,6 +189,58 @@ export function useDashboard() {
     void hydrate();
     return () => { cancelled = true; };
   }, []);
+
+  function applyDashboardRoute(
+    route: DashboardRoute,
+    currentScripts = scripts,
+    currentRegistryCommands = installedRegistryCommands,
+    currentGitRegistries = gitRegistries,
+  ) {
+    if (route.view === 'registry' && route.id && currentRegistryCommands.some((command) => command.id === route.id)) {
+      setActiveTab('editor');
+      setSelectedRegistryCommandId(route.id);
+      setSelectedId(undefined);
+      return;
+    }
+    if (route.view === 'updates') {
+      setActiveTab('git-updates');
+      setSelectedGitView('updates');
+      return;
+    }
+    if (route.view === 'git' && currentGitRegistries.some((registry) => registry.id === route.id)) {
+      setActiveTab('git-updates');
+      setSelectedGitView(route.id);
+      return;
+    }
+    const nextScriptId = route.view === 'script' && route.id && currentScripts.some((script) => script.id === route.id)
+      ? route.id
+      : currentScripts[0]?.id;
+    setActiveTab('editor');
+    setSelectedRegistryCommandId(undefined);
+    setSelectedId(nextScriptId);
+  }
+
+  useEffect(() => {
+    if (loadState !== 'ready') return;
+    function handleHashChange() {
+      applyDashboardRoute(parseDashboardHash());
+    }
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [loadState, scripts, installedRegistryCommands, gitRegistries]);
+
+  useEffect(() => {
+    if (loadState !== 'ready') return;
+    if (activeTab === 'editor' && selectedRegistryCommandId) {
+      writeDashboardHash({ view: 'registry', id: selectedRegistryCommandId });
+    } else if (activeTab === 'editor' && selectedId) {
+      writeDashboardHash({ view: 'script', id: selectedId });
+    } else if (activeTab === 'git-updates' && selectedGitView === 'updates') {
+      writeDashboardHash({ view: 'updates' });
+    } else if (activeTab === 'git-updates') {
+      writeDashboardHash({ view: 'git', id: selectedGitView });
+    }
+  }, [activeTab, loadState, selectedGitView, selectedId, selectedRegistryCommandId]);
 
   useEffect(() => {
     async function init() { const loaded = await loadSettings(); setSettings(loaded); }
@@ -167,6 +255,15 @@ export function useDashboard() {
       browser.storage.onChanged.addListener(handler as Parameters<typeof browser.storage.onChanged.addListener>[0]);
       return () => browser.storage.onChanged.removeListener(handler as Parameters<typeof browser.storage.onChanged.removeListener>[0]);
     }
+  }, []);
+
+  useEffect(() => {
+    async function refreshInstalledRegistryCommands() {
+      setInstalledRegistryCommands(await loadInstalledRegistryCommands());
+    }
+
+    window.addEventListener('focus', refreshInstalledRegistryCommands);
+    return () => window.removeEventListener('focus', refreshInstalledRegistryCommands);
   }, []);
 
   const activeTheme = useMemo(() => {
@@ -207,6 +304,27 @@ export function useDashboard() {
     setHasUnsavedChanges(true); setSaveState('Unsaved changes');
   }
 
+  function navigateToScript(id: string | undefined) {
+    if (!id) return;
+    setActiveTab('editor');
+    setSelectedId(id);
+    setSelectedRegistryCommandId(undefined);
+    writeDashboardHash({ view: 'script', id });
+  }
+
+  function navigateToRegistryCommand(id: string) {
+    setActiveTab('editor');
+    setSelectedRegistryCommandId(id);
+    setSelectedId(undefined);
+    writeDashboardHash({ view: 'registry', id });
+  }
+
+  function navigateToGitView(view: 'updates' | string) {
+    setActiveTab('git-updates');
+    setSelectedGitView(view);
+    writeDashboardHash(view === 'updates' ? { view: 'updates' } : { view: 'git', id: view });
+  }
+
   async function saveSelectedScript(successMessage = 'Saved') {
     if (!selectedScript) return;
     const nextScripts = scripts.map(s => s.id === selectedScript.id ? prepareLocalScriptForSave(s) : s);
@@ -217,7 +335,7 @@ export function useDashboard() {
   async function createDraft() {
     const draft = createLocalScriptDraft();
     const nextScripts = [draft, ...scripts];
-    setScripts(nextScripts); setSelectedId(draft.id);
+    setScripts(nextScripts); navigateToScript(draft.id);
     await persistScripts(nextScripts, 'Draft saved');
   }
 
@@ -228,7 +346,7 @@ export function useDashboard() {
     const fallback = nextScripts.length > 0 ? undefined : createLocalScriptDraft();
     const finalScripts = fallback ? [fallback] : nextScripts;
     const nextSelection = (finalScripts[Math.max(0, idx - 1)] ?? finalScripts[0]).id;
-    setScripts(finalScripts); setSelectedId(nextSelection);
+    setScripts(finalScripts); navigateToScript(nextSelection);
     await persistScripts(finalScripts, fallback ? 'Deleted script and created a draft' : 'Deleted script');
   }
 
@@ -247,6 +365,79 @@ export function useDashboard() {
   async function setScriptStatusDirectly(script: LocalScript, status: LocalScript['status']) {
     const nextScripts = scripts.map(s => s.id === script.id ? prepareLocalScriptForSave({ ...s, status }) : s);
     setScripts(nextScripts); await persistScripts(nextScripts, 'Saved');
+  }
+
+  async function uninstallOfficialRegistryCommand(commandId: string) {
+    await uninstallRegistryCommand(commandId);
+    const next = await loadInstalledRegistryCommands();
+    setInstalledRegistryCommands(next);
+    if (selectedRegistryCommandId === commandId) {
+      setSelectedRegistryCommandId(undefined);
+      navigateToScript(scripts[0]?.id);
+    }
+    if (typeof browser !== 'undefined' && browser.runtime?.sendMessage) {
+      await browser.runtime.sendMessage({ type: 'burst:sync-local-scripts' }).catch(() => {});
+    }
+    setSaveState('Uninstalled registry command');
+  }
+
+  async function forkOfficialRegistryCommand(command: BurstCommand) {
+    const existing = scripts.find((script) => script.originRegistryKind === 'official' && script.originCommandId === command.id);
+    const baseCode = command.code || '';
+    if (existing) {
+      setSelectedId(existing.id);
+      setSaveState(`Opened fork "${existing.name}"`);
+      return;
+    }
+
+    const fork: LocalScript = {
+      id: `local-fork-${command.id}-${Date.now()}`,
+      name: `${command.title} fork`,
+      matchPatterns: command.matchPatterns.length > 0 ? command.matchPatterns : ['<all_urls>'],
+      icon: command.icon || { type: 'initials', value: command.title.substring(0, 2).toUpperCase() },
+      status: 'enabled',
+      updatedAt: new Date().toISOString().slice(0, 10),
+      code: baseCode,
+      originRegistryUrl: getRegistryServerBaseUrl(settings),
+      originRegistryKind: 'official',
+      originCommandId: command.id,
+      upstreamCodeAtFork: baseCode,
+      version: command.version || '1.0.0',
+    };
+    const nextScripts = [fork, ...scripts];
+    setScripts(nextScripts);
+    navigateToScript(fork.id);
+    await persistScripts(nextScripts, `Forked "${command.title}" for local customization`);
+  }
+
+  async function unlinkForkedScript(scriptId: string) {
+    const script = scripts.find((item) => item.id === scriptId);
+    if (!script) return;
+    const confirmed = window.confirm(`Unlink "${script.name}" from registry updates? It will remain as a local script.`);
+    if (!confirmed) return;
+    const nextScripts = scripts.map((script) => script.id === scriptId ? prepareLocalScriptForSave({
+      ...script,
+      originRegistryUrl: undefined,
+      originRegistryKind: undefined,
+      originCommandId: undefined,
+      upstreamCodeAtFork: undefined,
+      version: undefined,
+    }) : script);
+    setScripts(nextScripts);
+    await persistScripts(nextScripts, 'Unlinked customized script from registry updates');
+  }
+
+  async function resetForkedScriptToUpstream(scriptId: string) {
+    const script = scripts.find((item) => item.id === scriptId);
+    if (!script?.upstreamCodeAtFork) return;
+    const confirmed = window.confirm(`Reset "${script.name}" to the last known registry source? Local edits will be replaced.`);
+    if (!confirmed) return;
+    const nextScripts = scripts.map((item) => item.id === scriptId ? prepareLocalScriptForSave({
+      ...item,
+      code: script.upstreamCodeAtFork!,
+    }) : item);
+    setScripts(nextScripts);
+    await persistScripts(nextScripts, 'Reset fork to registry source');
   }
 
   function exportSingleScript(script: LocalScript) {
@@ -297,7 +488,7 @@ export function useDashboard() {
       };
       const nextRegistries = [...gitRegistries, newRegistry];
       setGitRegistries(nextRegistries); await saveGitRegistries(nextRegistries);
-      setNewRepoUrl(''); setAddError(''); setSelectedGitView(id);
+      setNewRepoUrl(''); setAddError(''); navigateToGitView(id);
     } catch (error) { setAddError(error instanceof Error ? error.message : 'Failed to fetch manifest'); }
   }
 
@@ -305,7 +496,7 @@ export function useDashboard() {
     const reg = gitRegistries.find(r => r.id === id);
     if (!reg) return;
     const next = gitRegistries.filter(r => r.id !== id);
-    setGitRegistries(next); await saveGitRegistries(next); setSelectedGitView('updates');
+    setGitRegistries(next); await saveGitRegistries(next); navigateToGitView('updates');
   }
 
   async function installGitCommand(command: BurstCommand, registry: GitRegistry) {
@@ -338,18 +529,37 @@ export function useDashboard() {
 
   async function checkUpdates() {
     setIsCheckingUpdates(true); setUpdateStatusText('Checking for updates...');
-    const officialUpdates: ScriptUpdate[] = []; const gitUpdates: ScriptUpdate[] = [];
+    const officialUpdates: ScriptUpdate[] = []; const gitUpdates: ScriptUpdate[] = []; const forkUpdates: ScriptUpdate[] = [];
     try {
       const installedRegistryCmds = await loadInstalledRegistryCommands();
       for (const cmd of installedRegistryCmds) {
         try {
-          const officialCmd = await getRegistryCommand(cmd.id);
+          const officialCmd = await getRegistryCommand(cmd.id, getRegistryServerBaseUrl(settings));
           if (officialCmd?.version && cmd.version && officialCmd.version !== cmd.version) {
             officialUpdates.push({ type: 'official', id: cmd.id, name: cmd.title, currentVersion: cmd.version, latestVersion: officialCmd.version, code: officialCmd.code || '', manifestCommand: officialCmd });
           }
         } catch (e) { console.error(`Failed to check update for official command ${cmd.id}:`, e); }
       }
-      const gitScripts = scripts.filter(s => s.originRegistryUrl && s.originCommandId);
+      const officialForks = scripts.filter(s => s.originRegistryKind === 'official' && s.originCommandId);
+      for (const script of officialForks) {
+        try {
+          const remoteCmd = await getRegistryCommand(script.originCommandId!, getRegistryServerBaseUrl(settings));
+          if (remoteCmd?.version && script.version && remoteCmd.version !== script.version) {
+            forkUpdates.push({
+              type: 'fork',
+              id: script.id,
+              name: script.name,
+              currentVersion: script.version,
+              latestVersion: remoteCmd.version,
+              code: remoteCmd.code || '',
+              hasLocalChanges: Boolean(script.upstreamCodeAtFork && script.code !== script.upstreamCodeAtFork),
+              upstreamCodeAtFork: script.upstreamCodeAtFork,
+              manifestCommand: remoteCmd,
+            });
+          }
+        } catch (e) { console.error(`Failed to check update for fork ${script.id}:`, e); }
+      }
+      const gitScripts = scripts.filter(s => s.originRegistryUrl && s.originCommandId && s.originRegistryKind !== 'official');
       const uniqueUrls = Array.from(new Set(gitScripts.map(s => s.originRegistryUrl).filter((url): url is string => !!url)));
       for (const url of uniqueUrls) {
         try {
@@ -368,7 +578,7 @@ export function useDashboard() {
           }
         } catch (e) { console.error(`Failed to check updates for Git registry ${url}:`, e); }
       }
-      const allUpdates = [...officialUpdates, ...gitUpdates];
+      const allUpdates = [...officialUpdates, ...forkUpdates, ...gitUpdates];
       setAvailableUpdates(allUpdates);
       setUpdateStatusText(allUpdates.length > 0 ? `Found ${allUpdates.length} update(s).` : 'All scripts are up to date.');
     } catch (err) { setUpdateStatusText('Error checking for updates.'); console.error(err); }
@@ -382,7 +592,17 @@ export function useDashboard() {
         const updated = installed.map(cmd => cmd.id === update.id && update.manifestCommand ? update.manifestCommand : cmd);
         await saveInstalledRegistryCommands(updated);
       } else {
-        const nextScripts = scripts.map(s => s.id === update.id ? { ...s, code: update.code, version: update.latestVersion, updatedAt: new Date().toISOString().slice(0, 10) } : s);
+        if (update.type === 'fork' && update.hasLocalChanges) {
+          const confirmed = window.confirm(`"${update.name}" has local customizations. Replace your fork with the registry version?`);
+          if (!confirmed) return;
+        }
+        const nextScripts = scripts.map(s => s.id === update.id ? {
+          ...s,
+          code: update.code,
+          version: update.latestVersion,
+          upstreamCodeAtFork: update.code,
+          updatedAt: new Date().toISOString().slice(0, 10),
+        } : s);
         setScripts(nextScripts); await saveLocalScripts(nextScripts);
       }
       if (typeof browser !== 'undefined' && browser.runtime?.sendMessage) {
@@ -398,11 +618,43 @@ export function useDashboard() {
     for (const update of updatesToProcess) await handleUpdateScript(update);
   }
 
+  async function handleMergeForkUpdate(update: ScriptUpdate) {
+    const script = scripts.find((item) => item.id === update.id);
+    if (!script) return;
+    const mergedCode = [
+      '<<<<<<< LOCAL CUSTOMIZATION',
+      script.code,
+      '=======',
+      update.code,
+      '>>>>>>> REGISTRY UPDATE',
+    ].join('\n');
+    const nextScripts = scripts.map((item) => item.id === update.id ? {
+      ...item,
+      code: mergedCode,
+      version: update.latestVersion,
+      upstreamCodeAtFork: update.code,
+      updatedAt: new Date().toISOString().slice(0, 10),
+    } : item);
+    setScripts(nextScripts);
+    navigateToScript(update.id);
+    await saveLocalScripts(nextScripts);
+    setAvailableUpdates(current => current.filter(u => u.id !== update.id));
+    setSaveState(`Created merge conflict markers for ${update.name}`);
+  }
+
+  async function handleUnlinkUpdate(update: ScriptUpdate) {
+    await unlinkForkedScript(update.id);
+    setAvailableUpdates(current => current.filter(u => u.id !== update.id));
+  }
+
   return {
     settings, setSettings,
     scripts, setScripts,
+    installedRegistryCommands, setInstalledRegistryCommands,
     selectedId, setSelectedId,
+    selectedRegistryCommandId, setSelectedRegistryCommandId,
     selectedScript,
+    selectedRegistryCommand,
     editorFontFamily, setEditorFontFamily,
     editorFontSize, setEditorFontSize,
     editorTheme, setEditorTheme,
@@ -432,12 +684,19 @@ export function useDashboard() {
     updateStatusText, setUpdateStatusText,
     hasUserScriptsPermission,
     persistScripts,
+    navigateToScript,
+    navigateToRegistryCommand,
+    navigateToGitView,
     updateSelectedScript,
     saveSelectedScript,
     createDraft,
     deleteSelectedScript,
     exportScripts,
     setScriptStatusDirectly,
+    uninstallOfficialRegistryCommand,
+    forkOfficialRegistryCommand,
+    unlinkForkedScript,
+    resetForkedScriptToUpstream,
     exportSingleScript,
     importScripts,
     handleAddRegistry,
@@ -445,6 +704,8 @@ export function useDashboard() {
     installGitCommand,
     checkUpdates,
     handleUpdateScript,
+    handleMergeForkUpdate,
+    handleUnlinkUpdate,
     handleUpdateAll,
     activeTheme,
     editorPrefModalOpen, setEditorPrefModalOpen,

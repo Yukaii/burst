@@ -26,6 +26,8 @@ export type LocalScript = {
   code: string;
   originRegistryUrl?: string;
   originCommandId?: string;
+  originRegistryKind?: 'official' | 'git';
+  upstreamCodeAtFork?: string;
   version?: string;
 };
 
@@ -517,6 +519,8 @@ function normalizeLocalScript(script: LocalScript): LocalScript {
     icon: normalizeIcon(script.icon),
     originRegistryUrl: script.originRegistryUrl?.trim() || undefined,
     originCommandId: script.originCommandId?.trim() || undefined,
+    originRegistryKind: script.originRegistryKind === 'official' || script.originRegistryKind === 'git' ? script.originRegistryKind : undefined,
+    upstreamCodeAtFork: script.upstreamCodeAtFork,
     version: script.version?.trim() || undefined,
   };
 }
@@ -542,6 +546,8 @@ function isLocalScript(value: unknown): value is LocalScript {
     && isCommandIcon(script.icon)
     && (script.originRegistryUrl === undefined || typeof script.originRegistryUrl === 'string')
     && (script.originCommandId === undefined || typeof script.originCommandId === 'string')
+    && (script.originRegistryKind === undefined || script.originRegistryKind === 'official' || script.originRegistryKind === 'git')
+    && (script.upstreamCodeAtFork === undefined || typeof script.upstreamCodeAtFork === 'string')
     && (script.version === undefined || typeof script.version === 'string');
 }
 

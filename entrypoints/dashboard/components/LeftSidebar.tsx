@@ -8,8 +8,10 @@ import {
   Power,
   Trash2,
   PanelLeftClose,
+  CheckCircle2,
 } from 'lucide-react';
 import logoUrl from '@/assets/logo.svg';
+import type { BurstCommand } from '@/src/lib/commands';
 import type { LocalScript } from '@/src/lib/localScripts';
 import { createLocalScriptDraft } from '@/src/lib/localScripts';
 import type { GitRegistry } from './types';
@@ -20,10 +22,15 @@ export function LeftSidebar({
   scripts,
   selectedId,
   onSelect,
+  installedRegistryCommands,
+  selectedRegistryCommandId,
+  onSelectRegistryCommand,
   onCreateDraft,
   onExportAll,
   onImport,
   onToggleScriptStatus,
+  onUninstallRegistryCommand,
+  onForkRegistryCommand,
   onExportScript,
   onDeleteScript,
   onAddRegistry,
@@ -45,10 +52,15 @@ export function LeftSidebar({
   scripts: LocalScript[];
   selectedId: string | undefined;
   onSelect: (id: string) => void;
+  installedRegistryCommands: BurstCommand[];
+  selectedRegistryCommandId: string | undefined;
+  onSelectRegistryCommand: (id: string) => void;
   onCreateDraft: () => void;
   onExportAll: () => void;
   onImport: () => void;
   onToggleScriptStatus: (script: LocalScript) => void;
+  onUninstallRegistryCommand: (commandId: string) => void;
+  onForkRegistryCommand: (command: BurstCommand) => void;
   onExportScript: (script: LocalScript) => void;
   onDeleteScript: (script: LocalScript) => void;
   onAddRegistry: (e: React.FormEvent) => void;
@@ -168,7 +180,7 @@ export function LeftSidebar({
                   return (
                     <div
                       className={`group w-full flex items-center justify-between p-2 rounded-lg transition-colors border border-transparent hover:bg-accent/40 cursor-pointer ${
-                        script.id === selectedId ? 'bg-accent border-border' : ''
+                        !selectedRegistryCommandId && script.id === selectedId ? 'bg-accent border-border' : ''
                       }`}
                       key={script.id}
                       onClick={() => onSelect(script.id)}
@@ -235,6 +247,69 @@ export function LeftSidebar({
                     </div>
                   );
                 })}
+
+                {installedRegistryCommands.length > 0 && (
+                  <>
+                    <div className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase pt-3 pb-1 shrink-0">
+                      Registry Installs
+                    </div>
+                    {installedRegistryCommands.map((command) => (
+                      <div
+                        className={`group w-full flex items-center justify-between p-2 rounded-lg transition-colors border border-transparent hover:bg-accent/40 cursor-pointer ${
+                          command.id === selectedRegistryCommandId ? 'bg-accent border-border' : ''
+                        }`}
+                        key={command.id}
+                        onClick={() => onSelectRegistryCommand(command.id)}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <span className="w-8 h-8 flex items-center justify-center rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold shrink-0">
+                            <CheckCircle2 className="w-4 h-4" />
+                          </span>
+                          <span className="min-w-0 flex-1 flex flex-col gap-0.5">
+                            <strong className="text-xs font-semibold text-foreground truncate block">{command.title}</strong>
+                            <em className="text-[10px] text-muted-foreground truncate block not-italic font-medium">
+                              {formatMatchPatterns(command.matchPatterns)} · <span className="text-emerald-400 font-semibold">installed</span>
+                            </em>
+                          </span>
+                        </div>
+
+                        <div className="relative shrink-0 ml-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setOpenMenuId((c) => c === command.id ? undefined : command.id); }}
+                            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent/80 cursor-pointer transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                            type="button"
+                            title="Actions"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </button>
+                          {openMenuId === command.id && (
+                            <>
+                              <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenMenuId(undefined); }} />
+                              <div className="absolute right-0 top-full mt-1.5 z-20 w-36 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  onClick={() => { onForkRegistryCommand(command); setOpenMenuId(undefined); }}
+                                  className="w-full flex items-center gap-2 p-2 rounded text-xs hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors text-left"
+                                >
+                                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                                  Fork
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { onUninstallRegistryCommand(command.id); setOpenMenuId(undefined); }}
+                                  className="w-full flex items-center gap-2 p-2 rounded text-xs text-destructive hover:bg-destructive/10 cursor-pointer transition-colors text-left"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                                  Uninstall
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             </div>
           ) : (

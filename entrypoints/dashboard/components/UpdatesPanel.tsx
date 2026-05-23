@@ -12,6 +12,8 @@ export function UpdatesPanel({
   onCheckUpdates,
   onUpdateAll,
   onUpdateScript,
+  onMergeForkUpdate,
+  onUnlinkUpdate,
 }: {
   leftSidebarOpen: boolean;
   onToggleLeft: () => void;
@@ -21,6 +23,8 @@ export function UpdatesPanel({
   onCheckUpdates: () => void;
   onUpdateAll: () => void;
   onUpdateScript: (update: ScriptUpdate) => void;
+  onMergeForkUpdate: (update: ScriptUpdate) => void;
+  onUnlinkUpdate: (update: ScriptUpdate) => void;
 }) {
   const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
 
@@ -82,14 +86,19 @@ export function UpdatesPanel({
               <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card/40 shadow-sm gap-4" key={update.id}>
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-8 h-8 flex items-center justify-center rounded-md bg-secondary text-secondary-foreground border border-border text-[11px] font-bold shrink-0">
-                    {update.type === 'official' ? 'R' : 'G'}
+                    {update.type === 'official' ? 'R' : update.type === 'fork' ? 'F' : 'G'}
                   </div>
                   <div className="min-w-0">
                     <h4 className="text-xs font-semibold text-foreground truncate block">{update.name}</h4>
                     <div className="flex gap-2 mt-1 flex-wrap">
                       <span className="px-1.5 py-0.5 rounded bg-muted text-[9px] font-bold text-muted-foreground border border-border uppercase">
-                        {update.type === 'official' ? 'Official' : 'Git'}
+                        {update.type === 'official' ? 'Official' : update.type === 'fork' ? 'Customized fork' : 'Git'}
                       </span>
+                      {update.type === 'fork' && update.hasLocalChanges && (
+                        <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-[9px] font-bold text-amber-500 border border-amber-500/20 uppercase">
+                          Local edits
+                        </span>
+                      )}
                       <span className="px-1.5 py-0.5 rounded bg-muted text-[9px] font-bold text-muted-foreground border border-border">
                         Installed: v{update.currentVersion}
                       </span>
@@ -99,13 +108,39 @@ export function UpdatesPanel({
                     </div>
                   </div>
                 </div>
-                <button
-                  className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-2.5 py-1.5 bg-primary text-primary-foreground shadow hover:bg-primary/95 cursor-pointer transition-colors"
-                  type="button"
-                  onClick={() => onUpdateScript(update)}
-                >
-                  Update
-                </button>
+                {update.type === 'fork' && update.hasLocalChanges ? (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-2.5 py-1.5 bg-primary text-primary-foreground shadow hover:bg-primary/95 cursor-pointer transition-colors"
+                      type="button"
+                      onClick={() => onUpdateScript(update)}
+                    >
+                      Replace
+                    </button>
+                    <button
+                      className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-2.5 py-1.5 bg-secondary text-secondary-foreground border border-input hover:bg-accent cursor-pointer transition-colors"
+                      type="button"
+                      onClick={() => onMergeForkUpdate(update)}
+                    >
+                      Merge
+                    </button>
+                    <button
+                      className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-2.5 py-1.5 text-muted-foreground border border-input hover:bg-accent hover:text-foreground cursor-pointer transition-colors"
+                      type="button"
+                      onClick={() => onUnlinkUpdate(update)}
+                    >
+                      Unlink
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-2.5 py-1.5 bg-primary text-primary-foreground shadow hover:bg-primary/95 cursor-pointer transition-colors"
+                    type="button"
+                    onClick={() => onUpdateScript(update)}
+                  >
+                    Update
+                  </button>
+                )}
               </div>
             ))}
           </div>

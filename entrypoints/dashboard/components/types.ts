@@ -13,11 +13,13 @@ export type GitRegistry = {
 };
 
 export type ScriptUpdate = {
-  type: 'official' | 'git';
+  type: 'official' | 'git' | 'fork';
   id: string;
   name: string;
   currentVersion: string;
   latestVersion: string;
   code: string;
+  hasLocalChanges?: boolean;
+  upstreamCodeAtFork?: string;
   manifestCommand?: BurstCommand;
 };

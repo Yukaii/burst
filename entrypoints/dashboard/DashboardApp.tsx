@@ -4,6 +4,7 @@ import { LeftSidebar } from './components/LeftSidebar';
 import { EditorPanel } from './components/EditorPanel';
 import { UpdatesPanel } from './components/UpdatesPanel';
 import { GitRegistryPanel } from './components/GitRegistryPanel';
+import { RegistryCommandPanel } from './components/RegistryCommandPanel';
 import { EditorPrefModal } from './components/EditorPrefModal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { TestHarnessModal } from './components/TestHarnessModal';
@@ -22,7 +23,7 @@ export default function DashboardApp() {
     );
   }
 
-  if (d.loadState === 'error' || !d.selectedScript) {
+  if (d.loadState === 'error' || (!d.selectedScript && !d.selectedRegistryCommand)) {
     return (
       <main className="h-screen w-screen flex items-center justify-center bg-background text-foreground">
         <section className="text-sm font-semibold text-destructive uppercase">{d.saveState}</section>
@@ -35,10 +36,15 @@ export default function DashboardApp() {
       {(d.isDraggingLeft || d.isDraggingRight) && <div className="drag-overlay" />}
 
       <LeftSidebar
-        scripts={d.scripts} selectedId={d.selectedId} onSelect={d.setSelectedId}
+        scripts={d.scripts} selectedId={d.selectedId} onSelect={d.navigateToScript}
+        installedRegistryCommands={d.installedRegistryCommands}
+        selectedRegistryCommandId={d.selectedRegistryCommandId}
+        onSelectRegistryCommand={d.navigateToRegistryCommand}
         onCreateDraft={d.createDraft} onExportAll={d.exportScripts}
         onImport={() => {}}
         onToggleScriptStatus={(script) => void d.setScriptStatusDirectly(script, script.status === 'enabled' ? 'disabled' : 'enabled')}
+        onUninstallRegistryCommand={(commandId) => void d.uninstallOfficialRegistryCommand(commandId)}
+        onForkRegistryCommand={(command) => void d.forkOfficialRegistryCommand(command)}
         onExportScript={d.exportSingleScript}
         onDeleteScript={(script) => {
           d.setConfirmModal({
@@ -51,13 +57,16 @@ export default function DashboardApp() {
               const fallback = nextScripts.length > 0 ? undefined : d.createLocalScriptDraft();
               const finalScripts = fallback ? [fallback] : nextScripts;
               const nextSelection = (finalScripts[Math.max(0, idx - 1)] ?? finalScripts[0]).id;
-              d.setScripts(finalScripts); d.setSelectedId(nextSelection);
+              d.setScripts(finalScripts); d.navigateToScript(nextSelection);
               await d.persistScripts(finalScripts, fallback ? 'Deleted script and created a draft' : 'Deleted script');
             }
           });
         }}
-        onAddRegistry={d.handleAddRegistry} onSelectGitView={d.setSelectedGitView}
-        activeTab={d.activeTab} onChangeTab={d.setActiveTab}
+        onAddRegistry={d.handleAddRegistry} onSelectGitView={d.navigateToGitView}
+        activeTab={d.activeTab} onChangeTab={(tab) => {
+          if (tab === 'editor') d.navigateToScript(d.selectedId ?? d.scripts[0]?.id);
+          else d.navigateToGitView(d.selectedGitView);
+        }}
         gitRegistries={d.gitRegistries} selectedGitView={d.selectedGitView}
         availableUpdates={d.availableUpdates}
         newRepoUrl={d.newRepoUrl} setNewRepoUrl={d.setNewRepoUrl} addError={d.addError}
@@ -75,7 +84,22 @@ export default function DashboardApp() {
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
         {!d.hasUserScriptsPermission && <PermissionBanner />}
 
-        {d.activeTab === 'editor' ? (
+        {d.activeTab === 'editor' && d.selectedRegistryCommand ? (
+          <RegistryCommandPanel
+            command={d.selectedRegistryCommand}
+            leftSidebarOpen={d.leftSidebarOpen}
+            onToggleLeft={() => {
+              d.setLeftSidebarOpen((o: boolean) => {
+                const n = !o;
+                localStorage.setItem('burst.dashboard.leftSidebarOpen', String(n));
+                return n;
+              });
+            }}
+            saveState={d.saveState}
+            onFork={() => void d.forkOfficialRegistryCommand(d.selectedRegistryCommand!)}
+            onUninstall={() => void d.uninstallOfficialRegistryCommand(d.selectedRegistryCommand!.id)}
+          />
+        ) : d.activeTab === 'editor' && d.selectedScript ? (
           <EditorPanel
             selectedScript={d.selectedScript} scripts={d.scripts}
             leftSidebarOpen={d.leftSidebarOpen}
@@ -98,6 +122,8 @@ export default function DashboardApp() {
             onSave={() => void d.saveSelectedScript('Saved')}
             onDelete={d.deleteSelectedScript}
             onUpdateScript={d.updateSelectedScript}
+            onResetFork={() => void d.resetForkedScriptToUpstream(d.selectedScript!.id)}
+            onUnlinkFork={() => void d.unlinkForkedScript(d.selectedScript!.id)}
             onOpenTestHarness={() => d.setTestHarnessOpen(true)}
             onOpenEditorPrefs={() => d.setEditorPrefModalOpen(true)}
             editorFontFamily={d.editorFontFamily} editorFontSize={d.editorFontSize}
@@ -120,6 +146,8 @@ export default function DashboardApp() {
             onCheckUpdates={() => void d.checkUpdates()}
             onUpdateAll={() => void d.handleUpdateAll()}
             onUpdateScript={(u) => void d.handleUpdateScript(u)}
+            onMergeForkUpdate={(u) => void d.handleMergeForkUpdate(u)}
+            onUnlinkUpdate={(u) => void d.handleUnlinkUpdate(u)}
           />
         ) : (
           (() => {
