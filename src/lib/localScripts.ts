@@ -596,7 +596,7 @@ function getWebStorage(): WebStorage | undefined {
 export function detectRequiredCapabilities(code: string): Array<'page-dom' | 'selection' | 'clipboard-write' | 'toast' | 'list'> {
   const capabilities: Array<'page-dom' | 'selection' | 'clipboard-write' | 'toast' | 'list'> = [];
 
-  if (/page\b|document\b|querySelector|querySelectorAll|createElement/i.test(code)) {
+  if (/page\b|document\b|querySelector|querySelectorAll|createElement|\btitle\b|\burl\b|\blocation\b/i.test(code)) {
     capabilities.push('page-dom');
   }
   if (/selection\b|getSelection/i.test(code)) {

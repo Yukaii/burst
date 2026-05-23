@@ -17,9 +17,11 @@ import {
 import { sampleCommandManifests, validateCommandManifest } from '../src/lib/manifest.ts';
 import {
   getRegistryCommands,
+  getRegistryCommandsPage,
   getRegistryCommand,
   getAuditReport,
   getPublisherProfile,
+  getMockScriptCode,
 } from '../src/lib/registryApi.ts';
 import { createRegistryHandler } from '../apps/registry/src/registryHandler.ts';
 import { createMemoryRegistryStore } from '../apps/registry/src/registryStore.ts';
@@ -29,6 +31,8 @@ import {
   getRegistryScriptResultEventName,
   getRegistryScriptMatchPatterns,
   createRegistryUserScriptCode,
+  installRegistryCommand,
+  loadInstalledRegistryCommands,
   loadConsentGrants,
   saveConsentGrant,
 } from '../src/lib/registryStorage.ts';
@@ -170,6 +174,15 @@ describe('capability detection', () => {
     expect(capabilities).toContain('list');
   });
 
+  test('detects title and url context reads as page-dom capability', () => {
+    const code = `
+      export default async function run({ title, url, toast }) {
+        toast(\`[\${title}](\${url})\`);
+      }
+    `;
+    expect(detectRequiredCapabilities(code)).toContain('page-dom');
+  });
+
   test('returns empty array when no capabilities match', () => {
     const code = `
       export default async function run(context) {
@@ -187,6 +200,24 @@ describe('registry API layer', () => {
 
     const filtered = await getRegistryCommands('Markdown');
     expect(filtered.some(c => c.id === 'markdown-link-builder')).toBe(true);
+  });
+
+  test('getRegistryCommandsPage returns pagination metadata', async () => {
+    const page = await getRegistryCommandsPage('', { offset: 0, limit: 2 });
+    expect(page.commands.length).toBe(2);
+    expect(page.offset).toBe(0);
+    expect(page.limit).toBe(2);
+    expect(page.total).toBeGreaterThan(2);
+    expect(page.hasMore).toBe(true);
+  });
+
+  test('getRegistryCommandsPage filters by host before pagination', async () => {
+    const page = await getRegistryCommandsPage('', { host: 'github.com', offset: 0, limit: 20 });
+    expect(page.commands.some(command => command.id === 'copy-github-branch')).toBe(true);
+    expect(page.commands.every(command =>
+      command.matchPatterns.includes('<all_urls>') ||
+      command.matchPatterns.some(pattern => pattern.includes('github.com')),
+    )).toBe(true);
   });
 
   test('getRegistryCommand finds command details', async () => {
@@ -317,9 +348,19 @@ describe('registry storage and consent', () => {
     const reloaded = await loadConsentGrants();
     expect(reloaded.filter(id => id === 'copy-github-branch').length).toBe(1);
   });
+
+  test('refreshes installed registry command code on reinstall', async () => {
+    await installRegistryCommand({ ...baseCommand, id: 'refresh-test', code: 'old-code', version: '1.0.0' });
+    await installRegistryCommand({ ...baseCommand, id: 'refresh-test', code: 'new-code', version: '1.0.1' });
+
+    const installed = await loadInstalledRegistryCommands();
+    const command = installed.find((item) => item.id === 'refresh-test');
+    expect(command?.code).toBe('new-code');
+    expect(command?.version).toBe('1.0.1');
+  });
 });
 
-import { loadSettings, saveSettings } from '../src/lib/settings.ts';
+import { getRegistryServerBaseUrl, loadSettings, saveSettings } from '../src/lib/settings.ts';
 
 describe('extension settings storage', () => {
   test('loads default settings', async () => {
@@ -328,6 +369,8 @@ describe('extension settings storage', () => {
     expect(settings.position).toBe('top');
     expect(settings.backdropClickClose).toBe(true);
     expect(settings.showConsoleLogs).toBe(false);
+    expect(settings.registryServer).toBe('local');
+    expect(settings.registryServerUrl).toBe('http://localhost:5174');
     expect(settings.editorTheme).toBe('default');
     expect(settings.editorKeymap).toBe('default');
     expect(settings.editorWordWrap).toBe(true);
@@ -339,6 +382,8 @@ describe('extension settings storage', () => {
       position: 'center',
       backdropClickClose: false,
       showConsoleLogs: true,
+      registryServer: 'custom',
+      registryServerUrl: 'https://registry.example.test',
       editorFontFamily: 'Monospace',
       editorFontSize: 14,
       editorTheme: 'dracula',
@@ -348,6 +393,12 @@ describe('extension settings storage', () => {
     await saveSettings(customSettings);
     const loaded = await loadSettings();
     expect(loaded).toEqual(customSettings);
+  });
+
+  test('resolves registry server base URLs', () => {
+    expect(getRegistryServerBaseUrl({ registryServer: 'local', registryServerUrl: '' })).toBe('http://localhost:5174');
+    expect(getRegistryServerBaseUrl({ registryServer: 'production', registryServerUrl: '' })).toBe('https://burst-registry.pages.dev');
+    expect(getRegistryServerBaseUrl({ registryServer: 'custom', registryServerUrl: 'https://registry.example.test/' })).toBe('https://registry.example.test');
   });
 });
 
@@ -378,5 +429,13 @@ describe('sandbox IIFE wrapping and lexical shadowing', () => {
     expect(wrapped).toContain('const hasCap = (c) => capabilities.includes(c);');
     expect(wrapped).toContain('if (!hasCap(\'clipboard-write\'))');
     expect(wrapped).toContain('if (!hasCap(\'toast\'))');
+  });
+
+  test('markdown link registry command receives page title and url context', () => {
+    const wrapped = createSandboxedUserScriptCode(getMockScriptCode('markdown-link-builder'), 'run-evt', 'res-evt');
+
+    expect(wrapped).toContain('capabilities = ["page-dom","clipboard-write","toast"]');
+    expect(wrapped).toContain('title: hasCap(\'page-dom\') ? document.title : \'\'');
+    expect(wrapped).toContain('url: hasCap(\'page-dom\') ? location.href : \'\'');
   });
 });
