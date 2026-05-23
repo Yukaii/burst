@@ -61,6 +61,7 @@ const trustLabels: Record<BurstCommand['trustLevel'], string> = {
 };
 
 const PALETTE_QUERY_STORAGE_KEY = 'burst.palette.query.v1';
+const REGISTRY_STORE_PAGE_SIZE = 20;
 
 export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -76,6 +77,11 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const [customList, setCustomList] = useState<BurstCustomList | null>(null);
   const [listCommand, setListCommand] = useState<BurstCommand | null>(null);
+  const [isRegistryStoreOpen, setIsRegistryStoreOpen] = useState(false);
+  const [registryDiscoveryCommands, setRegistryDiscoveryCommands] = useState<BurstCommand[]>([]);
+  const [registryDiscoveryLoading, setRegistryDiscoveryLoading] = useState(false);
+  const [registryDiscoveryHasMore, setRegistryDiscoveryHasMore] = useState(false);
+  const [registryDiscoveryOffset, setRegistryDiscoveryOffset] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const host = useMemo(() => getHostFromUrl(pageUrl), [pageUrl]);
@@ -83,16 +89,18 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
 
   const consentAnalysis = useMemo(() => {
     if (!consentPendingCommand) return null;
-    const code = getMockScriptCode(consentPendingCommand.id);
+    const code = consentPendingCommand.code || getMockScriptCode(consentPendingCommand.registryCommandId ?? consentPendingCommand.id);
     return analyzeScriptCode(code, consentPendingCommand.matchPatterns);
   }, [consentPendingCommand]);
 
   const siteCommands = useMemo(
-    () => [
-      ...localCommands.filter((command) => commandMatchesHost(command, host)),
-      ...managementCommands,
-    ],
-    [host, localCommands],
+    () => isRegistryStoreOpen
+      ? registryDiscoveryCommands
+      : [
+          ...localCommands.filter((command) => commandMatchesHost(command, host)),
+          ...managementCommands,
+        ],
+    [host, isRegistryStoreOpen, localCommands, registryDiscoveryCommands],
   );
 
   const filteredCommands = useMemo(() => {
@@ -175,6 +183,50 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
       return;
     }
 
+    if (command.action === 'install-registry-command') {
+      const commandId = command.registryCommandId ?? command.id.replace(/^registry-discover-/, '');
+      setStatusMessage(`Installing "${command.title.replace(/^Install:\s*/, '')}"...`);
+      const result = await browser.runtime
+        .sendMessage({ type: 'burst:install-registry-command', commandId })
+        .catch((error) => ({
+          ok: false,
+          message: error instanceof Error ? error.message : 'Registry install failed.',
+        }));
+
+      if (!isInstallRegistryResponse(result) || result.ok === false) {
+        setStatusMessage(result?.message || 'Registry install failed.');
+        return;
+      }
+
+      setLocalCommands((current) => [
+        ...current.filter((item) => item.id !== result.command.id),
+        { ...result.command, action: 'run-registry-script' as const },
+      ]);
+      setRegistryDiscoveryCommands((current) => current.map((item) => item.registryCommandId === result.command.id
+        ? {
+            ...result.command,
+            id: result.command.id,
+            registryCommandId: result.command.id,
+            registryInstalled: true,
+            subtitle: `Installed · ${result.command.publisher.handle} · ${result.command.website}`,
+            action: 'run-registry-script' as const,
+          }
+        : item));
+      setStatusMessage(result.syncOk === false && result.message
+        ? `Installed "${result.command.title}". ${result.message}`
+        : `Installed "${result.command.title}". Reload this page if it does not run immediately.`);
+      return;
+    }
+
+    if (command.id === 'burst-install-script' || command.action === 'open-registry-store') {
+      setIsRegistryStoreOpen(true);
+      setRegistryDiscoveryCommands([]);
+      setQuery('');
+      setActiveIndex(0);
+      setStatusMessage('Search the Burst registry store.');
+      return;
+    }
+
     if (command.action) {
       void browser.runtime.sendMessage({ type: 'burst:run-management-command', action: command.action });
     }
@@ -249,6 +301,11 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     if (!isOpen) {
       setConsentPendingCommand(null);
       setCapturedSelectionSnapshot(null);
+      setIsRegistryStoreOpen(false);
+      setRegistryDiscoveryCommands([]);
+      setRegistryDiscoveryLoading(false);
+      setRegistryDiscoveryHasMore(false);
+      setRegistryDiscoveryOffset(0);
       return;
     }
 
@@ -282,6 +339,91 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   }, [isOpen]);
 
   useEffect(() => {
+    if (!isOpen || customList || !isRegistryStoreOpen) return;
+
+    const normalized = query.trim();
+    let active = true;
+    setRegistryDiscoveryCommands([]);
+    setRegistryDiscoveryOffset(0);
+    setRegistryDiscoveryHasMore(false);
+    setRegistryDiscoveryLoading(true);
+    const timeout = window.setTimeout(() => {
+      browser.runtime
+        .sendMessage({
+          type: 'burst:search-registry-commands',
+          query: normalized,
+          host,
+          offset: 0,
+          limit: REGISTRY_STORE_PAGE_SIZE,
+        })
+        .then((response) => {
+          if (!active) return;
+          if (!isRegistrySearchResponse(response)) {
+            setRegistryDiscoveryCommands([]);
+            setRegistryDiscoveryHasMore(false);
+            return;
+          }
+
+          setRegistryDiscoveryCommands(mapRegistryStoreCommands(response.commands, response.installedIds));
+          setRegistryDiscoveryOffset(response.nextOffset);
+          setRegistryDiscoveryHasMore(response.hasMore);
+        })
+        .catch(() => {
+          if (active) setRegistryDiscoveryCommands([]);
+        })
+        .finally(() => {
+          if (active) setRegistryDiscoveryLoading(false);
+        });
+    }, 180);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [customList, host, isOpen, isRegistryStoreOpen, query]);
+
+  useEffect(() => {
+    if (!isOpen || !isRegistryStoreOpen || customList) return;
+    const node = resultsRef.current;
+    if (!node) return;
+
+    function handleScroll() {
+      if (!node || registryDiscoveryLoading || !registryDiscoveryHasMore) return;
+      const remaining = node.scrollHeight - node.scrollTop - node.clientHeight;
+      if (remaining > 96) return;
+
+      setRegistryDiscoveryLoading(true);
+      browser.runtime
+        .sendMessage({
+          type: 'burst:search-registry-commands',
+          query: query.trim(),
+          host,
+          offset: registryDiscoveryOffset,
+          limit: REGISTRY_STORE_PAGE_SIZE,
+        })
+        .then((response) => {
+          if (!isRegistrySearchResponse(response)) {
+            setRegistryDiscoveryHasMore(false);
+            return;
+          }
+          setRegistryDiscoveryCommands((current) => [
+            ...current,
+            ...mapRegistryStoreCommands(response.commands, response.installedIds).filter(
+              (next) => !current.some((existing) => existing.registryCommandId === next.registryCommandId),
+            ),
+          ]);
+          setRegistryDiscoveryOffset(response.nextOffset);
+          setRegistryDiscoveryHasMore(response.hasMore);
+        })
+        .catch(() => setRegistryDiscoveryHasMore(false))
+        .finally(() => setRegistryDiscoveryLoading(false));
+    }
+
+    node.addEventListener('scroll', handleScroll);
+    return () => node.removeEventListener('scroll', handleScroll);
+  }, [customList, host, isOpen, isRegistryStoreOpen, query, registryDiscoveryHasMore, registryDiscoveryLoading, registryDiscoveryOffset]);
+
+  useEffect(() => {
     if (!isOpen) return;
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -292,6 +434,14 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
           setListCommand(null);
           setQuery('');
           setActiveIndex(0);
+          return;
+        }
+        if (isRegistryStoreOpen) {
+          setIsRegistryStoreOpen(false);
+          setRegistryDiscoveryCommands([]);
+          setQuery('');
+          setActiveIndex(0);
+          setStatusMessage(undefined);
           return;
         }
         closePalette();
@@ -342,7 +492,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
 
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [activeCommand, activeListItem, customList, filteredCommands.length, filteredListItems.length, isOpen, listCommand, consentPendingCommand]);
+  }, [activeCommand, activeListItem, customList, filteredCommands.length, filteredListItems.length, isOpen, isRegistryStoreOpen, listCommand, consentPendingCommand]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -543,12 +693,12 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
             ) : (
               <>
                 <label className="burst-search">
-                  <span>{customList ? customList.subtitle ?? listCommand?.title ?? host : host}</span>
+                  <span>{customList ? customList.subtitle ?? listCommand?.title ?? host : isRegistryStoreOpen ? 'Burst Store' : host}</span>
                   <input
                     ref={searchInputRef}
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder={customList?.searchPlaceholder ?? `Search ${pageTitle || host}`}
+                    placeholder={customList?.searchPlaceholder ?? (isRegistryStoreOpen ? 'Search registry commands' : `Search ${pageTitle || host}`)}
                   />
                 </label>
 
@@ -559,6 +709,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
                   aria-label={customList ? customList.title : 'Available commands'}
                 >
                   {statusMessage ? <div className="burst-status">{statusMessage}</div> : null}
+                  {registryDiscoveryLoading && isRegistryStoreOpen && !customList ? <div className="burst-status">Searching registry...</div> : null}
                   {customList ? (
                     filteredListItems.length > 0 ? (
                       filteredListItems.map((item, index) => {
@@ -620,6 +771,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
                           <span className="burst-command-copy">
                             <span className="burst-command-title">
                               <strong>{command.title}</strong>
+                              {command.registryInstalled ? <span className="burst-installed-check" aria-label="Installed">✓</span> : null}
                               {command.subtitle ? <span className="burst-command-subtitle">{command.subtitle}</span> : null}
                             </span>
                           </span>
@@ -855,6 +1007,53 @@ function normalizeToastPayload(payload: unknown): BurstToast {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function mapRegistryStoreCommands(commands: BurstCommand[], installedIdsValue: string[]): BurstCommand[] {
+  const installedIds = new Set(installedIdsValue);
+  return commands.map((command) => {
+    const registryInstalled = installedIds.has(command.id);
+    return {
+      ...command,
+      id: registryInstalled ? command.id : `registry-discover-${command.id}`,
+      registryCommandId: command.id,
+      registryInstalled,
+      title: registryInstalled ? command.title : `Install: ${command.title}`,
+      subtitle: `${registryInstalled ? 'Installed · ' : ''}${command.publisher.handle} · ${command.website}`,
+      action: registryInstalled ? 'run-registry-script' as const : 'install-registry-command' as const,
+    };
+  });
+}
+
+function isRegistrySearchResponse(value: unknown): value is {
+  commands: BurstCommand[];
+  installedIds: string[];
+  offset: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+  nextOffset: number;
+} {
+  if (!isRecord(value) || !Array.isArray(value.commands) || !Array.isArray(value.installedIds)) return false;
+  return typeof value.nextOffset === 'number'
+    && typeof value.hasMore === 'boolean'
+    && value.commands.every((command) => isRecord(command) && typeof command.id === 'string' && typeof command.title === 'string');
+}
+
+function isInstallRegistryResponse(value: unknown): value is {
+  ok?: boolean;
+  syncOk?: boolean;
+  message?: string;
+  command: BurstCommand;
+  installedIds: string[];
+  pinnedIds: string[];
+} {
+  return isRecord(value)
+    && isRecord(value.command)
+    && typeof value.command.id === 'string'
+    && typeof value.command.title === 'string'
+    && Array.isArray(value.installedIds)
+    && Array.isArray(value.pinnedIds);
 }
 
 function isBurstCustomList(value: unknown): value is BurstCustomList {

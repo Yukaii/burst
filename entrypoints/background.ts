@@ -16,7 +16,8 @@ import {
   getRegistryScriptMatchPatterns,
   createRegistryUserScriptCode,
 } from '@/src/lib/registryStorage';
-import { getMockScriptCode } from '@/src/lib/registryApi';
+import { getMockScriptCode, getRegistryCommand, getRegistryCommandsPage } from '@/src/lib/registryApi';
+import { getRegistryServerBaseUrl, loadSettings, type ExtensionSettings } from '@/src/lib/settings';
 
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
@@ -40,14 +41,69 @@ export default defineBackground(() => {
       return promise;
     }
 
+    if (type === 'burst:search-registry-commands') {
+      const { query = '', host = '', offset = 0, limit = 20 } = message as { query?: string; host?: string; offset?: number; limit?: number };
+      const promise = (async () => {
+        const registryBaseUrl = await getConfiguredRegistryBaseUrl();
+        const installed = await loadInstalledRegistryCommands();
+        const installedIds = new Set(installed.map((command) => command.id));
+        const page = await getRegistryCommandsPage(query, { baseOverride: registryBaseUrl, offset, limit, host });
+
+        return {
+          commands: page.commands,
+          installedIds: [...installedIds],
+          total: page.total,
+          offset: page.offset,
+          limit: page.limit,
+          hasMore: page.hasMore,
+          nextOffset: page.offset + page.commands.length,
+        };
+      })();
+      return promise;
+    }
+
     if (type === 'burst:install-command') {
       const { command } = message as { command: any };
       const promise = (async () => {
-        await installRegistryCommand(command);
+        const registryBaseUrl = await getConfiguredRegistryBaseUrl();
+        const registryCommand = typeof command?.id === 'string'
+          ? await getRegistryCommand(command.id, registryBaseUrl).catch(() => undefined)
+          : undefined;
+        await installRegistryCommand(registryCommand ?? command);
         await registerEnabledLocalScripts();
         const installed = await loadInstalledRegistryCommands();
         const pinned = await loadPinnedRegistryCommandIds();
         return {
+          installedIds: installed.map((c) => c.id),
+          pinnedIds: pinned,
+        };
+      })();
+      return promise;
+    }
+
+    if (type === 'burst:install-registry-command') {
+      const { commandId } = message as { commandId: string };
+      const promise = (async () => {
+        const registryBaseUrl = await getConfiguredRegistryBaseUrl();
+        const command = await getRegistryCommand(commandId, registryBaseUrl);
+        if (!command) {
+          return {
+            ok: false,
+            message: 'Registry command was not found.',
+            installedIds: (await loadInstalledRegistryCommands()).map((c) => c.id),
+            pinnedIds: await loadPinnedRegistryCommandIds(),
+          };
+        }
+
+        await installRegistryCommand(command);
+        const syncResult = await registerEnabledLocalScripts();
+        const installed = await loadInstalledRegistryCommands();
+        const pinned = await loadPinnedRegistryCommandIds();
+        return {
+          ok: true,
+          syncOk: syncResult.ok,
+          message: syncResult.message,
+          command,
           installedIds: installed.map((c) => c.id),
           pinnedIds: pinned,
         };
@@ -233,4 +289,10 @@ function getUserScriptsApi(): UserScriptsApi | undefined {
   };
 
   return runtime.browser?.userScripts;
+}
+
+async function getConfiguredRegistryBaseUrl(): Promise<string> {
+  const settings = await loadSettings().catch((): ExtensionSettings | undefined => undefined);
+  if (!settings) return 'http://localhost:5174';
+  return getRegistryServerBaseUrl(settings);
 }

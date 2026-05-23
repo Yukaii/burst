@@ -148,6 +148,32 @@ describe('registry backend permissions', () => {
     expect((await handler(new Request('http://registry.test/api/audit-reports/copy-github-branch'))).status).toBe(200);
   });
 
+  test('paginates the public command catalog when requested', async () => {
+    const handler = createRegistryHandler(createMemoryRegistryStore());
+    const response = await handler(new Request('http://registry.test/api/commands?limit=2&offset=1'));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.commands.length).toBe(2);
+    expect(body.offset).toBe(1);
+    expect(body.limit).toBe(2);
+    expect(body.total).toBeGreaterThan(2);
+    expect(body.hasMore).toBe(true);
+  });
+
+  test('filters the public command catalog by host before pagination', async () => {
+    const handler = createRegistryHandler(createMemoryRegistryStore());
+    const response = await handler(new Request('http://registry.test/api/commands?host=github.com&limit=20&offset=0'));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.commands.some((command) => command.id === 'copy-github-branch')).toBe(true);
+    expect(body.commands.every((command) =>
+      command.matchPatterns.includes('<all_urls>') ||
+      command.matchPatterns.some((pattern) => pattern.includes('github.com')),
+    )).toBe(true);
+  });
+
   test('only self or admin can read private user management records', async () => {
     const store = createMemoryRegistryStore();
     const handler = createRegistryHandler(store);

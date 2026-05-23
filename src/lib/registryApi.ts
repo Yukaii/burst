@@ -53,6 +53,14 @@ export type RegistrySessionUser = PublisherProfile | {
   role: 'member';
 };
 
+export type RegistryCommandPage = {
+  commands: BurstCommand[];
+  total: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
+};
+
 export const registryCommandsData: BurstCommand[] = [
   {
     id: 'copy-github-branch',
@@ -93,6 +101,7 @@ export const registryCommandsData: BurstCommand[] = [
     installs: 4230,
     rating: 4.9,
     icon: { type: 'emoji', value: '🔗' },
+    version: '1.0.1',
   },
   {
     id: 'hn-comments-summarizer',
@@ -322,18 +331,42 @@ export function getMockScriptCode(commandId: string): string {
   }
 }
 
-const processRef = typeof globalThis !== 'undefined' ? (globalThis as any).process : undefined;
+const globalRuntime = typeof globalThis !== 'undefined' ? (globalThis as any) : undefined;
+const processRef = globalRuntime?.process;
+const hasExtensionRuntime = Boolean(globalRuntime?.browser?.runtime || globalRuntime?.chrome?.runtime);
 const isCliTest =
-  typeof window === 'undefined' ||
+  (typeof window === 'undefined' && !hasExtensionRuntime) ||
   (processRef && (processRef.env?.NODE_ENV === 'test' || processRef.env?.TEST === 'true' || processRef.env?.VITEST === 'true'));
 
 const isHttpBrowser = typeof window !== 'undefined' && /^https?:$/.test(window.location.protocol);
 const isLocalRegistryHost =
   typeof window !== 'undefined' &&
   (window.location.host === 'localhost:5174' || window.location.host === 'localhost:5175');
-const API_BASE = isCliTest ? '' : isHttpBrowser ? window.location.origin : isLocalRegistryHost ? '' : 'http://localhost:5174';
+const configuredRegistryBase =
+  processRef?.env?.BURST_REGISTRY_API_BASE ||
+  globalRuntime?.BURST_REGISTRY_API_BASE ||
+  'http://localhost:5174';
+const API_BASE = isCliTest
+  ? ''
+  : isLocalRegistryHost
+  ? ''
+  : isHttpBrowser
+  ? window.location.origin
+  : configuredRegistryBase;
 
-export async function getRegistryCommands(query = ''): Promise<BurstCommand[]> {
+function getRegistryApiBase(baseOverride?: string): string {
+  return baseOverride?.trim() || API_BASE;
+}
+
+function getRegistryApiUrl(path: string, baseOverride?: string): string {
+  const base = getRegistryApiBase(baseOverride);
+  if (!base && typeof window !== 'undefined') {
+    return new URL(path, window.location.origin).toString();
+  }
+  return new URL(path, base || 'http://localhost:5174').toString();
+}
+
+export async function getRegistryCommands(query = '', baseOverride?: string): Promise<BurstCommand[]> {
   if (isCliTest) {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return registryCommandsData;
@@ -353,8 +386,7 @@ export async function getRegistryCommands(query = ''): Promise<BurstCommand[]> {
       return searchable.includes(normalized);
     });
   }
-  const origin = API_BASE || window.location.origin;
-  const url = new URL('/api/commands', origin);
+  const url = new URL(getRegistryApiUrl('/api/commands', baseOverride));
   if (query) {
     url.searchParams.set('q', query);
   }
@@ -363,11 +395,61 @@ export async function getRegistryCommands(query = ''): Promise<BurstCommand[]> {
   return response.json();
 }
 
-export async function getRegistryCommand(id: string): Promise<BurstCommand | undefined> {
+export async function getRegistryCommandsPage(
+  query = '',
+  options: { baseOverride?: string; offset?: number; limit?: number; host?: string } = {},
+): Promise<RegistryCommandPage> {
+  if (isCliTest) {
+    const commands = (await getRegistryCommands(query)).filter((command) => commandMatchesRegistryHost(command, options.host));
+    const offset = Math.max(options.offset ?? 0, 0);
+    const limit = Math.max(options.limit ?? 20, 1);
+    return {
+      commands: commands.slice(offset, offset + limit),
+      total: commands.length,
+      offset,
+      limit,
+      hasMore: offset + limit < commands.length,
+    };
+  }
+
+  const offset = Math.max(options.offset ?? 0, 0);
+  const limit = Math.max(options.limit ?? 20, 1);
+  const url = new URL(getRegistryApiUrl('/api/commands', options.baseOverride));
+  if (query) url.searchParams.set('q', query);
+  if (options.host) url.searchParams.set('host', options.host);
+  url.searchParams.set('offset', String(offset));
+  url.searchParams.set('limit', String(limit));
+  const response = await fetch(url.toString());
+  if (!response.ok) throw new Error('Failed to fetch registry commands');
+  const body = await response.json();
+  if (Array.isArray(body)) {
+    return {
+      commands: body,
+      total: body.length,
+      offset,
+      limit,
+      hasMore: false,
+    };
+  }
+  return body;
+}
+
+function commandMatchesRegistryHost(command: BurstCommand, host: string | undefined): boolean {
+  const normalizedHost = (host || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+  if (!normalizedHost) return true;
+  if (command.matchPatterns.includes('<all_urls>')) return true;
+  return command.matchPatterns.some((pattern) => {
+    const normalizedPattern = pattern.trim().toLowerCase().replace(/^(\*:\/\/)?(https?:\/\/)?(www\.)?/, '');
+    const [patternHost] = normalizedPattern.split('/');
+    return normalizedHost === patternHost || normalizedHost.endsWith(`.${patternHost}`);
+  });
+}
+
+export async function getRegistryCommand(id: string, baseOverride?: string): Promise<BurstCommand | undefined> {
   if (isCliTest) {
     return registryCommandsData.find((command) => command.id === id);
   }
-  const response = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(id)}`);
+  const response = await fetch(getRegistryApiUrl(`/api/commands/${encodeURIComponent(id)}`, baseOverride));
   if (response.status === 404) return undefined;
   if (!response.ok) throw new Error('Failed to fetch registry command');
   return response.json();

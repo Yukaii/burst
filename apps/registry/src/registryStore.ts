@@ -57,7 +57,7 @@ export type RegistryStore = {
   getCurrentUser(sessionId: string | null): Promise<StoredPublisherRecord | null>;
   createSession(handle: string): Promise<{ sessionId: string; user: StoredPublisherRecord }>;
   deleteSession(sessionId: string): Promise<void>;
-  listCommands(query: string): Promise<StoredRegistryCommand[]>;
+  listCommands(query: string, host?: string): Promise<StoredRegistryCommand[]>;
   getCommand(id: string): Promise<StoredRegistryCommand | undefined>;
   createCommand(input: PublishCommandInput): Promise<StoredRegistryCommand>;
   getPublisherProfile(handle: string): Promise<StoredPublisherRecord | undefined>;
@@ -70,7 +70,7 @@ export type RegistryStore = {
 const seedCommands: StoredRegistryCommand[] = registryCommandsData.map((command) => ({
   ...command,
   code: getMockScriptCode(command.id),
-  version: '1.0.0',
+  version: command.version || '1.0.0',
 }));
 
 const seedPublishers: StoredPublisherRecord[] = [
@@ -131,6 +131,21 @@ function matchesSearch(command: StoredRegistryCommand, query: string): boolean {
     .toLowerCase();
 
   return searchable.includes(normalized);
+}
+
+function normalizeHost(host: string | undefined): string {
+  return (host || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+}
+
+function matchesHost(command: StoredRegistryCommand, host: string | undefined): boolean {
+  const normalizedHost = normalizeHost(host);
+  if (!normalizedHost) return true;
+  if (command.matchPatterns.includes('<all_urls>')) return true;
+  return command.matchPatterns.some((pattern) => {
+    const normalizedPattern = pattern.trim().toLowerCase().replace(/^(\*:\/\/)?(https?:\/\/)?(www\.)?/, '');
+    const [patternHost] = normalizedPattern.split('/');
+    return normalizedHost === patternHost || normalizedHost.endsWith(`.${patternHost}`);
+  });
 }
 
 function getSeedPublisherProfile(handle: string): StoredPublisherRecord | undefined {
@@ -239,8 +254,8 @@ class MemoryRegistryStore implements RegistryStore {
     this.sessions.delete(sessionId);
   }
 
-  async listCommands(query: string): Promise<StoredRegistryCommand[]> {
-    return [...this.commands.values()].filter((command) => matchesSearch(command, query));
+  async listCommands(query: string, host?: string): Promise<StoredRegistryCommand[]> {
+    return [...this.commands.values()].filter((command) => matchesSearch(command, query) && matchesHost(command, host));
   }
 
   async getCommand(id: string): Promise<StoredRegistryCommand | undefined> {
@@ -392,7 +407,7 @@ class D1RegistryStore implements RegistryStore {
     await this.db.prepare('DELETE FROM sessions WHERE id = ?').bind(sessionId).run();
   }
 
-  async listCommands(query: string): Promise<StoredRegistryCommand[]> {
+  async listCommands(query: string, host?: string): Promise<StoredRegistryCommand[]> {
     await this.initPromise;
 
     const rows = await this.db
@@ -440,7 +455,7 @@ class D1RegistryStore implements RegistryStore {
 
     return rows.results
       .map((row) => this.mapCommandRow(row))
-      .filter((command) => matchesSearch(command, query));
+      .filter((command) => matchesSearch(command, query) && matchesHost(command, host));
   }
 
   async getCommand(id: string): Promise<StoredRegistryCommand | undefined> {

@@ -3,6 +3,8 @@ export type ExtensionSettings = {
   position: 'top' | 'center';
   backdropClickClose: boolean;
   showConsoleLogs: boolean;
+  registryServer: 'production' | 'local' | 'custom';
+  registryServerUrl: string;
   editorFontFamily?: string;
   editorFontSize?: number;
   editorTheme?: string;
@@ -15,6 +17,8 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   position: 'top',
   backdropClickClose: true,
   showConsoleLogs: false,
+  registryServer: 'local',
+  registryServerUrl: 'http://localhost:5174',
   editorFontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
   editorFontSize: 13,
   editorTheme: 'default',
@@ -100,4 +104,25 @@ export async function saveSettings(settings: ExtensionSettings): Promise<void> {
   }
 
   memorySettings = settings;
+}
+
+export function getRegistryServerBaseUrl(settings: Pick<ExtensionSettings, 'registryServer' | 'registryServerUrl'>): string {
+  if (settings.registryServer === 'production') return 'https://burst-registry.pages.dev';
+  if (settings.registryServer === 'custom') return normalizeRegistryServerUrl(settings.registryServerUrl);
+  return 'http://localhost:5174';
+}
+
+function normalizeRegistryServerUrl(value: string | undefined): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return 'http://localhost:5174';
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return 'http://localhost:5174';
+    url.pathname = url.pathname.replace(/\/+$/, '');
+    url.search = '';
+    url.hash = '';
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return 'http://localhost:5174';
+  }
 }

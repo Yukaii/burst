@@ -30,6 +30,15 @@ const POSITION_OPTIONS: Array<{
   { value: 'center', label: 'Centered (Middle of Page)' },
 ];
 
+const REGISTRY_SERVER_OPTIONS: Array<{
+  value: ExtensionSettings['registryServer'];
+  label: string;
+}> = [
+  { value: 'local', label: 'Local Dev (localhost:5174)' },
+  { value: 'production', label: 'Production Registry' },
+  { value: 'custom', label: 'Custom Server' },
+];
+
 function OptionsApp() {
   const [settings, setSettings] = useState<ExtensionSettings | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -95,6 +104,22 @@ function OptionsApp() {
     setSettings(next);
     await saveSettings(next);
     showFeedback('Settings saved successfully', 'success');
+  }
+
+  async function updateRegistryServer(value: ExtensionSettings['registryServer']) {
+    if (!settings) return;
+    const next = {
+      ...settings,
+      registryServer: value,
+      registryServerUrl: value === 'production'
+        ? 'https://burst-registry.pages.dev'
+        : value === 'local'
+        ? 'http://localhost:5174'
+        : settings.registryServerUrl || 'http://localhost:5174',
+    };
+    setSettings(next);
+    await saveSettings(next);
+    showFeedback('Registry server saved successfully', 'success');
   }
 
   function showFeedback(msg: string, type: 'success' | 'info' = 'info') {
@@ -255,6 +280,42 @@ function OptionsApp() {
                 />
                 <span className="toggle-slider"></span>
               </label>
+            </div>
+          </div>
+
+          {/* Registry server */}
+          <div className="setting-card">
+            <div className="setting-info">
+              <h2>Registry Server</h2>
+              <p>Choose which registry API the extension uses for store search, install, and update checks.</p>
+            </div>
+            <div className="setting-control registry-server-control">
+              <Select
+                value={settings.registryServer}
+                onValueChange={(value) => updateRegistryServer(value as ExtensionSettings['registryServer'])}
+              >
+                <SelectTrigger className="w-full sm:w-[240px]" aria-label="Registry server">
+                  <SelectValue placeholder="Select registry server" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {REGISTRY_SERVER_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <input
+                className="registry-url-input"
+                type="url"
+                value={settings.registryServerUrl}
+                disabled={settings.registryServer !== 'custom'}
+                placeholder="http://localhost:5174"
+                onChange={(event) => updateSetting('registryServerUrl', event.target.value)}
+                aria-label="Custom registry server URL"
+              />
             </div>
           </div>
 

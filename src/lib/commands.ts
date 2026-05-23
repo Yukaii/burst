@@ -59,9 +59,11 @@ export type BurstCommand = {
   code?: string;
   version?: string;
   pinned?: boolean;
+  registryInstalled?: boolean;
   shortcut?: string;
-  action?: 'open-dashboard' | 'open-installed' | 'create-local-script' | 'run-local-script' | 'run-registry-script';
+  action?: 'open-dashboard' | 'open-installed' | 'create-local-script' | 'open-registry-store' | 'run-local-script' | 'run-registry-script' | 'install-registry-command';
   localScriptId?: string;
+  registryCommandId?: string;
 };
 
 import { registryCommandsData } from './registryApi';
@@ -72,8 +74,8 @@ export const managementCommands: BurstCommand[] = [
   {
     id: 'burst-install-script',
     title: 'Install script from registry',
-    description: 'Open the local install manager.',
-    subtitle: 'Install manager',
+    description: 'Search installable commands from the Burst registry.',
+    subtitle: 'Store',
     website: 'Burst',
     matchPatterns: ['<all_urls>'],
     publisher: {
@@ -87,8 +89,8 @@ export const managementCommands: BurstCommand[] = [
     sourceUrl: 'burst://dashboard/install',
     installs: 0,
     rating: 0,
-    icon: { type: 'lucide', name: 'Download' },
-    action: 'open-dashboard',
+    icon: { type: 'lucide', name: 'Search' },
+    action: 'open-registry-store',
   },
   {
     id: 'burst-open-dashboard',

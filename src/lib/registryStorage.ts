@@ -161,10 +161,16 @@ export async function saveConsentGrant(commandId: string): Promise<void> {
 
 export async function installRegistryCommand(command: BurstCommand): Promise<void> {
   const installed = await loadInstalledRegistryCommands();
-  if (!installed.some((c) => c.id === command.id)) {
+  const existingIndex = installed.findIndex((c) => c.id === command.id);
+  if (existingIndex >= 0) {
+    installed[existingIndex] = {
+      ...installed[existingIndex],
+      ...command,
+    };
+  } else {
     installed.push(command);
-    await saveInstalledRegistryCommands(installed);
   }
+  await saveInstalledRegistryCommands(installed);
 }
 
 export async function uninstallRegistryCommand(commandId: string): Promise<void> {
@@ -234,4 +240,3 @@ export async function clearConsentGrants(): Promise<void> {
 
   memoryGrants = [];
 }
-

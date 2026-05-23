@@ -318,7 +318,19 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
 
       if (path === '/api/commands' && req.method === 'GET') {
         const q = url.searchParams.get('q')?.trim() || '';
-        const commands = await store.listCommands(q);
+        const host = url.searchParams.get('host')?.trim() || undefined;
+        const limit = Math.min(Math.max(Number(url.searchParams.get('limit') || 50), 1), 100);
+        const offset = Math.max(Number(url.searchParams.get('offset') || 0), 0);
+        const commands = await store.listCommands(q, host);
+        if (url.searchParams.has('limit') || url.searchParams.has('offset')) {
+          return jsonResponse({
+            commands: commands.slice(offset, offset + limit),
+            total: commands.length,
+            offset,
+            limit,
+            hasMore: offset + limit < commands.length,
+          });
+        }
         return jsonResponse(commands);
       }
 
