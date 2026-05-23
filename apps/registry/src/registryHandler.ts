@@ -175,12 +175,14 @@ async function fetchGithubUser(accessToken: string): Promise<GitHubUserProfile> 
     headers: {
       Accept: 'application/vnd.github+json',
       Authorization: `token ${accessToken}`,
+      'User-Agent': 'burst-registry',
       'X-GitHub-Api-Version': '2022-11-28',
     },
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch GitHub profile');
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`Failed to fetch GitHub profile (status: ${response.status}): ${errorText}`);
   }
 
   const profile = (await response.json()) as {
