@@ -21,6 +21,7 @@ import { LandingPage } from './components/LandingPage';
 import { UsersPanel } from './components/UsersPanel';
 import { AuditsPanel } from './components/AuditsPanel';
 import { SettingsPanel } from './components/SettingsPanel';
+import { ProfilePanel } from './components/ProfilePanel';
 
 // Extracted Sub-Components
 import { Sidebar } from './components/Sidebar';
@@ -28,7 +29,7 @@ import { BridgeLogsConsole } from './components/BridgeLogsConsole';
 import type { HandshakeLog } from './components/BridgeLogsConsole';
 import { DiscoverPanel } from './components/DiscoverPanel';
 
-const navItems = ['Discover', 'Publish', 'Users', 'Audits', 'Settings'] as const;
+const navItems = ['Discover', 'Publish', 'Profile', 'Users', 'Audits', 'Settings'] as const;
 const PublishPanel = lazy(() => import('./components/PublishPanel').then((module) => ({ default: module.PublishPanel })));
 
 const guestSessionUser: RegistrySessionUser = {
@@ -40,10 +41,37 @@ const guestSessionUser: RegistrySessionUser = {
 
 const bridgeClientId = `registry-${Math.random().toString(36).slice(2)}`;
 
+// Helper to parse hash routing
+const parseHash = () => {
+  const hash = typeof window === 'undefined' ? '' : window.location.hash;
+  if (!hash || hash === '#/') {
+    return { tab: 'Discover' as const, cmdId: null as string | null, open: false, view: null as 'landing' | 'app' | null };
+  }
+
+  const parts = hash.slice(2).split('/'); // removes '#/'
+  const tabName = parts[0];
+  const cmdId = parts[1] || null;
+
+  const matchedTab = (['Discover', 'Publish', 'Profile', 'Users', 'Audits', 'Settings'] as const).find(
+    (item) => item.toLowerCase() === tabName.toLowerCase()
+  );
+
+  if (matchedTab) {
+    return {
+      tab: matchedTab,
+      cmdId: cmdId,
+      open: matchedTab === 'Discover' && Boolean(cmdId),
+      view: 'app' as const,
+    };
+  }
+
+  return { tab: 'Discover' as const, cmdId: null, open: false, view: null };
+};
+
 export function RegistryApp() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authConfig, setAuthConfig] = useState<RegistryAuthConfig | null>(null);
-  const [navTab, setNavTab] = useState<'Discover' | 'Publish' | 'Users' | 'Audits' | 'Settings'>('Discover');
+  const [navTab, setNavTab] = useState<'Discover' | 'Publish' | 'Profile' | 'Users' | 'Audits' | 'Settings'>('Discover');
   const [publishSuccessToast, setPublishSuccessToast] = useState<string | null>(null);
   const [view, setView] = useState<'landing' | 'app'>('landing');
 
@@ -62,6 +90,7 @@ export function RegistryApp() {
   const [registryUserStats, setRegistryUserStats] = useState<{ total: number; admins: number; verified: number } | null>(null);
   const [installedCommandIds, setInstalledCommandIds] = useState<string[]>([]);
   const [pinnedCommandIds, setPinnedCommandIds] = useState<string[]>([]);
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false);
 
   // Productivity-grade workspace states
   const [filterCategory, setFilterCategory] = useState<'all' | 'verified' | 'high_risk' | 'installed'>('all');
@@ -78,7 +107,17 @@ export function RegistryApp() {
         if (!active) return;
         setAuthConfig(config);
         setCurrentUser(user);
-        if (user.handle !== 'guest') {
+
+        // Parse routing from hash on load
+        const route = parseHash();
+        if (route.view) {
+          setView(route.view);
+          setNavTab(route.tab);
+          if (route.tab === 'Discover' && route.cmdId) {
+            setActiveCommandId(route.cmdId);
+            setIsInspectorOpen(route.open);
+          }
+        } else if (user.handle !== 'guest') {
           setView('app');
         }
       } catch (err) {
@@ -97,6 +136,45 @@ export function RegistryApp() {
       active = false;
     };
   }, []);
+
+  // 1. Listen for browser routing hash changes (back/forward history buttons)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const route = parseHash();
+      if (route.view) {
+        setView(route.view);
+        setNavTab(route.tab);
+        if (route.tab === 'Discover') {
+          setActiveCommandId(route.cmdId);
+          setIsInspectorOpen(route.open);
+        }
+      } else {
+        setView('landing');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // 2. Synchronize active state -> URL hash
+  useEffect(() => {
+    if (authLoading) return;
+    if (view === 'landing') {
+      if (window.location.hash) {
+        window.location.hash = '';
+      }
+      return;
+    }
+    const tabLower = navTab.toLowerCase();
+    let expectedHash = `#/${tabLower}`;
+    if (navTab === 'Discover' && isInspectorOpen && activeCommandId) {
+      expectedHash = `#/${tabLower}/${activeCommandId}`;
+    }
+    if (window.location.hash !== expectedHash) {
+      window.location.hash = expectedHash;
+    }
+  }, [view, navTab, isInspectorOpen, activeCommandId, authLoading]);
 
   const isGuest = currentUser.handle === 'guest';
   const canManageRegistry = currentUser.role === 'admin';
@@ -374,7 +452,7 @@ export function RegistryApp() {
       // 4. Tab switching with keys (Alt/Option + 1 to 5)
       if (e.altKey && !e.metaKey && !e.ctrlKey) {
         const keyNum = parseInt(e.key);
-        if (keyNum >= 1 && keyNum <= 5) {
+        if (keyNum >= 1 && keyNum <= 6) {
           e.preventDefault();
           const targetTab = visibleNavItems[keyNum - 1];
           if (targetTab) {
@@ -514,6 +592,8 @@ export function RegistryApp() {
             filterCategory={filterCategory}
             setFilterCategory={setFilterCategory}
             setNavTab={setNavTab}
+            isInspectorOpen={isInspectorOpen}
+            setIsInspectorOpen={setIsInspectorOpen}
           />
         )}
 
@@ -531,7 +611,21 @@ export function RegistryApp() {
             />
           </Suspense>
         )}
-
+        {navTab === 'Profile' && (
+          <ProfilePanel
+            currentUser={currentUser}
+            onCurrentUserUpdate={(updatedUser) => {
+              setCurrentUser((prev) => ({
+                ...prev,
+                ...updatedUser,
+              }));
+            }}
+            commands={commands}
+            setActiveCommandId={setActiveCommandId}
+            setIsInspectorOpen={setIsInspectorOpen}
+            setNavTab={setNavTab}
+          />
+        )}
         {navTab === 'Users' && canManageRegistry && (
           <UsersPanel
             currentUser={currentUser}

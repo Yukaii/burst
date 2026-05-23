@@ -287,7 +287,7 @@ export function CommandInspector({
               <div className="registry-inspector-field">
                 <span>Publisher</span>
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  {command.publisher.name} <span className="text-slate-400 dark:text-slate-500 font-semibold">@{command.publisher.handle}</span>
+                  {command.publisher.name} <span className="text-slate-400 dark:text-slate-500 font-semibold">{command.publisher.handle.startsWith('@') ? command.publisher.handle : `@${command.publisher.handle}`}</span>
                 </span>
               </div>
               <div className="registry-inspector-field">
@@ -450,7 +450,7 @@ export function CommandInspector({
                   </div>
                   <div className="min-w-0">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">{publisherProfile.name}</h3>
-                    <span className="text-xs text-slate-400 dark:text-slate-500 block truncate mt-0.5">@{publisherProfile.handle}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 block truncate mt-0.5">{publisherProfile.handle.startsWith('@') ? publisherProfile.handle : `@${publisherProfile.handle}`}</span>
                     <div className="mt-2">
                       {publisherProfile.verified ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">

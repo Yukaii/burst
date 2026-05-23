@@ -6,12 +6,13 @@ import {
   Settings,
   Info,
   LogOut,
-  ChevronUp
+  ChevronUp,
+  User
 } from 'lucide-react';
 import type { RegistrySessionUser } from '@/src/lib/registryApi';
 import logoUrl from '@/assets/logo.svg';
 
-const navItems = ['Discover', 'Publish', 'Users', 'Audits', 'Settings'] as const;
+const navItems = ['Discover', 'Publish', 'Profile', 'Users', 'Audits', 'Settings'] as const;
 
 type NavTab = typeof navItems[number];
 
@@ -35,8 +36,18 @@ export function Sidebar({
   onOpenBridgeLogs
 }: SidebarProps) {
   const canManageRegistry = currentUser.role === 'admin';
-  const visibleNavItems = navItems.filter((item) => canManageRegistry || !['Users', 'Audits'].includes(item));
+  const isGuest = currentUser.handle === 'guest';
+  const visibleNavItems = navItems.filter((item) => {
+    if (item === 'Profile' && isGuest) return false;
+    if (['Users', 'Audits'].includes(item) && !canManageRegistry) return false;
+    return true;
+  });
   const displayHandle = currentUser.handle.startsWith('@') ? currentUser.handle : `@${currentUser.handle}`;
+  
+  // Prevent duplicate handle/github username if they are identical
+  const cleanHandle = currentUser.handle.replace(/^@/, '').toLowerCase();
+  const cleanGithub = currentUser.githubLogin?.replace(/^@/, '').toLowerCase();
+  const showGithub = cleanGithub && cleanGithub !== cleanHandle;
 
   return (
     <aside className="registry-sidebar" aria-label="Registry navigation">
@@ -57,6 +68,7 @@ export function Sidebar({
           const Icon = {
             Discover: Compass,
             Publish: PlusCircle,
+            Profile: User,
             Users: Users,
             Audits: CheckSquare,
             Settings: Settings
@@ -84,10 +96,10 @@ export function Sidebar({
           <div className="registry-session-avatar">
             {currentUser.avatarInitials}
           </div>
-          <div>
+          <div className="registry-session-info">
             <strong>{currentUser.name}</strong>
             <span>
-              {displayHandle} {currentUser.githubLogin ? `• ${currentUser.githubLogin}` : ''}
+              {displayHandle} {showGithub ? `• ${currentUser.githubLogin}` : ''}
             </span>
           </div>
           <ChevronUp className="registry-session-chevron" />

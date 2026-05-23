@@ -41,6 +41,8 @@ interface DiscoverPanelProps {
   filterCategory: 'all' | 'verified' | 'high_risk' | 'installed';
   setFilterCategory: (cat: 'all' | 'verified' | 'high_risk' | 'installed') => void;
   setNavTab: (tab: 'Discover' | 'Publish' | 'Users' | 'Audits' | 'Settings') => void;
+  isInspectorOpen: boolean;
+  setIsInspectorOpen: (open: boolean) => void;
 }
 
 export function DiscoverPanel({
@@ -64,7 +66,9 @@ export function DiscoverPanel({
   handleUnpin,
   filterCategory,
   setFilterCategory,
-  setNavTab
+  setNavTab,
+  isInspectorOpen,
+  setIsInspectorOpen
 }: DiscoverPanelProps) {
   return (
     <section className="registry-discover">
@@ -160,7 +164,10 @@ export function DiscoverPanel({
                     className={`registry-command-row ${isSelected ? 'is-selected' : ''}`}
                     key={command.id}
                     type="button"
-                    onClick={() => setActiveCommandId(command.id)}
+                    onClick={() => {
+                      setActiveCommandId(command.id);
+                      setIsInspectorOpen(true);
+                    }}
                   >
                     <span className="flex flex-col min-w-0 pr-2">
                       <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5 leading-tight truncate">
@@ -173,7 +180,7 @@ export function DiscoverPanel({
                         )}
                       </strong>
                       <span className="text-xs text-slate-400 dark:text-slate-500 truncate mt-1">
-                        by {command.publisher.name} <span className="text-[10px] text-slate-500">@{command.publisher.handle}</span>
+                        by {command.publisher.name} <span className="text-[10px] text-slate-500">{command.publisher.handle.startsWith('@') ? command.publisher.handle : `@${command.publisher.handle}`}</span>
                       </span>
                     </span>
                     <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 truncate pr-2">{command.website}</span>
@@ -201,15 +208,15 @@ export function DiscoverPanel({
           )}
         </div>
 
-        {(activeCommand || inspectorLoading) && activeCommand ? (
+        {isInspectorOpen && (activeCommand || inspectorLoading) && activeCommand ? (
           <div
             className="registry-inspector-modal"
-            onClick={() => setActiveCommandId(null)}
+            onClick={() => setIsInspectorOpen(false)}
           >
             <button
               type="button"
               className="registry-inspector-backdrop"
-              onClick={() => setActiveCommandId(null)}
+              onClick={() => setIsInspectorOpen(false)}
               aria-label="Close command details"
             />
             <CommandInspector
@@ -225,7 +232,7 @@ export function DiscoverPanel({
               onUninstall={handleUninstall}
               onPin={handlePin}
               onUnpin={handleUnpin}
-              onClose={() => setActiveCommandId(null)}
+              onClose={() => setIsInspectorOpen(false)}
               onPointerDown={(event) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}
             />

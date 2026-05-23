@@ -154,7 +154,9 @@ export function LandingPage({
               </Avatar>
               <div className="landing-nav-user-info">
                 <span className="landing-nav-username">{currentUser.name}</span>
-                <span className="landing-nav-handle">@{currentUser.handle}</span>
+                <span className="landing-nav-handle">
+                  {currentUser.handle.startsWith('@') ? currentUser.handle : `@${currentUser.handle}`}
+                </span>
               </div>
               <Button size="sm" variant="default" onClick={onGoToDashboard}>
                 Console

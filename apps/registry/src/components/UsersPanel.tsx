@@ -109,7 +109,7 @@ export function UsersPanel({
       if (updated.handle === currentUser.handle) {
         onCurrentUserUpdate(updated);
       }
-      setNotice(`Successfully saved profile changes for @${updated.handle}`);
+      setNotice(`Successfully saved profile changes for ${updated.handle.startsWith('@') ? updated.handle : `@${updated.handle}`}`);
     } catch (err) {
       setNotice(err instanceof Error ? err.message : 'Failed to save user');
     } finally {
@@ -176,7 +176,9 @@ export function UsersPanel({
                         <span className="text-[10px] text-emerald-500" title="Verified">✓</span>
                       )}
                     </span>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate">@{user.handle}</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
+                      {user.handle.startsWith('@') ? user.handle : `@${user.handle}`}
+                    </span>
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className={`px-1.5 py-0.2 rounded text-[8px] font-extrabold uppercase ${roleColors}`}>
                         {user.role || 'publisher'}
@@ -209,7 +211,9 @@ export function UsersPanel({
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-tight truncate">{selectedUser.name}</h2>
-                  <span className="text-xs text-slate-400 dark:text-slate-500 block truncate mt-0.5">@{selectedUser.handle}</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500 block truncate mt-0.5">
+                    {selectedUser.handle.startsWith('@') ? selectedUser.handle : `@${selectedUser.handle}`}
+                  </span>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     <Badge variant="secondary" className="font-bold text-[9px] px-2 py-0.2 rounded-full uppercase tracking-wider">
                       {selectedRole}
