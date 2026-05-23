@@ -21,6 +21,8 @@ import {
   getAuditReport,
   getPublisherProfile,
 } from '../src/lib/registryApi.ts';
+import { createRegistryHandler } from '../apps/registry/src/registryHandler.ts';
+import { createMemoryRegistryStore } from '../apps/registry/src/registryStore.ts';
 import {
   getRegistryScriptRegistrationId,
   getRegistryScriptEventName,
@@ -215,6 +217,68 @@ describe('registry API layer', () => {
 
     const missingProfile = await getPublisherProfile('@non-existent');
     expect(missingProfile).toBeUndefined();
+  });
+});
+
+describe('registry permissions', () => {
+  async function createPublisherSession(store, login = 'publisher-user') {
+    const user = await store.upsertGitHubUser({
+      id: `${login}-id`,
+      login,
+      name: login,
+      avatar_url: `https://github.com/${login}.png`,
+      html_url: `https://github.com/${login}`,
+      bio: null,
+    });
+    const { sessionId } = await store.createSession(user.handle);
+    return { user, sessionId };
+  }
+
+  test('requires admin access for the users directory', async () => {
+    const store = createMemoryRegistryStore();
+    const handler = createRegistryHandler(store);
+    const { sessionId } = await createPublisherSession(store);
+
+    const guestResponse = await handler(new Request('http://registry.test/api/users'));
+    expect(guestResponse.status).toBe(401);
+
+    const publisherResponse = await handler(new Request('http://registry.test/api/users', {
+      headers: { Cookie: `session_id=${sessionId}` },
+    }));
+    expect(publisherResponse.status).toBe(403);
+
+    await store.updateUser('@publisher-user', { role: 'admin' });
+    const adminResponse = await handler(new Request('http://registry.test/api/users', {
+      headers: { Cookie: `session_id=${sessionId}` },
+    }));
+    expect(adminResponse.status).toBe(200);
+  });
+
+  test('prevents self-service role and verification escalation', async () => {
+    const store = createMemoryRegistryStore();
+    const handler = createRegistryHandler(store);
+    const { sessionId } = await createPublisherSession(store, 'self-editor');
+
+    const response = await handler(new Request('http://registry.test/api/users/%40self-editor', {
+      method: 'PATCH',
+      headers: {
+        Cookie: `session_id=${sessionId}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Self Editor',
+        role: 'admin',
+        verified: true,
+        verifiedSources: ['github.com/self-editor'],
+      }),
+    }));
+
+    expect(response.status).toBe(200);
+    const updated = await response.json();
+    expect(updated.name).toBe('Self Editor');
+    expect(updated.role).toBe('publisher');
+    expect(updated.verified).toBe(false);
+    expect(updated.verifiedSources).toEqual(['github.com/self-editor']);
   });
 });
 

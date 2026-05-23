@@ -32,6 +32,9 @@ export function Sidebar({
   setView,
   onClearPublishToast
 }: SidebarProps) {
+  const canManageRegistry = currentUser.role === 'admin';
+  const visibleNavItems = navItems.filter((item) => canManageRegistry || !['Users', 'Audits'].includes(item));
+
   return (
     <aside className="registry-sidebar" aria-label="Registry navigation">
       <div 
@@ -46,7 +49,7 @@ export function Sidebar({
       </div>
 
       <nav className="registry-sidebar-nav">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = item === navTab;
           const Icon = {
             Discover: Compass,

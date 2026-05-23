@@ -99,6 +99,8 @@ export function RegistryApp() {
   }, []);
 
   const isGuest = currentUser.handle === 'guest';
+  const canManageRegistry = currentUser.role === 'admin';
+  const visibleNavItems = navItems.filter((item) => canManageRegistry || !['Users', 'Audits'].includes(item));
   
   const preferredTheme = typeof window === 'undefined'
     ? 'dark'
@@ -135,6 +137,12 @@ export function RegistryApp() {
       active = false;
     };
   }, [isGuest]);
+
+  useEffect(() => {
+    if (!canManageRegistry && ['Users', 'Audits'].includes(navTab)) {
+      setNavTab('Discover');
+    }
+  }, [canManageRegistry, navTab]);
 
   const workspaceStatus = [
     currentUser.handle === 'guest' ? 'Guest session' : currentUser.role || 'publisher',
@@ -368,7 +376,7 @@ export function RegistryApp() {
         const keyNum = parseInt(e.key);
         if (keyNum >= 1 && keyNum <= 5) {
           e.preventDefault();
-          const targetTab = navItems[keyNum - 1];
+          const targetTab = visibleNavItems[keyNum - 1];
           if (targetTab) {
             setNavTab(targetTab);
             setPublishSuccessToast(null);
@@ -408,7 +416,7 @@ export function RegistryApp() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navTab, activeCommandId, filteredCommands, installedCommandIds]);
+  }, [navTab, activeCommandId, filteredCommands, installedCommandIds, visibleNavItems]);
 
   // Active command scrolling helper
   useEffect(() => {
@@ -521,7 +529,7 @@ export function RegistryApp() {
           />
         )}
 
-        {navTab === 'Users' && (
+        {navTab === 'Users' && canManageRegistry && (
           <UsersPanel
             currentUser={currentUser}
             onCurrentUserUpdate={(updatedUser) => {
@@ -533,7 +541,7 @@ export function RegistryApp() {
           />
         )}
 
-        {navTab === 'Audits' && <AuditsPanel />}
+        {navTab === 'Audits' && canManageRegistry && <AuditsPanel />}
 
         {navTab === 'Settings' && <SettingsPanel bridgeConnected={bridgeConnected} />}
       </main>

@@ -4,6 +4,7 @@ import { createMemoryRegistryStore } from './src/registryStore';
 const authConfig = {
   githubClientId: Bun.env.GITHUB_CLIENT_ID,
   githubClientSecret: Bun.env.GITHUB_CLIENT_SECRET,
+  adminGithubLogins: Bun.env.REGISTRY_ADMIN_GITHUB_LOGINS,
 };
 
 const server = Bun.serve({

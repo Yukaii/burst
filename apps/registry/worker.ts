@@ -5,6 +5,7 @@ type Env = {
   DB: D1DatabaseLike;
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
+  REGISTRY_ADMIN_GITHUB_LOGINS?: string;
   ASSETS?: {
     fetch(request: Request): Promise<Response>;
   };
@@ -20,6 +21,7 @@ export default {
     return createRegistryHandler(createD1RegistryStore(env.DB), {
       githubClientId: env.GITHUB_CLIENT_ID,
       githubClientSecret: env.GITHUB_CLIENT_SECRET,
+      adminGithubLogins: env.REGISTRY_ADMIN_GITHUB_LOGINS,
     })(request);
   },
 };

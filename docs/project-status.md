@@ -57,6 +57,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Premium extension options settings page and syncing mechanism for Theme (Light/Dark/System), Alignment (Top/Center), Backdrop Close, Developer Logging, and Consent Revocation.
 - Stable public command API documented and capability-gated in sandboxed runtime executions, including custom list rendering and custom list actions.
 - Worker-compatible registry backend with shared API handlers and D1-backed persistence for commands, publishers, and session-based authentication.
+- Registry permission roles now distinguish guest, publisher, and admin sessions. Admins are explicitly bootstrapped through `REGISTRY_ADMIN_GITHUB_LOGINS`; user-management endpoints reject guests/publishers and self-edits cannot escalate role or verification.
 - Decentralized custom Git registries list in the Extension Dashboard, stored in Chrome local storage.
 - GitHub Raw manifest parser fetching and installing commands from external git repositories.
 - Unified Update Checker dashboard panel checking versions and providing one-click updates for official and custom Git registry scripts.
@@ -69,7 +70,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 
 ## In Progress
 
-- Registry website hardening: browser-level regression coverage, production OAuth/D1 validation, and deployment polish.
+- Registry website hardening: browser-level regression coverage, production OAuth/D1/admin allowlist validation, and deployment polish.
 - Registry dashboard polish beyond Discover/Publish: Users, Audits, and Settings still need the same compact dashboard baseline applied consistently.
 
 ## Not Implemented Yet
@@ -77,7 +78,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Browser tests for the content palette and registry website.
 - CI workflow for typecheck, build, lint, package validation, and browser regression runs.
 - Chrome/Firefox release packaging automation.
-- Production GitHub OAuth secret configuration and deployed Worker/D1 smoke testing.
+- Production GitHub OAuth secret/admin allowlist configuration and deployed Worker/D1 smoke testing.
 - Migration/versioning for local script records after extension distribution.
 
 ## Known Tradeoffs

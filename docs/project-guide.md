@@ -84,7 +84,7 @@ graph TD
 ### 4. Registry Website Workspace (`apps/registry/`)
 - Built as a normal Vite + React web app so it can own routing, OAuth, API calls, and Worker deployment without WXT constraints.
 - Uses a compact dashboard-style app shell aligned with the extension dashboard: persistent sidebar, concise toolbar status, and direct table/detail workflows.
-- Discover is browseable for guests, while Publish and account-sensitive workflows remain gated by GitHub-backed publisher sessions.
+- Discover is browseable for guests, Publish is gated by authenticated publisher/admin sessions, and management workflows are restricted to configured admin GitHub logins.
 - The local dev runner starts the registry API on port `5175` and the Vite UI on port `5174`.
 
 ---

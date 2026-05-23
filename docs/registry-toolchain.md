@@ -157,6 +157,8 @@ The registry API exposes HTTP endpoints for the extension client and registry we
 * **`POST /api/auth/logout`**: Clears session credentials.
 * **`GET /api/auth/me`**: Returns the current authenticated publisher profile, or `null`.
 
+Set `REGISTRY_ADMIN_GITHUB_LOGINS` to a comma-separated list of GitHub logins that should be promoted to registry admin during OAuth sign-in. New authenticated users default to `publisher`; there is no implicit root or first-user admin grant.
+
 #### 2. Commands Management
 * **`GET /api/commands`**: Lists all indexed marketplace commands. Accepts a query parameter `?q=searchterm` for client filtering.
 * **`GET /api/commands/:id`**: Retrieves detailed metadata and source code for a specific command ID.
@@ -164,7 +166,12 @@ The registry API exposes HTTP endpoints for the extension client and registry we
   * *Request Body*: JSON manifest fields + script source code.
   * *Security Gate*: Validates session token, matches publisher permissions, and triggers static analysis audit routines before saving to the registry store.
 
-#### 3. Client Integrations
+#### 3. Publisher Management
+* **`GET /api/users`**: Lists publisher accounts for admin sessions only.
+* **`GET /api/users/:handle`**: Returns a private publisher management record to that user or an admin.
+* **`PATCH /api/users/:handle`**: Lets admins update role, verification, verified sources, and profile fields. Non-admin users can only update their own non-privileged profile fields; role and verification escalation is ignored server-side.
+
+#### 4. Client Integrations
 * **`GET /api/audit-reports/:commandId`**: Fetches the computed audit verification report, which lists checklist evaluations for dangerous operations, remote connections, and obfuscation.
 
 ---

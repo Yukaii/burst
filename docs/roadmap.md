@@ -16,7 +16,7 @@
 
 - Add browser tests for the content palette and registry website (Phase 5: Quality Loop).
 - Apply the extension dashboard baseline to remaining registry panels: Users, Audits, and Settings.
-- Validate production Worker/D1/OAuth deployment with real secrets and session cookies.
+- Validate production Worker/D1/OAuth/admin allowlist deployment with real secrets and session cookies.
 
 ## Phase 1: Registry Contract
 
@@ -28,7 +28,7 @@
 
 ## Phase 2: Identity and Publishing
 
-- Add user sign-in to the registry website. (Mostly done - GitHub OAuth login flow and session endpoints are implemented; production secrets and deployed Worker validation still need to be configured.)
+- Add user sign-in to the registry website. (Mostly done - GitHub OAuth login flow, session endpoints, and explicit admin allowlist promotion are implemented; production secrets and deployed Worker validation still need to be configured.)
 - Add publisher profiles and verified source ownership. (Done - verified domain sources list and ownership logic implemented)
 - Build the publish use case flow. (Done - publishing wizard form UI implemented)
 - Require source URL, manifest validation, permission declaration, and package integrity metadata. (Done - wizard validation, permission checkbox, and pre-release scanner checklists implemented)

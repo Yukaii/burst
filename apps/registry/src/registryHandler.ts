@@ -4,6 +4,7 @@ import { buildAuditReport, type GitHubUserProfile, type PublishCommandInput, typ
 type RegistryAuthConfig = {
   githubClientId?: string;
   githubClientSecret?: string;
+  adminGithubLogins?: string | string[];
 };
 
 type JsonHeaders = Record<string, string>;
@@ -109,10 +110,32 @@ function appendSetCookies(headers: HeadersInit | undefined, cookies: string[]): 
   return next;
 }
 
-function normalizeAuthConfig(config: RegistryAuthConfig): Required<RegistryAuthConfig> {
+function normalizeAdminGithubLogins(value: string | string[] | undefined): Set<string> {
+  const raw = Array.isArray(value) ? value : value?.split(',') ?? [];
+  return new Set(
+    raw
+      .map((login) => login.trim().replace(/^@/, '').toLowerCase())
+      .filter(Boolean)
+  );
+}
+
+function normalizeAuthConfig(config: RegistryAuthConfig) {
   return {
     githubClientId: config.githubClientId?.trim() ?? '',
     githubClientSecret: config.githubClientSecret?.trim() ?? '',
+    adminGithubLogins: normalizeAdminGithubLogins(config.adminGithubLogins),
+  };
+}
+
+function isAdmin(user: { role?: string } | null | undefined): boolean {
+  return user?.role === 'admin';
+}
+
+function sanitizeSelfProfilePatch(patch: RegistryUserUpdate): RegistryUserUpdate {
+  return {
+    name: patch.name,
+    bio: patch.bio,
+    verifiedSources: patch.verifiedSources,
   };
 }
 
@@ -256,7 +279,10 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
         const accessToken = await exchangeGithubCode(req, normalizedAuthConfig, code);
         const githubProfile = await fetchGithubUser(accessToken);
         const user = await store.upsertGitHubUser(githubProfile);
-        const { sessionId } = await store.createSession(user.handle);
+        const sessionUser = normalizedAuthConfig.adminGithubLogins.has(githubProfile.login.toLowerCase())
+          ? await store.updateUser(user.handle, { role: 'admin' })
+          : user;
+        const { sessionId } = await store.createSession(sessionUser.handle);
         const returnTo = normalizeReturnTo(cookies[GITHUB_RETURN_TO_COOKIE] ?? '/dashboard', req.url);
 
         return redirectResponse(returnTo, [
@@ -278,6 +304,11 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
       }
 
       if (path === '/api/users' && req.method === 'GET') {
+        const currentUser = await store.getCurrentUser(parseCookies(req.headers.get('Cookie')).session_id ?? null);
+        if (!isAdmin(currentUser)) {
+          return errorResponse('Admin access required', currentUser ? 403 : 401);
+        }
+
         const q = url.searchParams.get('q')?.trim() || '';
         const users = await store.listUsers(q);
         return jsonResponse(users);
@@ -293,7 +324,7 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
         const body = (await req.json()) as PublishCommandInput;
         const user = await store.getCurrentUser(parseCookies(req.headers.get('Cookie')).session_id ?? null);
 
-        if (!user || user.handle !== body.publisherHandle) {
+        if (!user || user.handle !== body.publisherHandle || !['admin', 'publisher'].includes(user.role ?? 'member')) {
           return errorResponse('Unauthorized publishing action', 401);
         }
 
@@ -338,6 +369,14 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
         const handle = decodeURIComponent(userMatch[1]);
 
         if (req.method === 'GET') {
+          const currentUser = await store.getCurrentUser(parseCookies(req.headers.get('Cookie')).session_id ?? null);
+          if (!currentUser) {
+            return errorResponse('Unauthorized', 401);
+          }
+          if (currentUser.handle !== handle && !isAdmin(currentUser)) {
+            return errorResponse('Forbidden', 403);
+          }
+
           const profile = await store.getUser(handle);
           if (!profile) {
             return errorResponse('Publisher profile not found', 404);
@@ -357,12 +396,12 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
             return errorResponse('Publisher profile not found', 404);
           }
 
-          if (currentUser.handle !== handle && currentUser.role !== 'admin') {
+          if (currentUser.handle !== handle && !isAdmin(currentUser)) {
             return errorResponse('Forbidden', 403);
           }
 
           const patch = (await req.json()) as RegistryUserUpdate;
-          const updated = await store.updateUser(handle, patch);
+          const updated = await store.updateUser(handle, isAdmin(currentUser) ? patch : sanitizeSelfProfilePatch(patch));
           return jsonResponse(updated);
         }
       }
