@@ -112,9 +112,9 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             You must be signed in as a verified publisher or community contributor to publish commands to the registry.
           </p>
-          <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-900/60 rounded-xl text-left">
-            <p className="text-[11px] text-slate-450 dark:text-slate-500 leading-relaxed font-semibold">
-              <span className="text-slate-600 dark:text-slate-350">Note:</span> Sign in with GitHub before publishing. The registry requires a real OAuth session for registry actions.
+          <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-900/60 rounded-xl text-left">
+            <p className="text-[11px] text-slate-500 dark:text-slate-500 leading-relaxed font-semibold">
+              <span className="text-slate-600 dark:text-slate-300">Note:</span> Sign in with GitHub before publishing. The registry requires a real OAuth session for registry actions.
             </p>
           </div>
         </div>
@@ -322,7 +322,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
                 placeholder="https://github.com/username/repo"
                 className="font-semibold text-xs h-9"
               />
-              <span className="text-[10px] text-slate-400 dark:text-slate-550 font-medium">Used for publisher verification checks. Must match verified sources.</span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Used for publisher verification checks. Must match verified sources.</span>
               {errors.sourceUrl && <span className="text-[10px] font-bold text-rose-500">{errors.sourceUrl}</span>}
             </div>
 

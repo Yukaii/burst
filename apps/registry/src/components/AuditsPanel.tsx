@@ -77,7 +77,7 @@ export function AuditsPanel() {
                 <span className="size-2 rounded-full bg-emerald-500" />
                 <strong className="text-xs font-bold uppercase tracking-wider">Pass Status</strong>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-450 leading-relaxed font-medium">
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                 Scripts restricted to explicit scopes, requesting no broad permissions, with visible, non-obfuscated operations and zero network dependencies.
               </p>
             </div>
@@ -87,7 +87,7 @@ export function AuditsPanel() {
                 <span className="size-2 rounded-full bg-amber-50" />
                 <strong className="text-xs font-bold uppercase tracking-wider">Warning Status</strong>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-450 leading-relaxed font-medium">
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                 Triggered by medium-risk APIs like clipboard writes, localStorage reading, outbound fetch requests, and obfuscation keywords. Broad match patterns like <code className="bg-amber-500/10 px-1 py-0.5 rounded font-mono text-[10px]">&lt;all_urls&gt;</code> also warrant verification.
               </p>
             </div>
@@ -97,7 +97,7 @@ export function AuditsPanel() {
                 <span className="size-2 rounded-full bg-rose-500" />
                 <strong className="text-xs font-bold uppercase tracking-wider">Fail Status</strong>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-450 leading-relaxed font-medium">
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                 Triggered by dangerous features that compromise user privacy. This includes accessing session cookies, Chrome storage APIs, reading clipboard content without action, script-tag creations, and direct string execution via <code className="bg-rose-500/10 px-1 py-0.5 rounded font-mono text-[10px]">eval()</code>.
               </p>
             </div>

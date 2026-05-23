@@ -128,7 +128,7 @@ export function UsersPanel({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search publisher directory..."
-              className="pl-9 h-9 text-xs bg-slate-50/50 dark:bg-slate-955/40 border-slate-200 dark:border-slate-800 focus-visible:ring-sky-500"
+              className="pl-9 h-9 text-xs bg-slate-50/50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 focus-visible:ring-sky-500"
             />
           </div>
           <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -159,7 +159,7 @@ export function UsersPanel({
                   className={`w-full px-4 py-3 flex items-start gap-3 text-left border-none transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-sky-500/5 dark:bg-sky-500/10 shadow-[inset_3px_0_0_0_#0ea5e9]'
-                      : 'bg-transparent hover:bg-slate-50/50 dark:hover:bg-slate-955/40'
+                      : 'bg-transparent hover:bg-slate-50/50 dark:hover:bg-slate-900/40'
                   }`}
                   onClick={() => {
                     setSelectedHandle(user.handle);
@@ -204,7 +204,7 @@ export function UsersPanel({
         {selectedUser ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden flex flex-col">
             {/* Publisher Hero */}
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-955/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="size-14 rounded-2xl bg-sky-500/10 text-sky-500 flex items-center justify-center font-extrabold text-lg border border-sky-500/20 shrink-0">
                   {selectedUser.avatarInitials}
@@ -234,7 +234,7 @@ export function UsersPanel({
                   <span className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Published</span>
                   <strong className="text-base font-extrabold text-slate-900 dark:text-white block mt-0.5">{selectedUser.publishedCommandsCount}</strong>
                 </div>
-                <div className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-955 border border-slate-100 dark:border-slate-900/60 text-left min-w-[110px]">
+                <div className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/60 text-left min-w-[110px]">
                   <span className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Joined</span>
                   <strong className="text-xs font-bold text-slate-800 dark:text-slate-200 block mt-1 truncate">
                     {new Date(selectedUser.joinedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}
@@ -277,7 +277,7 @@ export function UsersPanel({
                     value={draft.bio}
                     onChange={(event) => setDraft((prev) => ({ ...prev, bio: event.target.value }))}
                     disabled={!canEditSelected}
-                    className="bg-white dark:bg-slate-955 border-slate-200 dark:border-slate-800 rounded-xl text-sm"
+                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl text-sm"
                   />
                 </div>
 
@@ -288,11 +288,11 @@ export function UsersPanel({
                     value={draft.verifiedSources}
                     onChange={(event) => setDraft((prev) => ({ ...prev, verifiedSources: event.target.value }))}
                     disabled={!canEditAll && selectedUser.handle !== currentUser.handle}
-                    className="bg-white dark:bg-slate-955 border-slate-200 dark:border-slate-800 rounded-xl font-mono text-xs"
+                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl font-mono text-xs"
                   />
                 </div>
 
-                <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-955/20 cursor-pointer select-none">
+                <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-900/20 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={draft.verified}
@@ -308,7 +308,7 @@ export function UsersPanel({
               </div>
 
               {/* Sidebar metadata column */}
-              <div className="md:col-span-2 flex flex-col gap-5 bg-slate-50 dark:bg-slate-955/40 p-4 border-l border-slate-100 dark:border-slate-800/40 rounded-xl">
+              <div className="md:col-span-2 flex flex-col gap-5 bg-slate-50 dark:bg-slate-900/40 p-4 border-l border-slate-100 dark:border-slate-800/40 rounded-xl">
                 <div className="flex flex-col gap-1.5">
                   <h3 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Identity Context</h3>
                   <div className="flex flex-col gap-2 mt-1">
@@ -334,7 +334,7 @@ export function UsersPanel({
 
                 <div className="flex flex-col gap-1.5 border-t border-slate-200/50 dark:border-slate-800/40 pt-4">
                   <h3 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Verification Status</h3>
-                  <div className="p-3 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/60 rounded-xl mt-1">
+                  <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/60 rounded-xl mt-1">
                     <strong className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
                       {selectedUser.verified ? 'Verified publisher' : 'Community contributor'}
                     </strong>
@@ -349,7 +349,7 @@ export function UsersPanel({
             </div>
 
             {/* Form actions / notifications */}
-            <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-955/20 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-4">
+            <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-900/20 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-4">
               <div className="flex-1">
                 {notice && (
                   <div className={`text-xs font-bold px-3 py-1.5 rounded-lg border ${

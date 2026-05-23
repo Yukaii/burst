@@ -89,7 +89,7 @@ export function ProfilePanel({
   if (isGuest) {
     return (
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center flex flex-col items-center justify-center shadow-sm">
-        <User className="size-10 text-slate-350 dark:text-slate-655 mb-3" />
+        <User className="size-10 text-slate-400 dark:text-slate-500 mb-3" />
         <strong className="text-sm font-bold text-slate-800 dark:text-slate-200">Guest Session</strong>
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm leading-relaxed">
           You are currently browsing the registry as a guest. Please sign in with GitHub to customize your profile, publish commands, or gain access to the publisher dashboard.
@@ -104,7 +104,7 @@ export function ProfilePanel({
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full min-w-0">
       {/* Edit Profile Form */}
       <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-955/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="size-14 rounded-2xl bg-sky-500/10 text-sky-500 flex items-center justify-center font-extrabold text-lg border border-sky-500/20 shrink-0">
               {publisher.avatarInitials}
@@ -124,11 +124,11 @@ export function ProfilePanel({
           </div>
 
           <div className="flex gap-3 text-right">
-            <div className="px-4 py-2 rounded-xl bg-slate-55 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/60 text-left min-w-[100px]">
+            <div className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/60 text-left min-w-[100px]">
               <span className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Published</span>
               <strong className="text-base font-extrabold text-slate-900 dark:text-white block mt-0.5">{publisher.publishedCommandsCount}</strong>
             </div>
-            <div className="px-4 py-2 rounded-xl bg-slate-55 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/60 text-left min-w-[110px]">
+            <div className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/60 text-left min-w-[110px]">
               <span className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Joined</span>
               <strong className="text-xs font-bold text-slate-800 dark:text-slate-200 block mt-1 truncate">
                 {new Date(publisher.joinedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}
@@ -171,7 +171,7 @@ export function ProfilePanel({
           </div>
         </div>
 
-        <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-955/20 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-4">
+        <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-4">
           <div className="flex-1">
             {notice && (
               <div className={`text-xs font-bold px-3 py-1.5 rounded-lg border inline-block ${
@@ -196,7 +196,7 @@ export function ProfilePanel({
 
       {/* Profile Details & Published Commands */}
       <div className="lg:col-span-1 flex flex-col gap-6 w-full min-w-0">
-        <div className="bg-slate-50 dark:bg-slate-955/40 p-5 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col gap-5">
+        <div className="bg-slate-50 dark:bg-slate-950/40 p-5 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col gap-5">
           <div className="flex flex-col gap-1.5">
             <h3 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Identity Details</h3>
             <div className="flex flex-col gap-3 mt-1">
@@ -222,14 +222,14 @@ export function ProfilePanel({
 
           <div className="flex flex-col gap-1.5 border-t border-slate-200/50 dark:border-slate-800/40 pt-4">
             <h3 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Verification Status</h3>
-            <div className="p-3 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800/60 rounded-xl mt-1">
+            <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/60 rounded-xl mt-1">
               <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
                 <ShieldCheck className={`size-4 ${publisher.verified ? 'text-emerald-500' : 'text-slate-400'}`} />
                 <strong className="text-xs font-bold">
                   {publisher.verified ? 'Verified publisher' : 'Community contributor'}
                 </strong>
               </div>
-              <p className="text-[10px] leading-relaxed text-slate-500 dark:text-slate-450 mt-1.5">
+              <p className="text-[10px] leading-relaxed text-slate-500 dark:text-slate-400 mt-1.5">
                 {publisher.verified
                   ? 'This account has passed verification. Commands published by this account will automatically receive a "Verified" trust rating if the source origin matches their verified claims.'
                   : 'This is a community account. Commands will receive a "Community" trust level by default until reviewed by an admin.'}
@@ -261,7 +261,7 @@ export function ProfilePanel({
                     setIsInspectorOpen(true);
                     setNavTab('Discover');
                   }}
-                  className="w-full text-left p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-955/20 hover:bg-sky-500/5 dark:hover:bg-sky-500/10 hover:border-sky-500/20 dark:hover:border-sky-500/20 transition-all flex items-center justify-between gap-3 cursor-pointer shrink-0"
+                  className="w-full text-left p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 hover:bg-sky-500/5 dark:hover:bg-sky-500/10 hover:border-sky-500/20 dark:hover:border-sky-500/20 transition-all flex items-center justify-between gap-3 cursor-pointer shrink-0"
                 >
                   <div className="min-w-0 flex flex-col">
                     <strong className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate leading-tight">{cmd.title}</strong>

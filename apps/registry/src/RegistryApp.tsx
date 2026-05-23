@@ -1,6 +1,13 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type { BurstCommand } from '@/src/lib/commands';
 import { CheckCircle2 } from 'lucide-react';
+import logoUrl from '@/assets/logo.svg';
+
+// Correct /dashboard path to hash routing early
+if (typeof window !== 'undefined' && (window.location.pathname === '/dashboard' || window.location.pathname.startsWith('/dashboard/'))) {
+  const hash = window.location.hash || '#/discover';
+  window.history.replaceState(null, '', '/' + hash);
+}
 import {
   getAuthConfig,
   getCurrentUser,
@@ -68,12 +75,37 @@ const parseHash = () => {
   return { tab: 'Discover' as const, cmdId: null, open: false, view: null };
 };
 
+const initialRoute = parseHash();
+const hasSessionFlag = typeof window !== 'undefined' && localStorage.getItem('burst_has_session') === 'true';
+const defaultView = initialRoute.view || (hasSessionFlag ? 'app' : 'landing');
+
+function SplashLoadingScreen({ theme }: { theme: 'light' | 'dark' }) {
+  return (
+    <div className={`flex flex-col items-center justify-center w-screen h-screen bg-background text-foreground ${theme === 'dark' ? 'dark' : ''}`}>
+      <div className="flex flex-col items-center gap-6">
+        <div className="relative flex items-center justify-center">
+          {/* Outer decorative ring */}
+          <div className="absolute w-20 h-20 rounded-2xl border border-sky-500/30 animate-spin" style={{ animationDuration: '3s' }} />
+          <div className="absolute w-16 h-16 rounded-xl border border-indigo-500/20 animate-spin" style={{ animationDuration: '6s', animationDirection: 'reverse' }} />
+          <img className="w-12 h-12 rounded-xl object-cover shadow-lg relative z-10" src={logoUrl} alt="Burst Logo" />
+        </div>
+        <div className="flex flex-col items-center gap-1.5 animate-pulse">
+          <span className="text-sm font-extrabold tracking-tight">Burst Registry</span>
+          <span className="text-[11px] font-semibold text-muted-foreground">Authenticating session...</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function RegistryApp() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authConfig, setAuthConfig] = useState<RegistryAuthConfig | null>(null);
-  const [navTab, setNavTab] = useState<'Discover' | 'Publish' | 'Profile' | 'Users' | 'Audits' | 'Settings'>('Discover');
+  const [navTab, setNavTab] = useState<'Discover' | 'Publish' | 'Profile' | 'Users' | 'Audits' | 'Settings'>(
+    initialRoute.tab || 'Discover'
+  );
   const [publishSuccessToast, setPublishSuccessToast] = useState<string | null>(null);
-  const [view, setView] = useState<'landing' | 'app'>('landing');
+  const [view, setView] = useState<'landing' | 'app'>(defaultView);
 
   const [query, setQuery] = useState('');
   const [commands, setCommands] = useState<BurstCommand[]>([]);
@@ -120,11 +152,18 @@ export function RegistryApp() {
         } else if (user.handle !== 'guest') {
           setView('app');
         }
+
+        if (user.handle !== 'guest') {
+          localStorage.setItem('burst_has_session', 'true');
+        } else {
+          localStorage.removeItem('burst_has_session');
+        }
       } catch (err) {
         if (!active) return;
         console.error('Failed to bootstrap registry auth state:', err);
         setAuthConfig({ githubEnabled: false });
         setCurrentUser(guestSessionUser);
+        localStorage.removeItem('burst_has_session');
       } finally {
         if (active) setAuthLoading(false);
       }
@@ -356,7 +395,7 @@ export function RegistryApp() {
 
   const handleGitHubLogin = () => {
     const loginUrl = new URL(authConfig?.loginUrl ?? '/api/auth/github/start', window.location.origin);
-    loginUrl.searchParams.set('returnTo', `${window.location.origin}/dashboard`);
+    loginUrl.searchParams.set('returnTo', `${window.location.origin}/#/discover`);
     window.location.assign(loginUrl.toString());
   };
 
@@ -370,6 +409,7 @@ export function RegistryApp() {
       setNavTab('Discover');
       setPublishSuccessToast(null);
       setView('landing');
+      localStorage.removeItem('burst_has_session');
     }
   };
 
@@ -507,6 +547,9 @@ export function RegistryApp() {
   }, [activeCommandId]);
 
   if (authLoading) {
+    if (view === 'app') {
+      return <SplashLoadingScreen theme={preferredTheme} />;
+    }
     return (
       <LandingPage
         authLoading
