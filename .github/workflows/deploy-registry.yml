@@ -1,0 +1,50 @@
+name: Deploy Registry App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/registry/**'
+      - '.github/workflows/deploy-registry.yml'
+      - 'package.json'
+      - 'bun.lock'
+
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-registry
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Registry App
+        run: bun run build:registry
+
+      - name: Apply D1 Migrations
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: 'apps/registry'
+          command: d1 migrations apply burst --remote
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: 'apps/registry'
+          command: deploy
