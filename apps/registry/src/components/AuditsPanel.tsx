@@ -11,14 +11,14 @@ export function AuditsPanel() {
   const report = analyzeScriptCode(testCode, patterns.split(',').map((p) => p.trim()));
 
   return (
-    <div className="registry-secondary-page">
-      <div className="registry-section-heading">
-        <h2>Static Security Audits</h2>
-        <p>Inspect the guidelines, security parameters, and analyze custom execution script blocks.</p>
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="grid gap-1 border-b border-border pb-2.5">
+        <h2 className="m-0 text-foreground text-[15px] font-semibold leading-normal">Static Security Audits</h2>
+        <p className="m-0 text-muted-foreground text-xs leading-normal">Inspect the guidelines, security parameters, and analyze custom execution script blocks.</p>
       </div>
 
-      <div className="registry-secondary-grid">
-        <div className="registry-card lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-3 items-start min-h-0">
+        <div className="flex flex-col gap-4 min-w-0 border border-border rounded-lg bg-card p-4 lg:col-span-2">
           <div className="flex flex-col gap-1">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">Interactive Audit Sandbox</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">Paste or edit code below to instantly inspect rule triggers and risk metrics.</p>
@@ -66,7 +66,7 @@ export function AuditsPanel() {
         </div>
 
         <div className="lg:col-span-1 flex flex-col gap-6">
-          <div className="registry-card">
+          <div className="flex flex-col gap-4 min-w-0 border border-border rounded-lg bg-card p-4">
             <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-slate-800/60 pb-3">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">Static Heuristic Audit Guidelines</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">Burst registry runs an automated static checker mapping scripts to their security postures.</p>

@@ -133,28 +133,37 @@ export function LandingPage({
   ];
 
   return (
-    <div className="landing-shell">
-      <nav className="landing-nav">
-        <div className="landing-brand" onClick={!isGuest ? onGoToDashboard : undefined} style={{ cursor: !isGuest ? 'pointer' : 'default' }}>
-          <img className="brand-logo-img" src={logoUrl} alt="Burst Logo" />
+    <div 
+      className="h-screen overflow-y-auto min-h-screen p-12 px-6 pb-[120px] flex flex-col gap-[120px]"
+      style={{
+        background: 'radial-gradient(circle at 10% 10%, rgba(14, 165, 233, 0.12) 0%, transparent 45%), radial-gradient(circle at 90% 10%, rgba(99, 102, 241, 0.08) 0%, transparent 45%), linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)'
+      }}
+    >
+      <nav className="max-w-[1200px] w-full mx-auto flex justify-between items-center">
+        <div 
+          className="flex items-center gap-3" 
+          onClick={!isGuest ? onGoToDashboard : undefined} 
+          style={{ cursor: !isGuest ? 'pointer' : 'default' }}
+        >
+          <img className="w-[42px] h-[42px] rounded-xl object-cover" src={logoUrl} alt="Burst Logo" />
           <div>
-            <strong>Burst</strong>
-            <em>Registry</em>
+            <strong className="text-slate-900 text-lg font-extrabold leading-[1.1] tracking-tight block">Burst</strong>
+            <em className="text-slate-500 text-xs font-semibold not-italic block mt-1">Registry</em>
           </div>
         </div>
-        <div className="landing-nav-actions">
+        <div className="flex items-center gap-3.5">
           {authLoading ? (
-            <div className="landing-nav-loading">Loading...</div>
+            <div className="text-xs font-semibold text-muted-foreground">Loading...</div>
           ) : !isGuest ? (
-            <div className="landing-nav-user">
+            <div className="flex items-center gap-2.5 border border-border rounded-lg bg-card p-1.5 px-3">
               <Avatar className="size-8">
                 <AvatarFallback className="bg-slate-100 text-slate-800 text-xs font-bold">
                   {currentUser.avatarInitials}
                 </AvatarFallback>
               </Avatar>
-              <div className="landing-nav-user-info">
-                <span className="landing-nav-username">{currentUser.name}</span>
-                <span className="landing-nav-handle">
+              <div className="flex flex-col text-left justify-center min-w-0">
+                <span className="text-foreground text-xs font-bold leading-tight block truncate">{currentUser.name}</span>
+                <span className="text-muted-foreground text-[10px] font-semibold leading-tight block truncate">
                   {currentUser.handle.startsWith('@') ? currentUser.handle : `@${currentUser.handle}`}
                 </span>
               </div>
@@ -174,18 +183,18 @@ export function LandingPage({
         </div>
       </nav>
 
-      <header className="landing-hero">
-        <div className="landing-hero-copy">
-          <div className="landing-kicker">
+      <header className="max-w-[1200px] w-full mx-auto grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-12 lg:gap-16 items-start">
+        <div className="flex flex-col gap-6 max-w-[620px]">
+          <div className="inline-flex items-center gap-2 self-start border border-sky-500/15 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 text-xs font-bold px-3 py-1 uppercase tracking-wide">
             <Sparkles className="size-3.5 text-sky-500" />
             Trusted Command Registry
           </div>
-          <h1>Run powerful commands on any webpage, safely.</h1>
-          <p>
+          <h1 className="m-0 text-slate-900 text-4xl lg:text-[46px] font-black leading-[1.1] tracking-tight">Run powerful commands on any webpage, safely.</h1>
+          <p className="m-0 text-slate-600 text-base lg:text-[17px] font-medium leading-relaxed">
             Burst is a modern browser extension framework that lets you build and run secure scripts on any webpage. Use the public registry to discover community scripts, compare publisher profiles, and audit static analysis results before anything touches your browser.
           </p>
 
-          <div className="landing-actions">
+          <div className="flex flex-wrap gap-3">
             {!isGuest ? (
               <Button onClick={onGoToDashboard}>
                 Go to Console
@@ -203,17 +212,17 @@ export function LandingPage({
             </Button>
           </div>
           {isGuest && !githubEnabled && (
-            <p className="landing-auth-note">
+            <p className="flex items-center gap-2 text-slate-500 text-xs font-semibold leading-normal">
               <Info className="size-4 flex-shrink-0" />
               GitHub sign-in is disabled in this environment. Set GITHUB_CLIENT_ID & GITHUB_CLIENT_SECRET to enable.
             </p>
           )}
 
-          <div className="landing-meta">
+          <div className="flex flex-wrap gap-8 lg:gap-12 mt-4">
             {landingStats.map((stat) => (
-              <div key={stat.label} className="landing-stat">
-                <span className="landing-stat-value">{stat.value}</span>
-                <span className="landing-stat-label">{stat.label}</span>
+              <div key={stat.label} className="flex flex-col gap-1.5">
+                <span className="text-slate-950 text-2xl font-black leading-none tracking-tight">{stat.value}</span>
+                <span className="text-slate-500 text-xs font-semibold leading-none uppercase tracking-wider">{stat.label}</span>
               </div>
             ))}
           </div>
@@ -276,45 +285,45 @@ export function LandingPage({
         </div>
       </header>
 
-      <section className="landing-surface">
-        <div className="feature-grid">
+      <section className="max-w-[1200px] w-full mx-auto flex flex-col gap-[120px]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {landingHighlights.map((item) => (
-            <div key={item.title} className="feature-card">
-              <div className="feature-icon-container">
+            <div key={item.title} className="flex flex-col gap-4 border border-slate-200/50 rounded-[20px] bg-white p-6 shadow-[0_10px_30px_-10px_rgba(15,23,42,0.02)]">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-sky-50 text-sky-600 shrink-0">
                 {item.icon}
               </div>
-              <h3>{item.title}</h3>
-              <p>{item.description}</p>
+              <h3 className="m-0 text-slate-900 text-sm font-extrabold leading-normal">{item.title}</h3>
+              <p className="m-0 text-slate-500 text-[12px] font-medium leading-relaxed">{item.description}</p>
             </div>
           ))}
         </div>
 
-        <div className="featured-commands" id="featured-commands">
-          <div className="section-header">
-            <h2>Featured commands in the catalog</h2>
-            <p>Each command lists verified capabilities, publisher profiles, and static analysis risk flags.</p>
+        <div className="flex flex-col gap-8" id="featured-commands">
+          <div className="flex flex-col gap-2 max-w-[600px]">
+            <h2 className="m-0 text-slate-900 text-2xl font-black leading-tight tracking-tight">Featured commands in the catalog</h2>
+            <p className="m-0 text-slate-500 text-sm font-semibold leading-relaxed">Each command lists verified capabilities, publisher profiles, and static analysis risk flags.</p>
           </div>
-          <div className="featured-grid">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {featuredCommands.map((command) => (
-              <div key={command.id} className="featured-card">
+              <div key={command.id} className="flex flex-col justify-between gap-6 border border-slate-200/50 rounded-[20px] bg-white p-6 shadow-[0_10px_30px_-10px_rgba(15,23,42,0.02)]">
                 <div>
-                  <div className="featured-header">
-                    <div className="featured-avatar-fallback">
+                  <div className="flex items-center gap-3.5 border-b border-slate-100 pb-4">
+                    <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-sky-50 text-sky-600 text-sm font-extrabold border border-sky-100 shrink-0">
                       {command.publisher.avatarInitials}
                     </div>
-                    <div className="featured-info">
-                      <strong className="featured-title">{command.title}</strong>
-                      <span className="featured-publisher">by {command.publisher.name}</span>
+                    <div className="flex flex-col min-w-0 text-left">
+                      <strong className="text-slate-900 text-sm font-extrabold leading-tight truncate">{command.title}</strong>
+                      <span className="text-slate-500 text-[11px] font-semibold mt-0.5">by {command.publisher.name}</span>
                     </div>
                   </div>
-                  <p className="featured-desc">{command.description}</p>
+                  <p className="text-slate-600 text-[12.5px] font-medium leading-relaxed mt-4">{command.description}</p>
                 </div>
-                <div className="featured-meta">
-                  <div className="featured-badges">
-                    <span className="featured-tag">{trustCopy[command.trustLevel]}</span>
-                    <span className="featured-tag">{riskCopy[command.risk]} Risk</span>
+                <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-6">
+                  <div className="flex gap-1.5">
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-slate-50 border border-slate-100 text-slate-500 tracking-wider">{trustCopy[command.trustLevel]}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-slate-50 border border-slate-100 text-slate-500 tracking-wider">{riskCopy[command.risk]} Risk</span>
                   </div>
-                  <span className="featured-publisher" style={{ fontSize: '11px' }}>{command.website}</span>
+                  <span className="text-slate-500 text-[11px] font-semibold mt-0.5">{command.website}</span>
                 </div>
               </div>
             ))}

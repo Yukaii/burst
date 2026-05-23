@@ -71,8 +71,8 @@ export function DiscoverPanel({
   setIsInspectorOpen
 }: DiscoverPanelProps) {
   return (
-    <section className="registry-discover">
-      <header className="registry-discover-controls">
+    <section className="flex flex-1 min-h-0 flex-col gap-3">
+      <header className="flex items-center gap-2.5 shrink-0">
         <div className="relative flex-1 min-w-0 flex items-center">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 size-4 pointer-events-none" />
           <Input
@@ -94,17 +94,17 @@ export function DiscoverPanel({
         </Button>
       </header>
 
-      <section className="registry-discover-workspace">
-        <div className="registry-command-table" aria-label="Registry commands">
-          <div className="registry-panel-header">
+      <section className="relative flex min-h-0 flex-1">
+        <div className="flex w-full min-w-0 min-h-0 flex-col overflow-hidden border border-border rounded-lg bg-card" aria-label="Registry commands">
+          <div className="flex items-center justify-between gap-3.5 border-b border-border p-3 px-3.5">
             <div>
-              <h2>Discover commands</h2>
-              <p>Find actions that match the current website, then inspect trust signals before installing.</p>
+              <h2 className="m-0 text-foreground text-sm font-semibold leading-normal">Discover commands</h2>
+              <p className="m-0 mt-1 text-muted-foreground text-[11px] leading-relaxed">Find actions that match the current website, then inspect trust signals before installing.</p>
             </div>
-            <span>{filteredCommands.length} results</span>
+            <span className="shrink-0 rounded-full bg-muted text-muted-foreground text-[11px] font-semibold leading-none p-1.25 px-2">{filteredCommands.length} results</span>
           </div>
 
-          <div className="registry-filter-row">
+          <div className="flex flex-wrap gap-1 border-b border-border bg-background p-2">
             {(
               [
                 { id: 'all', label: 'All' },
@@ -119,7 +119,11 @@ export function DiscoverPanel({
                   key={cat.id}
                   type="button"
                   onClick={() => setFilterCategory(cat.id)}
-                  className={isActive ? 'is-active' : ''}
+                  className={`h-6.5 border rounded-lg bg-transparent cursor-pointer text-[11px] font-semibold px-2.25 text-center transition-all duration-150 ${
+                    isActive 
+                      ? 'border-border bg-accent text-accent-foreground' 
+                      : 'border-transparent text-muted-foreground hover:border-border hover:bg-accent hover:text-accent-foreground'
+                  }`}
                 >
                   {cat.label}
                 </button>
@@ -127,7 +131,7 @@ export function DiscoverPanel({
             })}
           </div>
 
-          <div className="registry-table-head">
+          <div className="grid grid-cols-[minmax(190px,_1.5fr)_minmax(120px,_1fr)_92px_78px_72px] gap-3 items-center border-b border-border bg-background text-muted-foreground text-[10px] font-bold tracking-[0.08em] p-2.25 px-3.5 uppercase">
             <span>Command</span>
             <span>Website</span>
             <span>Trust</span>
@@ -136,12 +140,12 @@ export function DiscoverPanel({
           </div>
 
           {loading ? (
-            <div className="registry-loading-state">
+            <div className="grid flex-1 min-h-[220px] place-content-center gap-2.5 text-muted-foreground text-center">
               <RefreshCw className="size-6 animate-spin text-sky-500" />
               <span className="text-sm font-semibold">Searching registry...</span>
             </div>
           ) : filteredCommands.length > 0 ? (
-            <div className="registry-command-rows">
+            <div className="flex-1 min-h-0 overflow-y-auto">
               {filteredCommands.map((command) => {
                 const isSelected = activeCommandId === command.id;
                 
@@ -151,7 +155,7 @@ export function DiscoverPanel({
                   community: 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/30',
                   local: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/30',
                 }[command.trustLevel];
-
+ 
                 const riskColors = {
                   low: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/40',
                   medium: 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-900/30',
@@ -161,7 +165,9 @@ export function DiscoverPanel({
                 return (
                   <button
                     data-command-id={command.id}
-                    className={`registry-command-row ${isSelected ? 'is-selected' : ''}`}
+                    className={`grid grid-cols-[minmax(190px,_1.5fr)_minmax(120px,_1fr)_92px_78px_72px] gap-3 items-center w-full min-h-[60px] border-0 border-b border-border bg-card text-foreground cursor-pointer p-2.5 px-3.5 text-left transition-all duration-150 hover:bg-accent/55 ${
+                      isSelected ? 'bg-accent shadow-[inset_3px_0_0_0_hsl(var(--primary))]' : ''
+                    }`}
                     key={command.id}
                     type="button"
                     onClick={() => {
@@ -200,7 +206,7 @@ export function DiscoverPanel({
               })}
             </div>
           ) : (
-            <div className="registry-empty-state">
+            <div className="grid flex-1 min-h-[220px] place-content-center gap-2.5 text-muted-foreground text-center">
               <Search className="size-8 text-slate-300 dark:text-slate-700" />
               <strong className="text-sm font-bold text-slate-900 dark:text-white mt-1">No registry commands match</strong>
               <span className="text-xs text-slate-400 dark:text-slate-500 max-w-sm leading-relaxed">Try searching for a different website matching pattern or publisher name.</span>
@@ -210,12 +216,12 @@ export function DiscoverPanel({
 
         {isInspectorOpen && (activeCommand || inspectorLoading) && activeCommand ? (
           <div
-            className="registry-inspector-modal"
+            className="fixed z-50 inset-0"
             onClick={() => setIsInspectorOpen(false)}
           >
             <button
               type="button"
-              className="registry-inspector-backdrop"
+              className="absolute inset-0 border-0 bg-[#080d1a]/28 backdrop-blur-sm cursor-default"
               onClick={() => setIsInspectorOpen(false)}
               aria-label="Close command details"
             />

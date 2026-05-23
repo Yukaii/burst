@@ -532,7 +532,7 @@ export function RegistryApp() {
   }
 
   return (
-    <div className={`registry-app-shell ${preferredTheme === 'dark' ? 'dark' : ''}`}>
+    <div className={`grid grid-cols-[280px_minmax(0,_1fr)] w-screen h-screen overflow-hidden bg-background text-foreground ${preferredTheme === 'dark' ? 'dark' : ''}`}>
       <Sidebar
         navTab={navTab}
         setNavTab={setNavTab}
@@ -543,29 +543,29 @@ export function RegistryApp() {
         onOpenBridgeLogs={() => setIsConsoleOpen(true)}
       />
 
-      <main className="registry-workspace">
-        <header className="registry-toolbar">
+      <main className="flex min-w-0 min-h-0 flex-col gap-3 overflow-hidden p-3.5">
+        <header className="grid grid-cols-[minmax(0,_1fr)_auto] items-center gap-4 border border-border rounded-lg bg-card p-2.5 px-3">
           <div className="min-w-0">
-            <div className="registry-toolbar-title">
-              <button type="button" onClick={() => setView('landing')}>Registry</button>
+            <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] font-semibold leading-none">
+              <button type="button" className="border-0 bg-transparent text-inherit cursor-pointer font-inherit p-0 hover:text-foreground" onClick={() => setView('landing')}>Registry</button>
               <span>/</span>
-              <strong>{navTab}</strong>
+              <strong className="text-foreground">{navTab}</strong>
             </div>
           </div>
-          <div className="registry-toolbar-status" aria-label="Workspace status">
+          <div className="flex flex-wrap justify-end gap-1.5" aria-label="Workspace status">
             {workspaceStatus.map((item) => (
-              <span key={item}>{item}</span>
+              <span key={item} className="border border-border rounded-full bg-background text-muted-foreground text-[11px] font-semibold leading-none p-1.5 px-2">{item}</span>
             ))}
           </div>
         </header>
 
         {publishSuccessToast && (
-          <div className="registry-toast-success">
+          <div className="flex items-center justify-between gap-2.5 border border-emerald-500/25 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold p-2 px-[11px]">
             <span className="font-semibold flex items-center gap-2">
               <CheckCircle2 className="size-4 text-emerald-500" />
               {publishSuccessToast}
             </span>
-            <button type="button" onClick={() => setPublishSuccessToast(null)}>×</button>
+            <button type="button" className="border-0 bg-transparent text-current cursor-pointer text-lg leading-none p-0 px-0.5" onClick={() => setPublishSuccessToast(null)}>×</button>
           </div>
         )}
 
@@ -598,7 +598,7 @@ export function RegistryApp() {
         )}
 
         {navTab === 'Publish' && (
-          <Suspense fallback={<div className="registry-card text-sm text-muted-foreground">Loading publish workspace...</div>}>
+          <Suspense fallback={<div className="flex flex-col gap-4 min-w-0 border border-border rounded-lg bg-card p-4 text-sm text-muted-foreground">Loading publish workspace...</div>}>
             <PublishPanel
               currentUser={currentUser}
               onPublishSuccess={(newCmd) => {

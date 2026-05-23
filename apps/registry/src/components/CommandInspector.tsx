@@ -17,7 +17,6 @@ import {
   ExternalLink, 
   Copy, 
   Check,
-  Terminal,
   Code,
   X
 } from 'lucide-react';
@@ -139,7 +138,7 @@ export function ChecklistItem({
 
 export function EmptyInspector() {
   return (
-    <aside className="registry-inspector-overlay p-6 gap-6" aria-label="Registry status">
+    <aside className="absolute top-3.5 right-3.5 bottom-3.5 flex flex-col w-[calc(100vw-308px)] max-w-[760px] min-h-0 overflow-hidden border border-border rounded-lg bg-card shadow-[0_24px_90px_hsl(var(--foreground)/0.22)] p-6 gap-6" aria-label="Registry status">
       <div className="flex items-start gap-4 border-b border-slate-100 dark:border-slate-800/60 pb-5">
         <img className="size-11 rounded-xl object-cover" src={logoUrl} alt="Burst Logo" />
         <div>
@@ -199,12 +198,11 @@ export function CommandInspector({
   onPointerDown?: React.PointerEventHandler<HTMLElement>;
   onClick?: React.MouseEventHandler<HTMLElement>;
 }) {
-  const [copiedCli, setCopiedCli] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
   if (loading) {
     return (
-      <aside className="registry-inspector-overlay items-center justify-center p-8" aria-label="Loading details">
+      <aside className="absolute top-3.5 right-3.5 bottom-3.5 flex flex-col w-[calc(100vw-308px)] max-w-[760px] min-h-0 overflow-hidden border border-border rounded-lg bg-card shadow-[0_24px_90px_hsl(var(--foreground)/0.22)] items-center justify-center p-8" aria-label="Loading details">
         <RefreshCw className="size-6 animate-spin text-sky-500" />
         <span className="text-sm font-semibold text-slate-400 dark:text-slate-500 mt-3">Loading details...</span>
       </aside>
@@ -214,19 +212,13 @@ export function CommandInspector({
   const isInstalled = installedCommandIds.includes(command.id);
   const isPinned = pinnedCommandIds.includes(command.id);
 
-  const cliCommand = `burst add ${command.id}`;
   const sourceCode = command.code || `export default async function run({ page, toast }) {\n  // Source code is not available for this package\n}`;
 
-  const copyToClipboard = async (text: string, type: 'cli' | 'code') => {
+  const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      if (type === 'cli') {
-        setCopiedCli(true);
-        setTimeout(() => setCopiedCli(false), 2000);
-      } else {
-        setCopiedCode(true);
-        setTimeout(() => setCopiedCode(false), 2000);
-      }
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
     } catch (err) {
       console.error('Failed to copy text: ', err);
     }
@@ -234,12 +226,12 @@ export function CommandInspector({
 
   return (
     <aside
-      className="registry-inspector-overlay"
+      className="absolute top-3.5 right-3.5 bottom-3.5 flex flex-col w-[calc(100vw-308px)] max-w-[760px] min-h-0 overflow-hidden border border-border rounded-lg bg-card shadow-[0_24px_90px_hsl(var(--foreground)/0.22)]"
       aria-label="Selected command audit details"
       onPointerDown={onPointerDown}
       onClick={onClick}
     >
-      <div className="registry-inspector-header">
+      <div className="flex items-start gap-3.5 shrink-0 border-b border-border bg-background p-4">
         <div className="size-11 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center font-extrabold text-sm border border-sky-500/20 shrink-0">
           {command.publisher.avatarInitials}
         </div>
@@ -249,7 +241,7 @@ export function CommandInspector({
         </div>
         <button
           type="button"
-          className="registry-inspector-close"
+          className="grid w-7.5 h-7.5 shrink-0 place-items-center border border-border rounded-lg bg-card text-muted-foreground cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors duration-150"
           onClick={onClose}
           aria-label="Close command details"
           title="Close"
@@ -258,17 +250,17 @@ export function CommandInspector({
         </button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'audit' | 'publisher')} className="registry-inspector-tabs">
-        <div className="registry-inspector-tabbar">
-          <TabsList className="registry-tabs-list">
-            <TabsTrigger value="details" className="registry-tab-trigger">Details</TabsTrigger>
-            <TabsTrigger value="audit" className="registry-tab-trigger">Audit</TabsTrigger>
-            <TabsTrigger value="publisher" className="registry-tab-trigger">Publisher</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'audit' | 'publisher')} className="flex min-h-0 flex-1 flex-col">
+        <div className="shrink-0 border-b border-border p-2 px-2.5">
+          <TabsList className="!grid !grid-cols-3 !w-full !border !border-border !rounded-[7px] !bg-background !p-[3px] !overflow-hidden">
+            <TabsTrigger value="details" className="!w-full !min-w-0 !inline-flex !items-center !justify-center !h-[28px] !border-0 !rounded-[5px] !bg-transparent !text-muted-foreground cursor-pointer !text-[11px] !font-bold !leading-none !overflow-hidden !text-ellipsis !whitespace-nowrap transition-colors hover:!bg-accent hover:!text-accent-foreground data-[state=active]:!bg-accent data-[state=active]:!text-accent-foreground data-active:!bg-accent data-active:!text-accent-foreground">Details</TabsTrigger>
+            <TabsTrigger value="audit" className="!w-full !min-w-0 !inline-flex !items-center !justify-center !h-[28px] !border-0 !rounded-[5px] !bg-transparent !text-muted-foreground cursor-pointer !text-[11px] !font-bold !leading-none !overflow-hidden !text-ellipsis !whitespace-nowrap transition-colors hover:!bg-accent hover:!text-accent-foreground data-[state=active]:!bg-accent data-[state=active]:!text-accent-foreground data-active:!bg-accent data-active:!text-accent-foreground">Audit</TabsTrigger>
+            <TabsTrigger value="publisher" className="!w-full !min-w-0 !inline-flex !items-center !justify-center !h-[28px] !border-0 !rounded-[5px] !bg-transparent !text-muted-foreground cursor-pointer !text-[11px] !font-bold !leading-none !overflow-hidden !text-ellipsis !whitespace-nowrap transition-colors hover:!bg-accent hover:!text-accent-foreground data-[state=active]:!bg-accent data-[state=active]:!text-accent-foreground data-active:!bg-accent data-active:!text-accent-foreground">Publisher</TabsTrigger>
           </TabsList>
         </div>
 
-        <div className="registry-inspector-scroll">
-          <TabsContent value="details" className="registry-tab-panel">
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <TabsContent value="details" className="flex flex-col gap-3 m-0 p-3.5">
             <div className="flex gap-2">
               <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
                 command.trustLevel === 'verified' ? 'bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 border-cyan-100 dark:border-cyan-900/30' :
@@ -283,15 +275,15 @@ export function CommandInspector({
               }`}>{riskCopy[command.risk]} risk</span>
             </div>
 
-            <div className="registry-inspector-section">
-              <div className="registry-inspector-field">
-                <span>Publisher</span>
+            <div className="flex flex-col gap-2.5 min-w-0 border border-border rounded-lg bg-background p-3">
+              <div className="flex min-w-0 flex-col gap-1.5 border-b border-border pb-2.5 last:border-b-0 last:pb-0">
+                <span className="m-0 text-muted-foreground text-[10px] font-bold tracking-[0.1em] leading-none uppercase">Publisher</span>
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                   {command.publisher.name} <span className="text-slate-400 dark:text-slate-500 font-semibold">{command.publisher.handle.startsWith('@') ? command.publisher.handle : `@${command.publisher.handle}`}</span>
                 </span>
               </div>
-              <div className="registry-inspector-field">
-                <span>Source</span>
+              <div className="flex min-w-0 flex-col gap-1.5 border-b border-border pb-2.5 last:border-b-0 last:pb-0">
+                <span className="m-0 text-muted-foreground text-[10px] font-bold tracking-[0.1em] leading-none uppercase">Source</span>
                 <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                   <a href={command.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline inline-flex items-center gap-1">
                     {command.sourceUrl.replace('https://github.com/', '')}
@@ -299,14 +291,14 @@ export function CommandInspector({
                   </a>
                 </span>
               </div>
-              <div className="registry-inspector-field">
-                <span>Website Match</span>
+              <div className="flex min-w-0 flex-col gap-1.5 border-b border-border pb-2.5 last:border-b-0 last:pb-0">
+                <span className="m-0 text-muted-foreground text-[10px] font-bold tracking-[0.1em] leading-none uppercase">Website Match</span>
                 <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 font-mono">{command.matchPatterns.join(', ')}</span>
               </div>
             </div>
 
-            <div className="registry-inspector-section">
-              <h3 className="registry-section-label">Requested permissions</h3>
+            <div className="flex flex-col gap-2.5 min-w-0 border border-border rounded-lg bg-background p-3">
+              <h3 className="m-0 text-muted-foreground text-[10px] font-bold tracking-[0.1em] leading-none uppercase">Requested permissions</h3>
               <div className="flex flex-wrap gap-1.5">
                 {command.permissions.map((permission) => {
                   const isSensitive = ['Network access', 'Read page DOM'].includes(permission);
@@ -326,27 +318,8 @@ export function CommandInspector({
               </div>
             </div>
 
-            {/* CLI Command Installation Panel */}
-            <div className="registry-inspector-section registry-command-snippet">
-              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-                <Terminal className="size-3.5 text-sky-500" />
-                <strong className="text-[10px] font-extrabold uppercase tracking-widest">CLI Installation</strong>
-              </div>
-              <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 px-3.5 py-2 rounded-lg font-mono text-xs text-slate-800 dark:text-slate-200 select-all shrink-0">
-                <span className="truncate">{cliCommand}</span>
-                <button
-                  type="button"
-                  onClick={() => void copyToClipboard(cliCommand, 'cli')}
-                  className="bg-transparent border-none text-slate-400 hover:text-sky-500 cursor-pointer p-0 shrink-0"
-                  title="Copy command"
-                >
-                  {copiedCli ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
-                </button>
-              </div>
-            </div>
-
             {/* Script Source Preview */}
-            <div className="registry-inspector-section">
+            <div className="flex flex-col gap-2.5 min-w-0 border border-border rounded-lg bg-background p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
                   <Code className="size-3.5 text-sky-500" />
@@ -354,7 +327,7 @@ export function CommandInspector({
                 </div>
                 <button
                   type="button"
-                  onClick={() => void copyToClipboard(sourceCode, 'code')}
+                  onClick={() => void copyToClipboard(sourceCode)}
                   className="text-xs font-bold text-sky-500 hover:text-sky-400 bg-transparent border-none cursor-pointer p-0 flex items-center gap-1"
                 >
                   {copiedCode ? (
@@ -370,16 +343,16 @@ export function CommandInspector({
                   )}
                 </button>
               </div>
-              <pre className="registry-code-preview">
+              <pre className="max-h-[320px] m-0 overflow-auto border border-[#1e293b] rounded-lg bg-[#0b0f19] text-[#e2e8f0] font-mono text-[11px] leading-relaxed p-3.5 whitespace-pre-wrap overflow-wrap-anywhere break-all">
                 <code>{highlightJavaScript(sourceCode)}</code>
               </pre>
             </div>
           </TabsContent>
 
-          <TabsContent value="audit" className="registry-tab-panel">
+          <TabsContent value="audit" className="flex flex-col gap-3 m-0 p-3.5">
             {auditReport ? (
               <>
-                <div className="registry-inspector-section">
+                <div className="flex flex-col gap-2.5 min-w-0 border border-border rounded-lg bg-background p-3">
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Audit Summary</h3>
                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase border ${
@@ -397,8 +370,8 @@ export function CommandInspector({
                   </div>
                 </div>
 
-                <div className="registry-inspector-section">
-                  <h3 className="registry-section-label">Static Review Checks</h3>
+                <div className="flex flex-col gap-2.5 min-w-0 border border-border rounded-lg bg-background p-3">
+                  <h3 className="m-0 text-muted-foreground text-[10px] font-bold tracking-[0.1em] leading-none uppercase">Static Review Checks</h3>
                   <div className="flex flex-col gap-2.5">
                     <ChecklistItem
                       label="Host Scope Restrictions"
@@ -441,7 +414,7 @@ export function CommandInspector({
             )}
           </TabsContent>
 
-          <TabsContent value="publisher" className="registry-tab-panel">
+          <TabsContent value="publisher" className="flex flex-col gap-3 m-0 p-3.5">
             {publisherProfile ? (
               <>
                 <div className="flex items-center gap-4 border-b border-slate-100 dark:border-slate-800/40 pb-5">
@@ -466,8 +439,8 @@ export function CommandInspector({
                 </div>
 
                 {publisherProfile.bio && (
-                  <div className="registry-inspector-section">
-                    <h3 className="registry-section-label">Biography</h3>
+                  <div className="flex flex-col gap-2.5 min-w-0 border border-border rounded-lg bg-background p-3">
+                    <h3 className="m-0 text-muted-foreground text-[10px] font-bold tracking-[0.1em] leading-none uppercase">Biography</h3>
                     <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-semibold">{publisherProfile.bio}</p>
                   </div>
                 )}
@@ -486,8 +459,8 @@ export function CommandInspector({
                 </div>
 
                 {publisherProfile.verifiedSources.length > 0 && (
-                  <div className="registry-inspector-section">
-                    <h3 className="registry-section-label">Verified Sources</h3>
+                  <div className="flex flex-col gap-2.5 min-w-0 border border-border rounded-lg bg-background p-3">
+                    <h3 className="m-0 text-muted-foreground text-[10px] font-bold tracking-[0.1em] leading-none uppercase">Verified Sources</h3>
                     <ul className="flex flex-col gap-1.5 list-none p-0 m-0">
                       {publisherProfile.verifiedSources.map((source) => (
                         <li key={source} className="text-xs font-semibold">
@@ -511,7 +484,7 @@ export function CommandInspector({
         </div>
       </Tabs>
 
-      <div className="registry-inspector-actions">
+      <div className="flex gap-2.5 shrink-0 border-t border-border bg-background p-3">
         <Button
           variant={isInstalled ? "destructive" : "default"}
           className="flex-1 font-bold text-xs h-9 cursor-pointer border-none"

@@ -225,7 +225,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
   };
 
   return (
-    <div className="registry-publish-page">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-1">
       <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-slate-800/60 pb-4">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -345,7 +345,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Source Code (ES Module)</label>
-              <div className="registry-publish-editor">
+              <div className="overflow-hidden border border-[#1e293b] rounded-lg bg-[#0b0f19]">
                 <CodeMirror
                   value={code}
                   basicSetup={{
