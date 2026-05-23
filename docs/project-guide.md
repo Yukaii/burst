@@ -15,8 +15,8 @@ burst/
 │       ├── src/                  # React Front-end components & Publisher Wizard
 │       ├── server.ts             # Local Bun dev wrapper around the registry API
 │       ├── worker.ts             # Cloudflare Worker entrypoint for the registry API
-│       ├── registryStore.ts      # Shared memory/D1 persistence abstraction
-│       ├── registryHandler.ts    # Shared HTTP request router
+│       ├── src/registryStore.ts  # Shared memory/D1 persistence abstraction
+│       ├── src/registryHandler.ts # Shared HTTP request router
 │       ├── wrangler.toml         # Cloudflare Worker deployment config
 │       └── package.json
 ├── entrypoints/                  # WXT Chrome/Firefox Extension Entrypoints
@@ -39,6 +39,7 @@ burst/
 │   └── lib/                      # Core domain abstractions
 │       ├── commands.ts           # Command, Icon types and structures
 │       ├── manifest.ts           # Manifest validation schemas and checks
+│       ├── localScripts.ts       # Local script storage and sandboxed runtime wrapper
 │       ├── registryApi.ts        # Mock and Live API clients
 │       ├── registryStorage.ts    # Client persistence for installed commands
 │       ├── settings.ts           # Configuration storage keys and managers
@@ -80,6 +81,12 @@ graph TD
   - **Left Pane**: Features CodeMirror 6 with custom syntax highlighting (TypeScript/JS), metadata managers, and icon selectors.
   - **Right Pane**: Packages the interactive script debugger console (Test Harness), editor configuration triggers, and the Static Security Audit reports.
 
+### 4. Registry Website Workspace (`apps/registry/`)
+- Built as a normal Vite + React web app so it can own routing, OAuth, API calls, and Worker deployment without WXT constraints.
+- Uses a compact dashboard-style app shell aligned with the extension dashboard: persistent sidebar, concise toolbar status, and direct table/detail workflows.
+- Discover is browseable for guests, while Publish and account-sensitive workflows remain gated by GitHub-backed publisher sessions.
+- The local dev runner starts the registry API on port `5175` and the Vite UI on port `5174`.
+
 ---
 
 ## 3. Sandboxed Runtime & Lexical Shadowing
@@ -91,7 +98,7 @@ Webpage globals like `document`, `window`, `navigator`, and `location` are shado
 
 ```javascript
 (async function(context) {
-  const { page, window, location, navigator, selection, url, title, toast } = context;
+  const { page, window, location, navigator, selection, url, title, toast, list } = context;
   
   // Shadow webpage globals
   const document = page;
@@ -112,6 +119,8 @@ Webpage globals like `document`, `window`, `navigator`, and `location` are shado
 - **`page` Proxy**: Limits DOM reads. Returns read-only element proxies. Write methods (`document.write`, `element.appendChild`) are absent.
 - **`navigator.clipboard` Proxy**: Intercepts clipboard operations to allow only `writeText()` when the `clipboard-write` capability is granted. Reading the clipboard is restricted to protect sensitive user text.
 - **`selection` Proxy**: Pre-captures the window selection *before* the palette focuses, preventing focus-resets from clearing the user's highlighted text.
+- **`toast` Proxy**: Sends command feedback back through the palette without exposing page-level notification primitives directly.
+- **`list` Proxy**: Lets commands render searchable custom lists and register first-class list actions while keeping action callbacks inside the sandboxed command listener.
 
 ---
 
@@ -119,7 +128,7 @@ Webpage globals like `document`, `window`, `navigator`, and `location` are shado
 
 Burst integrates seamlessly with its registry site through a secure, two-way `window.postMessage` bridge.
 
-1. **Origin Verification**: The content script registers an event listener for `message` events, validating that the sender is the official registry domain.
+1. **Message Scope**: The content script registers an event listener for `message` events and accepts Burst-prefixed messages from the page context. Production deployments should narrow this to official registry origins before broader distribution.
 2. **Install/Uninstall Handshake**:
    - Web App sends `burst:install-command` with the command JSON metadata and source.
    - Content script relays the message to the background service worker using `browser.runtime.sendMessage`.
@@ -158,5 +167,5 @@ Burst integrates seamlessly with its registry site through a secure, two-way `wi
 To introduce a new browser API capability (e.g. storage access, notification triggers):
 1. Register the permission signature keyword in `src/lib/commands.ts`.
 2. Add capability mapping and mock definitions in `src/lib/localScripts.ts` (for test execution).
-3. Extend the IIFE compilation proxy layer in `entrypoints/background/index.ts`.
+3. Extend the IIFE compilation proxy layer in `src/lib/localScripts.ts`.
 4. Update the sandbox type references in `docs/api-guide.md`.

@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-05-21
+Last updated: 2026-05-22
 
 ## Repository Shape
 
@@ -9,7 +9,7 @@ Burst is now structured as a small monorepo:
 - `entrypoints/`: WXT extension entrypoints for background, content script, and popup.
 - `src/lib/`: shared product/domain code used by both the extension and registry website.
 - `src/ui/`: extension UI components and isolated content-script styling.
-- `apps/registry/`: registry website scaffold built with Vite + React.
+- `apps/registry/`: registry website and registry API built with Vite + React, Bun, and a Worker-compatible request handler.
 - `docs/`: product status, roadmap, and architecture notes.
 
 The registry website should live outside WXT entrypoints because it is a normal web app with different routing, deployment, authentication, and server/API needs. Keeping it in `apps/registry` lets the extension and website share types while avoiding extension build constraints.
@@ -33,9 +33,9 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Palette-triggered local scripts report started/complete/error status back to the palette; pages loaded before registration now show a reload instruction instead of failing silently.
 - Dashboard source check confirms the required `export default function run(context) { ... }` shape without using `eval`.
 - Interactive Dashboard Test Harness with Mock URL, Mock Title, Mock Selection, Mock DOM HTML, real-time capability badges, and scrollable console/execution log terminal.
-- Registry website scaffold with marketplace layout, dynamic mock command listings, and query-based search.
+- Registry website with landing catalog, authenticated app workspace, guest-browseable Discover flow, dynamic command listings, and query-based search.
 - Async Registry API Client layer in `src/lib/registryApi.ts` simulating network latency with mock commands, audit reports, and publisher profiles.
-- Tabbed Command Inspector in Registry Web App showing Details, Audit Report verification checklists, and verified Publisher profiles.
+- Tabbed Command Inspector in Registry Web App showing Details, Audit Report verification checklists, source preview, install/pin controls, and verified Publisher profiles.
 - Minimal `burst.command.json` v1 manifest contract with sample manifest validation.
 - Manifest package checks for HTTPS source URLs, safe relative entrypoints, archive integrity metadata, and semantic versions.
 - Bun test coverage for host matching, local script match conversion, user script code generation, palette ordering, management command discovery, script capabilities detection, and mock Registry API calls.
@@ -49,30 +49,36 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Static analysis audit engine (Phase 3: Trust and Audit) implementing client-side regex heuristics for host scope, sensitive APIs, remote code evaluation, outgoing network requests, and obfuscation signatures.
 - Static Security Audit checklist UI panels integrated dynamically inside the extension dashboard script editor and the command palette warning consent overlay.
 - Verified publisher credentials registration and publishing workflow (Phase 2) with verified sources checks.
-- Command publishing flow UI wizard with live static audit analysis and pre-release scanner checklists.
+- Command publishing flow UI wizard with live static audit analysis, permission declarations, publisher verification checks, and pre-release scanner checklists.
 - Simulated cryptographic package signature verification and manifest integrity checks in the registry audit console.
 - Persisted user settings (dark mode theme preferences, update updates configuration, local cache resets) on the settings dashboard.
 - Browser extension premium brand logo SVG asset integrated into the popup, dashboard, and registry header views.
 - Sandbox-isolated user script runtime execution wrappers shadowing page globals (`document`, `window`, `navigator`, `location`) using parameter-bound IIFE scopes and capability-gated explicit APIs (page, selection, clipboard, toast).
 - Premium extension options settings page and syncing mechanism for Theme (Light/Dark/System), Alignment (Top/Center), Backdrop Close, Developer Logging, and Consent Revocation.
-- Stable public command API documented and capability-gated in sandboxed runtime executions.
+- Stable public command API documented and capability-gated in sandboxed runtime executions, including custom list rendering and custom list actions.
 - Worker-compatible registry backend with shared API handlers and D1-backed persistence for commands, publishers, and session-based authentication.
 - Decentralized custom Git registries list in the Extension Dashboard, stored in Chrome local storage.
 - GitHub Raw manifest parser fetching and installing commands from external git repositories.
 - Unified Update Checker dashboard panel checking versions and providing one-click updates for official and custom Git registry scripts.
-- Sleek macOS-inspired visual redesign across all user-facing pages (Popup, Options, Dashboard, Shadow DOM Command Palette, and Registry Web App) featuring dynamic light/dark/system theme propagation, CodeMirror theme synchronization, glassmorphism, and keycap badges.
+- Sleek macOS-inspired visual redesign across all user-facing pages (Popup, Options, Dashboard, Shadow DOM Command Palette, and Registry Web App) featuring dynamic light/dark/system theme propagation, CodeMirror theme synchronization, compact workspace shells, and keycap badges.
+- Registry workspace has been reorganized to match the extension dashboard baseline: compact sidebar, concise toolbar status, direct Discover table + inspector workflow, and reduced duplicate summary surfaces.
+- Registry app supports guest catalog browsing while keeping publishing and account management behind authenticated publisher sessions.
 - Dashboard layout redesigned into a split-pane IDE workspace resolving editor overlapping issues.
 - Refactored dropdown controls like IconSelect and LocalScriptIcon using Tailwind CSS to emulate premium Shadcn UI select patterns.
 - Expanded VitePress documentation with comprehensive guides covering decentralized Git registries, D1-backed registry schemas, REST API endpoints, and a new Project Architecture & Developer Guide.
 
 ## In Progress
 
-- Registry dashboard UI refinement: stronger workspace hierarchy, session header, and user-management polish.
-- Registry account sign-in: GitHub OAuth session status endpoints are in place, and the registry now uses the real OAuth flow.
+- Registry website hardening: browser-level regression coverage, production OAuth/D1 validation, and deployment polish.
+- Registry dashboard polish beyond Discover/Publish: Users, Audits, and Settings still need the same compact dashboard baseline applied consistently.
 
 ## Not Implemented Yet
 
-- None.
+- Browser tests for the content palette and registry website.
+- CI workflow for typecheck, build, lint, package validation, and browser regression runs.
+- Chrome/Firefox release packaging automation.
+- Production GitHub OAuth secret configuration and deployed Worker/D1 smoke testing.
+- Migration/versioning for local script records after extension distribution.
 
 ## Known Tradeoffs
 
@@ -82,6 +88,8 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Local script import currently replaces the full local script list after confirmation instead of merging records.
 - The dashboard bundle is larger after adding CodeMirror 6. It is isolated to the dashboard page, not the content script.
 - GitHub OAuth secrets are still required in production before sign-in becomes active on the deployed Worker.
+- The registry backend can run against memory or D1 storage, but production deployment still needs environment-level validation.
+- Some registry UI panels are more mature than others: Discover and Publish are closest to the dashboard baseline; Users, Audits, and Settings are functional but need further workflow consolidation.
 
 ## Verification Baseline
 

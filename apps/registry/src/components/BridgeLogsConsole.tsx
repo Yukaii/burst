@@ -29,9 +29,6 @@ export function BridgeLogsConsole({
             <div className="flex items-center gap-2 text-white">
               <Terminal className="size-4 text-sky-500 animate-pulse" />
               <span className="text-xs font-bold tracking-tight">Bridge Handshake Monitor</span>
-              <kbd className="bg-slate-900 border border-slate-800 text-[8px] text-slate-500 px-1 py-0.2 rounded font-mono select-none">
-                ⌥L
-              </kbd>
             </div>
             <div className="flex items-center gap-1.5">
               <button
@@ -93,12 +90,6 @@ export function BridgeLogsConsole({
         >
           <Terminal className="size-4 text-sky-500" />
           <span>Bridge Logs</span>
-          <kbd className="bg-slate-800 border border-slate-700 text-[9px] text-slate-400 px-1 py-0.2 rounded font-mono select-none">
-            ⌥L
-          </kbd>
-          {logs.length > 0 && (
-            <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-          )}
         </button>
       )}
     </div>

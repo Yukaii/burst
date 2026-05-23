@@ -75,11 +75,8 @@ export function DiscoverPanel({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search website, publisher, permission, or use case"
-            className="pl-10 pr-12 h-9 w-full bg-background border-border rounded-lg text-xs font-semibold focus-visible:ring-ring"
+            className="pl-10 pr-3 h-9 w-full bg-background border-border rounded-lg text-xs font-semibold focus-visible:ring-ring"
           />
-          <kbd className="registry-control-kbd">
-            ⌘K
-          </kbd>
         </div>
         <Button
           className="h-9 px-3 rounded-md font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 text-xs shadow-sm transition-colors cursor-pointer border-none shrink-0"
@@ -200,32 +197,6 @@ export function DiscoverPanel({
               <Search className="size-8 text-slate-300 dark:text-slate-700" />
               <strong className="text-sm font-bold text-slate-900 dark:text-white mt-1">No registry commands match</strong>
               <span className="text-xs text-slate-400 dark:text-slate-500 max-w-sm leading-relaxed">Try searching for a different website matching pattern or publisher name.</span>
-            </div>
-          )}
-
-          {filteredCommands.length > 0 && (
-            <div className="registry-table-footer">
-              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                <span className="flex items-center gap-1.5">
-                  <kbd className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-1 py-0.2 rounded shadow-sm font-mono text-[9px]">↑</kbd>
-                  <kbd className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-1 py-0.2 rounded shadow-sm font-mono text-[9px]">↓</kbd>
-                  Navigate
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <kbd className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-1 py-0.2 rounded shadow-sm font-mono text-[9px]">↵</kbd>
-                  Install/Uninstall
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <kbd className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-1 py-0.2 rounded shadow-sm font-mono text-[9px]">Esc</kbd>
-                  Deselect
-                </span>
-              </div>
-              <div className="flex gap-x-4">
-                <span className="flex items-center gap-1.5">
-                  <kbd className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-1 py-0.2 rounded shadow-sm font-mono text-[9px]">⌥ 1-5</kbd>
-                  Switch Tabs
-                </span>
-              </div>
             </div>
           )}
         </div>

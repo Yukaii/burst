@@ -9,11 +9,14 @@
 
 ## In Progress
 
-- None.
+- Registry website hardening and workflow consolidation.
+- Browser-level regression coverage for the registry website and extension command palette.
 
 ## Next Up
 
 - Add browser tests for the content palette and registry website (Phase 5: Quality Loop).
+- Apply the extension dashboard baseline to remaining registry panels: Users, Audits, and Settings.
+- Validate production Worker/D1/OAuth deployment with real secrets and session cookies.
 
 ## Phase 1: Registry Contract
 
@@ -25,7 +28,7 @@
 
 ## Phase 2: Identity and Publishing
 
-- Add user sign-in to the registry website. (In progress - GitHub OAuth login flow and session endpoints are implemented; production secrets still need to be configured.)
+- Add user sign-in to the registry website. (Mostly done - GitHub OAuth login flow and session endpoints are implemented; production secrets and deployed Worker validation still need to be configured.)
 - Add publisher profiles and verified source ownership. (Done - verified domain sources list and ownership logic implemented)
 - Build the publish use case flow. (Done - publishing wizard form UI implemented)
 - Require source URL, manifest validation, permission declaration, and package integrity metadata. (Done - wizard validation, permission checkbox, and pre-release scanner checklists implemented)
@@ -45,7 +48,7 @@
 - Add extension settings for palette behavior while leaving global shortcut assignment in Chrome's shortcut UI. (Done - premium Options panel and storage sync implemented)
 - Design the command execution boundary. (Done - shadow DOM warning consent boundary overlay implemented)
 - Require explicit user consent before granting sensitive permissions. (Done - persistent consent grants storage implemented)
-- Add safe runtime APIs for page DOM reads, selected text, clipboard writes, captures, and connector calls. (Done - capability-gated page, selection, clipboard, toast wrappers and page globals shadowing IIFE implemented)
+- Add safe runtime APIs for page DOM reads, selected text, clipboard writes, captures, custom lists, custom list actions, and connector calls. (Done - capability-gated page, selection, clipboard, toast, list wrappers and page globals shadowing IIFE implemented)
 
 ## Phase 4.1: Local Script Data Model
 
@@ -54,7 +57,7 @@
 - Add enable/disable/delete actions. Done.
 - Expose stored local scripts inside the command palette discovery list. Done for enabled scripts.
 - Add import/export for local script backup and review. Done.
-- Add runtime execution with an explicit API surface instead of raw page globals. (Done - sandboxed runtime context with page, selection, clipboard, toast proxies and document/window/navigator/location shadowing IIFE implemented)
+- Add runtime execution with an explicit API surface instead of raw page globals. (Done - sandboxed runtime context with page, selection, clipboard, toast, list proxies and document/window/navigator/location shadowing IIFE implemented)
 
 ## Phase 5: Quality Loop
 
@@ -63,6 +66,7 @@
 - Add browser tests for the content palette and registry website.
 - Add CI for typecheck, build, lint, and package validation.
 - Add release packaging for Chrome and Firefox.
+- Add production smoke tests for Worker/D1/OAuth registry deployment.
 
 ## Phase 6: Sleek macOS Visual Redesign (Done)
 

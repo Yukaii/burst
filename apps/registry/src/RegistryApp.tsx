@@ -38,6 +38,8 @@ const guestSessionUser: RegistrySessionUser = {
   role: 'member',
 };
 
+const bridgeClientId = `registry-${Math.random().toString(36).slice(2)}`;
+
 export function RegistryApp() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authConfig, setAuthConfig] = useState<RegistryAuthConfig | null>(null);
@@ -65,6 +67,7 @@ export function RegistryApp() {
   const [filterCategory, setFilterCategory] = useState<'all' | 'verified' | 'high_risk' | 'installed'>('all');
   const [logs, setLogs] = useState<HandshakeLog[]>([]);
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
+  const [bridgeConnected, setBridgeConnected] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -97,32 +100,11 @@ export function RegistryApp() {
 
   const isGuest = currentUser.handle === 'guest';
   
-  const dashboardCopy: Record<
-    'Discover' | 'Publish' | 'Users' | 'Audits' | 'Settings',
-    { title: string; description: string }
-  > = {
-    Discover: {
-      title: 'Browse the public registry',
-      description: 'Search commands, compare publishers, and inspect risk labels before anything reaches the extension.',
-    },
-    Publish: {
-      title: 'Prepare a command for review',
-      description: 'Draft a command, declare its capabilities, and run the audit before it gets indexed.',
-    },
-    Users: {
-      title: 'Manage publisher identity',
-      description: 'Review accounts, verified sources, and role assignments in one place.',
-    },
-    Audits: {
-      title: 'Review security checks',
-      description: 'Inspect the static analysis output that decides whether a command passes or fails.',
-    },
-    Settings: {
-      title: 'Tune the workspace',
-      description: 'Keep the registry interface predictable for moderators and publishers.',
-    },
-  };
-  const dashboardState = dashboardCopy[navTab];
+  const preferredTheme = typeof window === 'undefined'
+    ? 'dark'
+    : localStorage.getItem('burst-theme') === 'light'
+    ? 'light'
+    : 'dark';
 
   useEffect(() => {
     let active = true;
@@ -154,37 +136,11 @@ export function RegistryApp() {
     };
   }, [isGuest]);
 
-  const dashboardMetrics: Record<
-    'Discover' | 'Publish' | 'Users' | 'Audits' | 'Settings',
-    Array<{ label: string; value: string }>
-  > = {
-    Discover: [
-      { label: 'Commands', value: registryCommandsData.length.toString() },
-      { label: 'Audited', value: registryCommandsData.filter((command) => command.trustLevel !== 'community').length.toString() },
-      { label: 'Sensitive', value: registryCommandsData.filter((command) => command.risk === 'high').length.toString() },
-    ],
-    Publish: [
-      { label: 'Verified sources', value: currentUser.handle === 'guest' ? '0' : currentUser.verifiedSources.length.toString() },
-      { label: 'Role', value: currentUser.role || 'publisher' },
-      { label: 'Audit checks', value: '5' },
-    ],
-    Users: [
-      { label: 'Publishers', value: registryUserStats ? registryUserStats.total.toString() : '…' },
-      { label: 'Admins', value: registryUserStats ? registryUserStats.admins.toString() : '…' },
-      { label: 'Verified', value: registryUserStats ? registryUserStats.verified.toString() : '…' },
-    ],
-    Audits: [
-      { label: 'Pass', value: registryCommandsData.filter((command) => command.trustLevel === 'verified').length.toString() },
-      { label: 'Review', value: registryCommandsData.filter((command) => command.trustLevel === 'reviewed').length.toString() },
-      { label: 'Warnings', value: registryCommandsData.filter((command) => command.risk !== 'low').length.toString() },
-    ],
-    Settings: [
-      { label: 'Theme', value: 'Adaptive' },
-      { label: 'Session', value: currentUser.handle === 'guest' ? 'Guest' : 'Signed in' },
-      { label: 'Storage', value: 'Local sync' },
-    ],
-  };
-  const workspaceMetrics = dashboardMetrics[navTab];
+  const workspaceStatus = [
+    currentUser.handle === 'guest' ? 'Guest session' : currentUser.role || 'publisher',
+    `${registryCommandsData.length} commands`,
+    `${registryCommandsData.filter((command) => command.trustLevel !== 'community').length} audited`,
+  ];
 
   useEffect(() => {
     let active = true;
@@ -265,21 +221,26 @@ export function RegistryApp() {
 
   // Hook Handshake Event Logging
   const sendBridgeMessage = (message: { type: string; [key: string]: any }) => {
+    const outboundMessage = {
+      ...message,
+      bridgeClientId,
+    };
     const newLog: HandshakeLog = {
       id: Math.random().toString(36).substring(2, 9),
       timestamp: new Date().toLocaleTimeString(),
       direction: 'out',
       type: message.type,
-      payload: message,
+      payload: outboundMessage,
     };
     setLogs((prev) => [newLog, ...prev].slice(0, 100));
-    window.postMessage(message, '*');
+    window.postMessage(outboundMessage, '*');
   };
 
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.source !== window || !event.data || typeof event.data !== 'object') return;
       const { type } = event.data;
+      if (event.data.bridgeClientId === bridgeClientId) return;
 
       if (type && type.startsWith('burst:')) {
         const newLog: HandshakeLog = {
@@ -293,6 +254,7 @@ export function RegistryApp() {
       }
 
       if (type === 'burst:installed-commands-response') {
+        setBridgeConnected(true);
         setInstalledCommandIds(event.data.installedIds || []);
         setPinnedCommandIds(event.data.pinnedIds || []);
       }
@@ -484,7 +446,7 @@ export function RegistryApp() {
   }
 
   return (
-    <div className="registry-app-shell dark">
+    <div className={`registry-app-shell ${preferredTheme === 'dark' ? 'dark' : ''}`}>
       <Sidebar
         navTab={navTab}
         setNavTab={setNavTab}
@@ -502,15 +464,10 @@ export function RegistryApp() {
               <span>/</span>
               <strong>{navTab}</strong>
             </div>
-            <h1>{dashboardState.title}</h1>
-            <p>{dashboardState.description}</p>
           </div>
-          <div className="registry-toolbar-metrics" aria-label="Workspace metrics">
-            {workspaceMetrics.map((metric) => (
-              <span key={metric.label}>
-                <strong>{metric.value}</strong>
-                <em>{metric.label}</em>
-              </span>
+          <div className="registry-toolbar-status" aria-label="Workspace status">
+            {workspaceStatus.map((item) => (
+              <span key={item}>{item}</span>
             ))}
           </div>
         </header>
@@ -578,7 +535,7 @@ export function RegistryApp() {
 
         {navTab === 'Audits' && <AuditsPanel />}
 
-        {navTab === 'Settings' && <SettingsPanel />}
+        {navTab === 'Settings' && <SettingsPanel bridgeConnected={bridgeConnected} />}
       </main>
 
       <BridgeLogsConsole

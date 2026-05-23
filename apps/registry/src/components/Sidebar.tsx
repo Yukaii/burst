@@ -6,7 +6,7 @@ import {
   Settings,
   Info,
   LogOut,
-  PanelLeft
+  ChevronUp
 } from 'lucide-react';
 import type { RegistrySessionUser } from '@/src/lib/registryApi';
 import logoUrl from '@/assets/logo.svg';
@@ -45,32 +45,6 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="registry-sidebar-session">
-        <div className="registry-session-main">
-          <div className="registry-session-avatar">
-            {currentUser.avatarInitials}
-          </div>
-          <div>
-            <strong>{currentUser.name}</strong>
-            <span>
-              @{currentUser.handle} {currentUser.githubLogin ? `• ${currentUser.githubLogin}` : ''}
-            </span>
-          </div>
-        </div>
-        <div className="registry-session-footer">
-          <span>
-            {currentUser.role || 'publisher'}
-          </span>
-          <button 
-            type="button" 
-            onClick={() => void onLogout()}
-          >
-            <LogOut />
-            Log out
-          </button>
-        </div>
-      </div>
-
       <nav className="registry-sidebar-nav">
         {navItems.map((item) => {
           const isActive = item === navTab;
@@ -99,28 +73,32 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="registry-sidebar-shortcuts">
-          <div>
-            <span>Search Registry</span>
-            <kbd>⌘K</kbd>
+      <details className="registry-sidebar-session">
+        <summary className="registry-session-main">
+          <div className="registry-session-avatar">
+            {currentUser.avatarInitials}
           </div>
           <div>
-            <span>Bridge Logs</span>
-            <kbd>⌥L</kbd>
+            <strong>{currentUser.name}</strong>
+            <span>
+              @{currentUser.handle} {currentUser.githubLogin ? `• ${currentUser.githubLogin}` : ''}
+            </span>
           </div>
-          <div>
-            <span>Navigate list</span>
-            <kbd>↑↓</kbd>
-          </div>
-          <div>
-            <span>Switch tabs</span>
-            <kbd>⌥1-5</kbd>
-          </div>
-          <div>
-            <span>Extension parity</span>
-            <PanelLeft />
-          </div>
-      </div>
+          <ChevronUp className="registry-session-chevron" />
+        </summary>
+        <div className="registry-session-footer">
+          <span>
+            {currentUser.role || 'publisher'}
+          </span>
+          <button
+            type="button"
+            onClick={() => void onLogout()}
+          >
+            <LogOut />
+            Log out
+          </button>
+        </div>
+      </details>
     </aside>
   );
 }

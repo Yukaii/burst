@@ -268,10 +268,8 @@ export function LandingPage({
           </div>
 
           <div className="flex items-center justify-between px-5 py-3 bg-slate-50/50 border-t border-slate-100 text-[11px] text-slate-500 font-semibold">
-            <span>Press <kbd className="bg-white border border-slate-200 rounded px-1.5 py-0.5 font-mono shadow-[0_1px_1px_rgba(0,0,0,0.05)]">↵</kbd> to run</span>
-            <div className="flex gap-1">
-              <span>Navigate with <kbd className="bg-white border border-slate-200 rounded px-1.5 py-0.5 font-mono shadow-[0_1px_1px_rgba(0,0,0,0.05)]">↑</kbd><kbd className="bg-white border border-slate-200 rounded px-1.5 py-0.5 font-mono shadow-[0_1px_1px_rgba(0,0,0,0.05)]">↓</kbd></span>
-            </div>
+            <span>Context-aware commands ready for review</span>
+            <span>Verified before install</span>
           </div>
         </div>
       </header>

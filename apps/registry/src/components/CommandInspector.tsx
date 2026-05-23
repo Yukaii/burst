@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { BurstCommand } from '@/src/lib/commands';
 import type { AuditReport, PublisherProfile } from '@/src/lib/registryApi';
 import logoUrl from '@/assets/logo.svg';
@@ -32,6 +33,76 @@ const riskCopy: Record<BurstCommand['risk'], string> = {
   medium: 'Medium',
   high: 'High',
 };
+
+const javascriptKeywords = new Set([
+  'async',
+  'await',
+  'break',
+  'case',
+  'catch',
+  'const',
+  'continue',
+  'default',
+  'else',
+  'export',
+  'false',
+  'for',
+  'from',
+  'function',
+  'if',
+  'import',
+  'let',
+  'new',
+  'null',
+  'return',
+  'throw',
+  'true',
+  'try',
+  'undefined',
+  'while',
+]);
+
+function highlightJavaScript(source: string) {
+  const tokenPattern = /(\/\/.*|\/\*[\s\S]*?\*\/|`(?:\\[\s\S]|[^`])*`|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|\b\d+(?:\.\d+)?\b|\b[A-Za-z_$][\w$]*\b|[{}()[\].,;:+\-*/%=<>!?|&]+)/g;
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = tokenPattern.exec(source)) !== null) {
+    const token = match[0];
+    if (match.index > cursor) {
+      nodes.push(source.slice(cursor, match.index));
+    }
+
+    let className = 'syntax-token';
+    if (token.startsWith('//') || token.startsWith('/*')) {
+      className += ' syntax-comment';
+    } else if (token.startsWith('"') || token.startsWith("'") || token.startsWith('`')) {
+      className += ' syntax-string';
+    } else if (/^\d/.test(token)) {
+      className += ' syntax-number';
+    } else if (javascriptKeywords.has(token)) {
+      className += ' syntax-keyword';
+    } else if (/^[{}()[\].,;:+\-*/%=<>!?|&]+$/.test(token)) {
+      className += ' syntax-punctuation';
+    } else {
+      className += ' syntax-identifier';
+    }
+
+    nodes.push(
+      <span className={className} key={`${match.index}-${token}`}>
+        {token}
+      </span>
+    );
+    cursor = match.index + token.length;
+  }
+
+  if (cursor < source.length) {
+    nodes.push(source.slice(cursor));
+  }
+
+  return nodes;
+}
 
 export function ChecklistItem({
   label,
@@ -67,7 +138,7 @@ export function ChecklistItem({
 
 export function EmptyInspector() {
   return (
-    <aside className="flex flex-col gap-6 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm h-full" aria-label="Registry status">
+    <aside className="registry-inspector-overlay p-6 gap-6" aria-label="Registry status">
       <div className="flex items-start gap-4 border-b border-slate-100 dark:border-slate-800/60 pb-5">
         <img className="size-11 rounded-xl object-cover" src={logoUrl} alt="Burst Logo" />
         <div>
@@ -126,7 +197,7 @@ export function CommandInspector({
 
   if (loading) {
     return (
-      <aside className="flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm h-[400px]" aria-label="Loading details">
+      <aside className="registry-inspector-overlay items-center justify-center p-8" aria-label="Loading details">
         <RefreshCw className="size-6 animate-spin text-sky-500" />
         <span className="text-sm font-semibold text-slate-400 dark:text-slate-500 mt-3">Loading details...</span>
       </aside>
@@ -155,8 +226,8 @@ export function CommandInspector({
   };
 
   return (
-    <aside className="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm h-full overflow-hidden" aria-label="Selected command audit details">
-      <div className="p-6 border-b border-slate-100 dark:border-slate-800/60 flex items-start gap-4 shrink-0 bg-slate-50/50 dark:bg-slate-950/20">
+    <aside className="registry-inspector-overlay" aria-label="Selected command audit details">
+      <div className="registry-inspector-header">
         <div className="size-11 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center font-extrabold text-sm border border-sky-500/20 shrink-0">
           {command.publisher.avatarInitials}
         </div>
@@ -166,17 +237,17 @@ export function CommandInspector({
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'audit' | 'publisher')} className="flex flex-col flex-1 min-h-0">
-        <div className="px-6 border-b border-slate-100 dark:border-slate-800/50 shrink-0">
-          <TabsList className="flex gap-4 bg-transparent p-0 rounded-none w-auto border-none">
-            <TabsTrigger value="details" className="relative h-10 bg-transparent px-1 py-2 text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 data-[state=active]:text-sky-500 dark:data-[state=active]:text-sky-400 data-[state=active]:border-b-2 data-[state=active]:border-sky-500 dark:data-[state=active]:border-sky-400 rounded-none shadow-none border-none transition-all cursor-pointer">Details</TabsTrigger>
-            <TabsTrigger value="audit" className="relative h-10 bg-transparent px-1 py-2 text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 data-[state=active]:text-sky-500 dark:data-[state=active]:text-sky-400 data-[state=active]:border-b-2 data-[state=active]:border-sky-500 dark:data-[state=active]:border-sky-400 rounded-none shadow-none border-none transition-all cursor-pointer">Audit Report</TabsTrigger>
-            <TabsTrigger value="publisher" className="relative h-10 bg-transparent px-1 py-2 text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 data-[state=active]:text-sky-500 dark:data-[state=active]:text-sky-400 data-[state=active]:border-b-2 data-[state=active]:border-sky-500 dark:data-[state=active]:border-sky-400 rounded-none shadow-none border-none transition-all cursor-pointer">Publisher</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'details' | 'audit' | 'publisher')} className="registry-inspector-tabs">
+        <div className="registry-inspector-tabbar">
+          <TabsList className="registry-tabs-list">
+            <TabsTrigger value="details" className="registry-tab-trigger">Details</TabsTrigger>
+            <TabsTrigger value="audit" className="registry-tab-trigger">Audit</TabsTrigger>
+            <TabsTrigger value="publisher" className="registry-tab-trigger">Publisher</TabsTrigger>
           </TabsList>
         </div>
 
-        <div className="flex-1 overflow-y-auto min-h-0">
-          <TabsContent value="details" className="p-6 m-0 flex flex-col gap-6">
+        <div className="registry-inspector-scroll">
+          <TabsContent value="details" className="registry-tab-panel">
             <div className="flex gap-2">
               <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
                 command.trustLevel === 'verified' ? 'bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 border-cyan-100 dark:border-cyan-900/30' :
@@ -191,15 +262,15 @@ export function CommandInspector({
               }`}>{riskCopy[command.risk]} risk</span>
             </div>
 
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-slate-800/40 pb-3">
-                <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Publisher</span>
+            <div className="registry-inspector-section">
+              <div className="registry-inspector-field">
+                <span>Publisher</span>
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                   {command.publisher.name} <span className="text-slate-400 dark:text-slate-500 font-semibold">@{command.publisher.handle}</span>
                 </span>
               </div>
-              <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-slate-800/40 pb-3">
-                <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Source</span>
+              <div className="registry-inspector-field">
+                <span>Source</span>
                 <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                   <a href={command.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline inline-flex items-center gap-1">
                     {command.sourceUrl.replace('https://github.com/', '')}
@@ -207,14 +278,14 @@ export function CommandInspector({
                   </a>
                 </span>
               </div>
-              <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-slate-800/40 pb-3">
-                <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Website Match</span>
+              <div className="registry-inspector-field">
+                <span>Website Match</span>
                 <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 font-mono">{command.matchPatterns.join(', ')}</span>
               </div>
             </div>
 
-            <div className="flex flex-col gap-2.5">
-              <h3 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Requested permissions</h3>
+            <div className="registry-inspector-section">
+              <h3 className="registry-section-label">Requested permissions</h3>
               <div className="flex flex-wrap gap-1.5">
                 {command.permissions.map((permission) => {
                   const isSensitive = ['Network access', 'Read page DOM'].includes(permission);
@@ -235,7 +306,7 @@ export function CommandInspector({
             </div>
 
             {/* CLI Command Installation Panel */}
-            <div className="flex flex-col gap-2.5 mt-2 bg-slate-50 dark:bg-slate-950 p-4 border border-slate-100 dark:border-slate-900/60 rounded-xl shadow-sm">
+            <div className="registry-inspector-section registry-command-snippet">
               <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
                 <Terminal className="size-3.5 text-sky-500" />
                 <strong className="text-[10px] font-extrabold uppercase tracking-widest">CLI Installation</strong>
@@ -254,7 +325,7 @@ export function CommandInspector({
             </div>
 
             {/* Script Source Preview */}
-            <div className="flex flex-col gap-2.5">
+            <div className="registry-inspector-section">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
                   <Code className="size-3.5 text-sky-500" />
@@ -278,16 +349,16 @@ export function CommandInspector({
                   )}
                 </button>
               </div>
-              <pre className="p-4 bg-slate-950 text-slate-100 dark:bg-slate-950/80 rounded-xl font-mono text-xs overflow-x-auto select-all max-h-[300px] border border-slate-800">
-                <code>{sourceCode}</code>
+              <pre className="registry-code-preview">
+                <code>{highlightJavaScript(sourceCode)}</code>
               </pre>
             </div>
           </TabsContent>
 
-          <TabsContent value="audit" className="p-6 m-0 flex flex-col gap-6">
+          <TabsContent value="audit" className="registry-tab-panel">
             {auditReport ? (
               <>
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/60 rounded-xl flex flex-col gap-2">
+                <div className="registry-inspector-section">
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Audit Summary</h3>
                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase border ${
@@ -305,8 +376,8 @@ export function CommandInspector({
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3">
-                  <h3 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Static Review Checks</h3>
+                <div className="registry-inspector-section">
+                  <h3 className="registry-section-label">Static Review Checks</h3>
                   <div className="flex flex-col gap-2.5">
                     <ChecklistItem
                       label="Host Scope Restrictions"
@@ -349,7 +420,7 @@ export function CommandInspector({
             )}
           </TabsContent>
 
-          <TabsContent value="publisher" className="p-6 m-0 flex flex-col gap-6">
+          <TabsContent value="publisher" className="registry-tab-panel">
             {publisherProfile ? (
               <>
                 <div className="flex items-center gap-4 border-b border-slate-100 dark:border-slate-800/40 pb-5">
@@ -374,8 +445,8 @@ export function CommandInspector({
                 </div>
 
                 {publisherProfile.bio && (
-                  <div className="flex flex-col gap-1.5">
-                    <h3 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Biography</h3>
+                  <div className="registry-inspector-section">
+                    <h3 className="registry-section-label">Biography</h3>
                     <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-semibold">{publisherProfile.bio}</p>
                   </div>
                 )}
@@ -394,8 +465,8 @@ export function CommandInspector({
                 </div>
 
                 {publisherProfile.verifiedSources.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    <h3 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Verified Sources</h3>
+                  <div className="registry-inspector-section">
+                    <h3 className="registry-section-label">Verified Sources</h3>
                     <ul className="flex flex-col gap-1.5 list-none p-0 m-0">
                       {publisherProfile.verifiedSources.map((source) => (
                         <li key={source} className="text-xs font-semibold">
@@ -419,7 +490,7 @@ export function CommandInspector({
         </div>
       </Tabs>
 
-      <div className="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800/60 flex gap-3 shrink-0">
+      <div className="registry-inspector-actions">
         <Button
           variant={isInstalled ? "destructive" : "default"}
           className="flex-1 font-bold text-xs h-9 cursor-pointer border-none"

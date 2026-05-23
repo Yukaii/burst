@@ -11,14 +11,14 @@ export function AuditsPanel() {
   const report = analyzeScriptCode(testCode, patterns.split(',').map((p) => p.trim()));
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-slate-800/60 pb-4">
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Static Security Audits</h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Inspect the guidelines, security parameters, and analyze custom execution script blocks.</p>
+    <div className="registry-secondary-page">
+      <div className="registry-section-heading">
+        <h2>Static Security Audits</h2>
+        <p>Inspect the guidelines, security parameters, and analyze custom execution script blocks.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 flex flex-col gap-6">
+      <div className="registry-secondary-grid">
+        <div className="registry-card lg:col-span-2">
           <div className="flex flex-col gap-1">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">Interactive Audit Sandbox</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">Paste or edit code below to instantly inspect rule triggers and risk metrics.</p>
@@ -66,7 +66,7 @@ export function AuditsPanel() {
         </div>
 
         <div className="lg:col-span-1 flex flex-col gap-6">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 flex flex-col gap-4">
+          <div className="registry-card">
             <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-slate-800/60 pb-3">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">Static Heuristic Audit Guidelines</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">Burst registry runs an automated static checker mapping scripts to their security postures.</p>
