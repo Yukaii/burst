@@ -328,7 +328,20 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
           return errorResponse('Unauthorized publishing action', 401);
         }
 
-        const created = await store.createCommand(body);
+        let created: Awaited<ReturnType<RegistryStore['createCommand']>>;
+        try {
+          created = await store.createCommand(body);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to publish command';
+          if (message.includes('already taken')) {
+            return errorResponse(message, 409);
+          }
+          if (message.includes('Publisher profile not found')) {
+            return errorResponse(message, 404);
+          }
+          throw error;
+        }
+
         return jsonResponse(created);
       }
 
