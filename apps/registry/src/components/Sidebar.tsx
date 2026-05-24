@@ -141,12 +141,10 @@ export function Sidebar({
                 {currentUser.role || 'publisher'}
               </span>
             </DropdownMenuItem>
-            {!isGuest && (
-              <DropdownMenuItem onSelect={() => setNavTab('Profile')}>
-                <User />
-                Profile
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onSelect={() => setNavTab('Profile')}>
+              <User />
+              Profile
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setNavTab('Settings')}>
               <Settings />
               Settings

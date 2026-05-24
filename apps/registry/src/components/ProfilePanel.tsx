@@ -4,7 +4,7 @@ import type {
   PublisherProfile 
 } from '@/src/lib/registryApi';
 import type { BurstCommand } from '@/src/lib/commands';
-import { updateRegistryUser } from '@/src/lib/registryApi';
+import { getRegistryUser, updateRegistryUser } from '@/src/lib/registryApi';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
@@ -39,6 +39,8 @@ export function ProfilePanel({
   const displayHandle = profileHandle.startsWith('@') ? profileHandle : `@${profileHandle}`;
 
   const [saving, setSaving] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [profile, setProfile] = useState<PublisherProfile | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   
   const [draft, setDraft] = useState({
@@ -47,15 +49,48 @@ export function ProfilePanel({
     verifiedSources: '',
   });
 
-  // Load initial draft from current user profile
   useEffect(() => {
-    if (isGuest) return;
-    setDraft({
-      name: currentUser.name || '',
-      bio: (currentUser as PublisherProfile).bio || '',
-      verifiedSources: ((currentUser as PublisherProfile).verifiedSources || []).join('\n'),
-    });
-  }, [currentUser, isGuest]);
+    if (isGuest) {
+      setProfile(null);
+      return;
+    }
+
+    let active = true;
+    setLoadingProfile(true);
+    setNotice(null);
+
+    async function loadProfile() {
+      try {
+        const loadedProfile = await getRegistryUser(profileHandle);
+        if (!active) return;
+        const nextProfile = loadedProfile ?? (currentUser as PublisherProfile);
+        setProfile(nextProfile);
+        setDraft({
+          name: nextProfile.name || '',
+          bio: nextProfile.bio || '',
+          verifiedSources: (nextProfile.verifiedSources || []).join('\n'),
+        });
+      } catch (err) {
+        if (!active) return;
+        const fallbackProfile = currentUser as PublisherProfile;
+        setProfile(fallbackProfile);
+        setDraft({
+          name: fallbackProfile.name || '',
+          bio: fallbackProfile.bio || '',
+          verifiedSources: (fallbackProfile.verifiedSources || []).join('\n'),
+        });
+        setNotice(err instanceof Error ? err.message : 'Failed to load profile details');
+      } finally {
+        if (active) setLoadingProfile(false);
+      }
+    }
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [currentUser, isGuest, profileHandle]);
 
   // Filter commands published by this user
   const myCommands = commands.filter(
@@ -77,6 +112,7 @@ export function ProfilePanel({
           .filter(Boolean),
       });
 
+      setProfile(updated);
       onCurrentUserUpdate(updated);
       setNotice('Successfully saved profile changes.');
     } catch (err) {
@@ -98,7 +134,7 @@ export function ProfilePanel({
     );
   }
 
-  const publisher = currentUser as PublisherProfile;
+  const publisher = profile ?? (currentUser as PublisherProfile);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full min-w-0">
@@ -186,10 +222,10 @@ export function ProfilePanel({
           <Button
             type="button"
             onClick={() => void handleSave()}
-            disabled={saving}
+            disabled={saving || loadingProfile}
             className="font-bold text-xs h-9"
           >
-            {saving ? 'Saving changes...' : 'Save profile changes'}
+            {saving ? 'Saving changes...' : loadingProfile ? 'Loading profile...' : 'Save profile changes'}
           </Button>
         </div>
       </div>
