@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import logoUrl from '@/assets/logo.svg';
 import {
@@ -47,18 +47,41 @@ function OptionsApp() {
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [hasUserScriptsPermission, setHasUserScriptsPermission] = useState<boolean>(true);
 
-  useEffect(() => {
-    function checkPermission() {
-      const hasWxt = typeof browser !== 'undefined' && !!browser.userScripts;
-      const hasChrome = typeof window !== 'undefined' && 'chrome' in window && !!(window as any).chrome?.userScripts;
-      setHasUserScriptsPermission(hasWxt || hasChrome);
-    }
-    checkPermission();
-    window.addEventListener('focus', checkPermission);
-    return () => {
-      window.removeEventListener('focus', checkPermission);
-    };
+  const checkUserScriptsPermission = useCallback(() => {
+    const hasWxt = typeof browser !== 'undefined' && !!browser.userScripts;
+    const hasChrome = typeof window !== 'undefined' && 'chrome' in window && !!(window as any).chrome?.userScripts;
+    const hasPermission = hasWxt || hasChrome;
+    setHasUserScriptsPermission(hasPermission);
+    return hasPermission;
   }, []);
+
+  useEffect(() => {
+    function refreshPermissionState() {
+      const hasPermission = checkUserScriptsPermission();
+      const shouldReloadAfterReturn = window.sessionStorage.getItem('burst-user-scripts-settings-opened') === 'true';
+
+      if (!hasPermission && shouldReloadAfterReturn && document.visibilityState === 'visible') {
+        window.sessionStorage.removeItem('burst-user-scripts-settings-opened');
+        window.location.reload();
+      }
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        refreshPermissionState();
+      }
+    }
+
+    refreshPermissionState();
+    window.addEventListener('focus', refreshPermissionState);
+    window.addEventListener('pageshow', refreshPermissionState);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', refreshPermissionState);
+      window.removeEventListener('pageshow', refreshPermissionState);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [checkUserScriptsPermission]);
 
   useEffect(() => {
     async function init() {
@@ -134,6 +157,14 @@ function OptionsApp() {
     showFeedback('Cleared all security permission grants', 'success');
   }
 
+  function handleOpenExtensionSettings() {
+    window.sessionStorage.setItem('burst-user-scripts-settings-opened', 'true');
+
+    if (typeof browser !== 'undefined' && browser.tabs?.create) {
+      void browser.tabs.create({ url: 'chrome://extensions/?id=' + browser.runtime.id });
+    }
+  }
+
   return (
     <main className="options-shell">
       <section className="options-panel">
@@ -176,11 +207,7 @@ function OptionsApp() {
             <div className="warning-actions">
               <button
                 type="button"
-                onClick={() => {
-                  if (typeof browser !== 'undefined' && browser.tabs?.create) {
-                    void browser.tabs.create({ url: 'chrome://extensions/?id=' + browser.runtime.id });
-                  }
-                }}
+                onClick={handleOpenExtensionSettings}
                 className="btn-warning-action"
               >
                 Open Extension Settings

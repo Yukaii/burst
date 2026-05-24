@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import type { BurstCommand } from '@/src/lib/commands';
 import { CheckCircle2 } from 'lucide-react';
 import logoUrl from '@/assets/logo.svg';
@@ -139,6 +139,7 @@ export function RegistryApp() {
   const [logs, setLogs] = useState<HandshakeLog[]>([]);
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const [bridgeConnected, setBridgeConnected] = useState(false);
+  const bridgeConnectedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -359,6 +360,8 @@ export function RegistryApp() {
     const outboundMessage = {
       ...message,
       bridgeClientId,
+      bridgeRequestId: `request-${Math.random().toString(36).slice(2)}`,
+      bridgeSender: 'registry-app',
     };
     const newLog: HandshakeLog = {
       id: Math.random().toString(36).substring(2, 9),
@@ -375,7 +378,9 @@ export function RegistryApp() {
     const handler = (event: MessageEvent) => {
       if (event.source !== window || !event.data || typeof event.data !== 'object') return;
       const { type } = event.data;
-      if (event.data.bridgeClientId === bridgeClientId) return;
+      if (event.data.bridgeSender === 'registry-app') return;
+      if (event.data.bridgeClientId && event.data.bridgeClientId !== bridgeClientId) return;
+      if (type === 'burst:bridge-ping') return;
 
       if (type && type.startsWith('burst:')) {
         const newLog: HandshakeLog = {
@@ -388,7 +393,13 @@ export function RegistryApp() {
         setLogs((prev) => [newLog, ...prev].slice(0, 100));
       }
 
+      if (type === 'burst:bridge-ready') {
+        bridgeConnectedRef.current = true;
+        setBridgeConnected(true);
+      }
+
       if (type === 'burst:installed-commands-response') {
+        bridgeConnectedRef.current = true;
         setBridgeConnected(true);
         setInstalledCommandIds(event.data.installedIds || []);
         setPinnedCommandIds(event.data.pinnedIds || []);
@@ -396,10 +407,18 @@ export function RegistryApp() {
     };
 
     window.addEventListener('message', handler);
+    sendBridgeMessage({ type: 'burst:bridge-ping' });
     sendBridgeMessage({ type: 'burst:get-installed-commands' });
+
+    const retryTimer = window.setInterval(() => {
+      if (bridgeConnectedRef.current) return;
+      sendBridgeMessage({ type: 'burst:bridge-ping' });
+      sendBridgeMessage({ type: 'burst:get-installed-commands' });
+    }, 1500);
 
     return () => {
       window.removeEventListener('message', handler);
+      window.clearInterval(retryTimer);
     };
   }, []);
 

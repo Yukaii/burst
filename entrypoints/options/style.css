@@ -479,19 +479,27 @@ input:checked + .toggle-slider:before {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .btn-warning-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   outline: 0;
   font-size: 12px;
   font-weight: 600;
-  height: 28px;
+  min-height: 28px;
   padding: 0 12px;
   border-radius: 6px;
   background: #f59e0b;
   color: #000000;
   cursor: pointer;
+  white-space: nowrap;
+  flex: 0 1 auto;
+  max-width: 100%;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
   transition: all 0.15s ease;
 }
@@ -504,6 +512,8 @@ input:checked + .toggle-slider:before {
   font-size: 11px;
   color: #64748b;
   font-style: italic;
+  flex: 1 1 140px;
+  min-width: 0;
 }
 
 @keyframes slideIn {
@@ -545,6 +555,20 @@ input:checked + .toggle-slider:before {
 
   .select-control {
     width: 100%;
+  }
+
+  .warning-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-warning-action {
+    width: 100%;
+  }
+
+  .auto-detect-hint {
+    flex-basis: auto;
   }
 }
 

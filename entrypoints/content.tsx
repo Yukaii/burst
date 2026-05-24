@@ -38,47 +38,89 @@ export default defineContentScript({
 
       const type = String(data.type);
       if (!type.startsWith('burst:')) return;
+      if (isBridgeResponseType(type)) return;
+
+      const bridgeClientId = typeof data.bridgeClientId === 'string' ? data.bridgeClientId : undefined;
+      const bridgeRequestId = typeof data.bridgeRequestId === 'string' ? data.bridgeRequestId : undefined;
+      const bridgeMeta = { bridgeClientId, bridgeRequestId };
+
+      if (type === 'burst:bridge-ping') {
+        window.postMessage({
+          type: 'burst:bridge-ready',
+          extensionId: browser.runtime.id,
+          bridgeSender: 'burst-extension',
+          ...bridgeMeta,
+        }, '*');
+        return;
+      }
 
       if (type === 'burst:get-installed-commands') {
         browser.runtime.sendMessage({ type })
           .then((response) => {
-            window.postMessage({ type: 'burst:installed-commands-response', ...response }, '*');
+            window.postMessage({ type: 'burst:installed-commands-response', ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
           })
-          .catch((err) => console.warn('[Burst] Get installed message failed', err));
+          .catch((err) => postBridgeError(type, err, bridgeMeta));
       } else if (type === 'burst:install-command') {
         const { command } = data as { command: any };
         browser.runtime.sendMessage({ type, command })
           .then((response) => {
-            window.postMessage({ type: 'burst:install-success', commandId: command.id, ...response }, '*');
-            window.postMessage({ type: 'burst:installed-commands-response', ...response }, '*');
+            window.postMessage({ type: 'burst:install-success', commandId: command.id, ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
+            window.postMessage({ type: 'burst:installed-commands-response', ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
           })
-          .catch((err) => console.warn('[Burst] Install message failed', err));
+          .catch((err) => postBridgeError(type, err, bridgeMeta));
       } else if (type === 'burst:uninstall-command') {
         const { commandId } = data as { commandId: string };
         browser.runtime.sendMessage({ type, commandId })
           .then((response) => {
-            window.postMessage({ type: 'burst:uninstall-success', commandId, ...response }, '*');
-            window.postMessage({ type: 'burst:installed-commands-response', ...response }, '*');
+            window.postMessage({ type: 'burst:uninstall-success', commandId, ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
+            window.postMessage({ type: 'burst:installed-commands-response', ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
           })
-          .catch((err) => console.warn('[Burst] Uninstall message failed', err));
+          .catch((err) => postBridgeError(type, err, bridgeMeta));
       } else if (type === 'burst:pin-command') {
         const { commandId } = data as { commandId: string };
         browser.runtime.sendMessage({ type, commandId })
           .then((response) => {
-            window.postMessage({ type: 'burst:pin-success', commandId, ...response }, '*');
-            window.postMessage({ type: 'burst:installed-commands-response', ...response }, '*');
+            window.postMessage({ type: 'burst:pin-success', commandId, ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
+            window.postMessage({ type: 'burst:installed-commands-response', ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
           })
-          .catch((err) => console.warn('[Burst] Pin message failed', err));
+          .catch((err) => postBridgeError(type, err, bridgeMeta));
       } else if (type === 'burst:unpin-command') {
         const { commandId } = data as { commandId: string };
         browser.runtime.sendMessage({ type, commandId })
           .then((response) => {
-            window.postMessage({ type: 'burst:unpin-success', commandId, ...response }, '*');
-            window.postMessage({ type: 'burst:installed-commands-response', ...response }, '*');
+            window.postMessage({ type: 'burst:unpin-success', commandId, ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
+            window.postMessage({ type: 'burst:installed-commands-response', ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
           })
-          .catch((err) => console.warn('[Burst] Unpin message failed', err));
+          .catch((err) => postBridgeError(type, err, bridgeMeta));
       }
     });
   },
 });
 
+function isBridgeResponseType(type: string) {
+  return [
+    'burst:bridge-ready',
+    'burst:bridge-error',
+    'burst:installed-commands-response',
+    'burst:install-success',
+    'burst:uninstall-success',
+    'burst:pin-success',
+    'burst:unpin-success',
+  ].includes(type);
+}
+
+function postBridgeError(
+  requestType: string,
+  err: unknown,
+  bridgeMeta: { bridgeClientId?: string; bridgeRequestId?: string },
+) {
+  const message = err instanceof Error ? err.message : String(err);
+  console.warn(`[Burst] ${requestType} message failed`, err);
+  window.postMessage({
+    type: 'burst:bridge-error',
+    requestType,
+    message,
+    bridgeSender: 'burst-extension',
+    ...bridgeMeta,
+  }, '*');
+}
