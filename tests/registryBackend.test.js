@@ -3,6 +3,7 @@ import { createRegistryHandler } from '../apps/registry/src/registryHandler.ts';
 import { createMemoryRegistryStore } from '../apps/registry/src/registryStore.ts';
 
 const originalFetch = globalThis.fetch;
+const originalConsoleError = console.error;
 
 function jsonRequest(path, init = {}) {
   return new Request(`http://registry.test${path}`, {
@@ -49,6 +50,7 @@ function commandPayload(publisherHandle, overrides = {}) {
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  console.error = originalConsoleError;
 });
 
 describe('registry backend auth endpoints', () => {
@@ -113,6 +115,52 @@ describe('registry backend auth endpoints', () => {
 
     const user = await store.getUser('@rootuser');
     expect(user?.role).toBe('admin');
+  });
+
+  test('rejects OAuth callback errors and invalid state without creating sessions', async () => {
+    const store = createMemoryRegistryStore();
+    const handler = createRegistryHandler(store, {
+      githubClientId: 'client-id',
+      githubClientSecret: 'client-secret',
+    });
+
+    const providerError = await handler(new Request('http://registry.test/api/auth/github/callback?error=access_denied'));
+    expect(providerError.status).toBe(401);
+    expect((await providerError.json()).error).toBe('access_denied');
+
+    const badState = await handler(new Request('http://registry.test/api/auth/github/callback?code=abc&state=wrong', {
+      headers: {
+        Cookie: 'burst_github_state=expected',
+      },
+    }));
+    expect(badState.status).toBe(400);
+    expect((await badState.json()).error).toBe('Invalid GitHub login state');
+  });
+
+  test('surfaces GitHub token exchange failures during OAuth callback', async () => {
+    const handler = createRegistryHandler(createMemoryRegistryStore(), {
+      githubClientId: 'client-id',
+      githubClientSecret: 'client-secret',
+    });
+    console.error = () => {};
+
+    globalThis.fetch = async (url) => {
+      if (String(url).includes('github.com/login/oauth/access_token')) {
+        return Response.json({ error_description: 'Bad verification code' });
+      }
+      return new Response('Unexpected URL', { status: 500 });
+    };
+
+    const response = await handler(new Request('http://registry.test/api/auth/github/callback?code=abc&state=state-1', {
+      headers: {
+        Cookie: 'burst_github_state=state-1; burst_github_return_to=%2Fdashboard',
+      },
+    }));
+
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.error).toBe('Internal Server Error');
+    expect(body.message).toBe('Bad verification code');
   });
 
   test('logout deletes the active session', async () => {
@@ -200,6 +248,36 @@ describe('registry backend permissions', () => {
     expect(adminResponse.status).toBe(200);
   });
 
+  test('requires admin access for user directory and filters by query', async () => {
+    const store = createMemoryRegistryStore();
+    const handler = createRegistryHandler(store);
+    await createSession(store, 'alpha-publisher', { role: 'publisher' });
+    await createSession(store, 'beta-member', { role: 'member' });
+    const admin = await createSession(store, 'directory-admin', { role: 'admin' });
+
+    const guestResponse = await handler(new Request('http://registry.test/api/users'));
+    expect(guestResponse.status).toBe(401);
+
+    const memberResponse = await handler(new Request('http://registry.test/api/users', {
+      headers: { Cookie: 'session_id=missing-session' },
+    }));
+    expect(memberResponse.status).toBe(401);
+
+    const publisher = await createSession(store, 'plain-publisher', { role: 'publisher' });
+    const publisherResponse = await handler(new Request('http://registry.test/api/users', {
+      headers: { Cookie: `session_id=${publisher.sessionId}` },
+    }));
+    expect(publisherResponse.status).toBe(403);
+
+    const adminResponse = await handler(new Request('http://registry.test/api/users?q=alpha', {
+      headers: { Cookie: `session_id=${admin.sessionId}` },
+    }));
+    expect(adminResponse.status).toBe(200);
+    const users = await adminResponse.json();
+    expect(users.map((user) => user.handle)).toContain('@alpha-publisher');
+    expect(users.map((user) => user.handle)).not.toContain('@beta-member');
+  });
+
   test('allows admins to update role and verification fields', async () => {
     const store = createMemoryRegistryStore();
     const handler = createRegistryHandler(store);
@@ -221,6 +299,32 @@ describe('registry backend permissions', () => {
     expect(updated.role).toBe('admin');
     expect(updated.verified).toBe(true);
     expect(updated.verifiedSources).toEqual(['github.com/publisher-user']);
+  });
+
+  test('sanitizes self profile updates to prevent role and verification escalation', async () => {
+    const store = createMemoryRegistryStore();
+    const handler = createRegistryHandler(store);
+    const member = await createSession(store, 'self-edit-user', { role: 'member', verified: false });
+
+    const response = await handler(jsonRequest('/api/users/%40self-edit-user', {
+      method: 'PATCH',
+      headers: { Cookie: `session_id=${member.sessionId}` },
+      body: JSON.stringify({
+        name: 'Self Edited',
+        bio: 'Updated bio',
+        role: 'admin',
+        verified: true,
+        verifiedSources: ['github.com/self-edit-user'],
+      }),
+    }));
+
+    expect(response.status).toBe(200);
+    const updated = await response.json();
+    expect(updated.name).toBe('Self Edited');
+    expect(updated.bio).toBe('Updated bio');
+    expect(updated.verifiedSources).toEqual(['github.com/self-edit-user']);
+    expect(updated.role).toBe('member');
+    expect(updated.verified).toBe(false);
   });
 
   test('requires the publisher session to match the command publisher handle', async () => {
@@ -270,6 +374,35 @@ describe('registry backend permissions', () => {
     }));
     expect(duplicate.status).toBe(409);
     expect((await duplicate.json()).error).toContain('Command ID is already taken');
+  });
+
+  test('returns dynamic audit reports from both audit routes', async () => {
+    const store = createMemoryRegistryStore();
+    const handler = createRegistryHandler(store);
+    const publisher = await createSession(store, 'audit-publisher', { role: 'publisher' });
+
+    await handler(jsonRequest('/api/commands', {
+      method: 'POST',
+      headers: { Cookie: `session_id=${publisher.sessionId}` },
+      body: JSON.stringify(commandPayload('@audit-publisher', {
+        id: 'dynamic-audit-command',
+        matchPatterns: ['<all_urls>'],
+        permissions: ['Read cookies'],
+        code: 'document.cookie; eval("console.log(1)")',
+      })),
+    }));
+
+    const canonical = await handler(new Request('http://registry.test/api/audit-reports/dynamic-audit-command?v=1.0.0'));
+    const nested = await handler(new Request('http://registry.test/api/commands/dynamic-audit-command/audit?v=1.0.0'));
+    expect(canonical.status).toBe(200);
+    expect(nested.status).toBe(200);
+
+    const canonicalBody = await canonical.json();
+    const nestedBody = await nested.json();
+    expect(canonicalBody.commandId).toBe('dynamic-audit-command');
+    expect(canonicalBody.version).toBe('1.0.0');
+    expect(canonicalBody.status).toBe('fail');
+    expect(nestedBody).toEqual(canonicalBody);
   });
 });
 
