@@ -21,6 +21,7 @@ import {
 } from '@/src/lib/localScripts';
 import {
   loadInstalledRegistryCommands,
+  isRegistryCommandEnabled,
   loadPinnedRegistryCommandIds,
   loadConsentGrants,
   saveConsentGrant,
@@ -321,11 +322,13 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
       const registryCmds = await loadInstalledRegistryCommands();
       const pinnedIds = await loadPinnedRegistryCommandIds();
 
-      const mappedRegistryCmds = registryCmds.map((cmd) => ({
-        ...cmd,
-        action: 'run-registry-script' as const,
-        pinned: pinnedIds.includes(cmd.id),
-      }));
+      const mappedRegistryCmds = registryCmds
+        .filter(isRegistryCommandEnabled)
+        .map((cmd) => ({
+          ...cmd,
+          action: 'run-registry-script' as const,
+          pinned: pinnedIds.includes(cmd.id),
+        }));
 
       setLocalCommands([
         ...scripts

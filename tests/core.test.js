@@ -32,9 +32,11 @@ import {
   getRegistryScriptMatchPatterns,
   createRegistryUserScriptCode,
   installRegistryCommand,
+  isRegistryCommandEnabled,
   loadInstalledRegistryCommands,
   loadConsentGrants,
   saveConsentGrant,
+  setRegistryCommandStatus,
 } from '../src/lib/registryStorage.ts';
 
 const baseCommand = {
@@ -357,6 +359,19 @@ describe('registry storage and consent', () => {
     const command = installed.find((item) => item.id === 'refresh-test');
     expect(command?.code).toBe('new-code');
     expect(command?.version).toBe('1.0.1');
+  });
+
+  test('tracks disabled status for installed registry commands', async () => {
+    await installRegistryCommand({ ...baseCommand, id: 'toggle-test', code: 'toggle-code' });
+    let installed = await loadInstalledRegistryCommands();
+    let command = installed.find((item) => item.id === 'toggle-test');
+    expect(isRegistryCommandEnabled(command)).toBe(true);
+
+    await setRegistryCommandStatus('toggle-test', 'disabled');
+    installed = await loadInstalledRegistryCommands();
+    command = installed.find((item) => item.id === 'toggle-test');
+    expect(command?.status).toBe('disabled');
+    expect(isRegistryCommandEnabled(command)).toBe(false);
   });
 });
 

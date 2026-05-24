@@ -43,6 +43,7 @@ export default function DashboardApp() {
         onCreateDraft={d.createDraft} onExportAll={d.exportScripts}
         onImport={() => {}}
         onToggleScriptStatus={(script) => void d.setScriptStatusDirectly(script, script.status === 'enabled' ? 'disabled' : 'enabled')}
+        onToggleRegistryCommandStatus={(command) => void d.setRegistryCommandStatusDirectly(command, command.status === 'disabled' ? 'enabled' : 'disabled')}
         onUninstallRegistryCommand={(commandId) => void d.uninstallOfficialRegistryCommand(commandId)}
         onForkRegistryCommand={(command) => void d.forkOfficialRegistryCommand(command)}
         onExportScript={d.exportSingleScript}
@@ -97,6 +98,7 @@ export default function DashboardApp() {
             }}
             saveState={d.saveState}
             onFork={() => void d.forkOfficialRegistryCommand(d.selectedRegistryCommand!)}
+            onToggleStatus={() => void d.setRegistryCommandStatusDirectly(d.selectedRegistryCommand!, d.selectedRegistryCommand!.status === 'disabled' ? 'enabled' : 'disabled')}
             onUninstall={() => void d.uninstallOfficialRegistryCommand(d.selectedRegistryCommand!.id)}
           />
         ) : d.activeTab === 'editor' && d.selectedScript ? (

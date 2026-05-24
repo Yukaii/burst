@@ -58,6 +58,7 @@ export type BurstCommand = {
   icon: CommandIcon;
   code?: string;
   version?: string;
+  status?: 'enabled' | 'disabled';
   pinned?: boolean;
   registryInstalled?: boolean;
   shortcut?: string;

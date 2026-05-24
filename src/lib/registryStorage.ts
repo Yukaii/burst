@@ -19,6 +19,8 @@ let memoryInstalled: BurstCommand[] = [];
 let memoryPinned: string[] = [];
 let memoryGrants: string[] = [];
 
+export type RegistryCommandStatus = 'enabled' | 'disabled';
+
 function getExtensionStorage(): LocalStorageArea | undefined {
   const runtime = globalThis as typeof globalThis & {
     browser?: {
@@ -74,6 +76,10 @@ export async function saveInstalledRegistryCommands(commands: BurstCommand[]): P
   }
 
   memoryInstalled = commands;
+}
+
+export function isRegistryCommandEnabled(command: Pick<BurstCommand, 'status'>): boolean {
+  return command.status !== 'disabled';
 }
 
 export async function loadPinnedRegistryCommandIds(): Promise<string[]> {
@@ -181,6 +187,14 @@ export async function uninstallRegistryCommand(commandId: string): Promise<void>
   const pinned = await loadPinnedRegistryCommandIds();
   const nextPinned = pinned.filter((id) => id !== commandId);
   await savePinnedRegistryCommandIds(nextPinned);
+}
+
+export async function setRegistryCommandStatus(commandId: string, status: RegistryCommandStatus): Promise<void> {
+  const installed = await loadInstalledRegistryCommands();
+  const nextInstalled = installed.map((command) => (
+    command.id === commandId ? { ...command, status } : command
+  ));
+  await saveInstalledRegistryCommands(nextInstalled);
 }
 
 export async function pinRegistryCommand(commandId: string): Promise<void> {

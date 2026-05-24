@@ -14,6 +14,7 @@ import logoUrl from '@/assets/logo.svg';
 import type { BurstCommand } from '@/src/lib/commands';
 import type { LocalScript } from '@/src/lib/localScripts';
 import { createLocalScriptDraft } from '@/src/lib/localScripts';
+import { isRegistryCommandEnabled } from '@/src/lib/registryStorage';
 import type { GitRegistry } from './types';
 import { Tooltip, LocalScriptIcon, AuditIssueDot } from './ui';
 import { getScriptAuditStatus, formatMatchPatterns } from './utils';
@@ -29,6 +30,7 @@ export function LeftSidebar({
   onExportAll,
   onImport,
   onToggleScriptStatus,
+  onToggleRegistryCommandStatus,
   onUninstallRegistryCommand,
   onForkRegistryCommand,
   onExportScript,
@@ -59,6 +61,7 @@ export function LeftSidebar({
   onExportAll: () => void;
   onImport: () => void;
   onToggleScriptStatus: (script: LocalScript) => void;
+  onToggleRegistryCommandStatus: (command: BurstCommand) => void;
   onUninstallRegistryCommand: (commandId: string) => void;
   onForkRegistryCommand: (command: BurstCommand) => void;
   onExportScript: (script: LocalScript) => void;
@@ -253,22 +256,31 @@ export function LeftSidebar({
                     <div className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase pt-3 pb-1 shrink-0">
                       Registry Installs
                     </div>
-                    {installedRegistryCommands.map((command) => (
-                      <div
-                        className={`group w-full flex items-center justify-between p-2 rounded-lg transition-colors border border-transparent hover:bg-accent/40 cursor-pointer ${
-                          command.id === selectedRegistryCommandId ? 'bg-accent border-border' : ''
-                        }`}
-                        key={command.id}
-                        onClick={() => onSelectRegistryCommand(command.id)}
-                      >
+                    {installedRegistryCommands.map((command) => {
+                      const enabled = isRegistryCommandEnabled(command);
+                      return (
+                        <div
+                          className={`group w-full flex items-center justify-between p-2 rounded-lg transition-colors border border-transparent hover:bg-accent/40 cursor-pointer ${
+                            command.id === selectedRegistryCommandId ? 'bg-accent border-border' : ''
+                          }`}
+                          key={command.id}
+                          onClick={() => onSelectRegistryCommand(command.id)}
+                        >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <span className="w-8 h-8 flex items-center justify-center rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold shrink-0">
+                          <span className={`w-8 h-8 flex items-center justify-center rounded-md border text-xs font-bold shrink-0 ${
+                            enabled
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                              : 'bg-red-500/10 text-red-400 border-red-500/20'
+                          }`}>
                             <CheckCircle2 className="w-4 h-4" />
                           </span>
                           <span className="min-w-0 flex-1 flex flex-col gap-0.5">
                             <strong className="text-xs font-semibold text-foreground truncate block">{command.title}</strong>
                             <em className="text-[10px] text-muted-foreground truncate block not-italic font-medium">
-                              {formatMatchPatterns(command.matchPatterns)} · <span className="text-emerald-400 font-semibold">installed</span>
+                              {formatMatchPatterns(command.matchPatterns)} ·{' '}
+                              <span className={enabled ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>
+                                {enabled ? 'enabled' : 'disabled'}
+                              </span>
                             </em>
                           </span>
                         </div>
@@ -286,6 +298,14 @@ export function LeftSidebar({
                             <>
                               <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenMenuId(undefined); }} />
                               <div className="absolute right-0 top-full mt-1.5 z-20 w-36 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  onClick={() => { onToggleRegistryCommandStatus(command); setOpenMenuId(undefined); }}
+                                  className="w-full flex items-center gap-2 p-2 rounded text-xs hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors text-left"
+                                >
+                                  <Power className="w-3.5 h-3.5 text-muted-foreground" />
+                                  {enabled ? 'Disable' : 'Enable'}
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => { onForkRegistryCommand(command); setOpenMenuId(undefined); }}
@@ -307,7 +327,8 @@ export function LeftSidebar({
                           )}
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </>
                 )}
               </div>

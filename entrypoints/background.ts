@@ -9,6 +9,7 @@ import {
   loadInstalledRegistryCommands,
   loadPinnedRegistryCommandIds,
   installRegistryCommand,
+  isRegistryCommandEnabled,
   uninstallRegistryCommand,
   pinRegistryCommand,
   unpinRegistryCommand,
@@ -243,7 +244,7 @@ async function registerEnabledLocalScripts() {
       count++;
     }
 
-    const registryCommands = await loadInstalledRegistryCommands();
+    const registryCommands = (await loadInstalledRegistryCommands()).filter(isRegistryCommandEnabled);
     for (const command of registryCommands) {
       const code = command.code || getMockScriptCode(command.id);
       await userScripts.register([

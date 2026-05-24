@@ -8,7 +8,13 @@ import {
   prepareLocalScriptForSave,
   saveLocalScripts,
 } from '@/src/lib/localScripts';
-import { loadInstalledRegistryCommands, saveInstalledRegistryCommands, uninstallRegistryCommand } from '@/src/lib/registryStorage';
+import {
+  isRegistryCommandEnabled,
+  loadInstalledRegistryCommands,
+  saveInstalledRegistryCommands,
+  setRegistryCommandStatus,
+  uninstallRegistryCommand,
+} from '@/src/lib/registryStorage';
 import { getRegistryCommand } from '@/src/lib/registryApi';
 import type { BurstCommand } from '@/src/lib/commands';
 import { ExtensionSettings, DEFAULT_SETTINGS, getRegistryServerBaseUrl, loadSettings, saveSettings } from '@/src/lib/settings';
@@ -367,6 +373,18 @@ export function useDashboard() {
     setScripts(nextScripts); await persistScripts(nextScripts, 'Saved');
   }
 
+  async function setRegistryCommandStatusDirectly(command: BurstCommand, status: 'enabled' | 'disabled') {
+    await setRegistryCommandStatus(command.id, status);
+    const next = (await loadInstalledRegistryCommands()).map((item) => (
+      item.id === command.id ? { ...item, status } : item
+    ));
+    setInstalledRegistryCommands(next);
+    if (typeof browser !== 'undefined' && browser.runtime?.sendMessage) {
+      await browser.runtime.sendMessage({ type: 'burst:sync-local-scripts' }).catch(() => {});
+    }
+    setSaveState(isRegistryCommandEnabled({ status }) ? 'Enabled registry command' : 'Disabled registry command');
+  }
+
   async function uninstallOfficialRegistryCommand(commandId: string) {
     await uninstallRegistryCommand(commandId);
     const next = await loadInstalledRegistryCommands();
@@ -693,6 +711,7 @@ export function useDashboard() {
     deleteSelectedScript,
     exportScripts,
     setScriptStatusDirectly,
+    setRegistryCommandStatusDirectly,
     uninstallOfficialRegistryCommand,
     forkOfficialRegistryCommand,
     unlinkForkedScript,

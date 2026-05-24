@@ -1,8 +1,9 @@
 import React from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
-import { ExternalLink, PanelLeftOpen, Trash2, GitFork } from 'lucide-react';
+import { ExternalLink, PanelLeftOpen, Trash2, GitFork, Power } from 'lucide-react';
 import type { BurstCommand } from '@/src/lib/commands';
+import { isRegistryCommandEnabled } from '@/src/lib/registryStorage';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
 import { Tooltip } from './ui';
 import { formatMatchPatterns } from './utils';
@@ -13,6 +14,7 @@ export function RegistryCommandPanel({
   onToggleLeft,
   saveState,
   onFork,
+  onToggleStatus,
   onUninstall,
 }: {
   command: BurstCommand;
@@ -20,11 +22,13 @@ export function RegistryCommandPanel({
   onToggleLeft: () => void;
   saveState: string;
   onFork: () => void;
+  onToggleStatus: () => void;
   onUninstall: () => void;
 }) {
   const audit = React.useMemo(() => analyzeScriptCode(command.code || '', command.matchPatterns), [command.code, command.matchPatterns]);
   const storeHref = `http://localhost:5174/#/discover/${encodeURIComponent(command.id)}`;
   const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
+  const enabled = isRegistryCommandEnabled(command);
 
   return (
     <section className="flex-1 flex flex-col h-full w-full bg-background text-foreground overflow-hidden" aria-label="Registry command details">
@@ -37,8 +41,12 @@ export function RegistryCommandPanel({
               </button>
             </Tooltip>
           )}
-          <span className="inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-            Installed Registry
+          <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+            enabled
+              ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+              : 'border-red-500/20 bg-red-500/10 text-red-400'
+          }`}>
+            {enabled ? 'Enabled Registry' : 'Disabled Registry'}
           </span>
           <div className="min-w-0">
             <h2 className="text-base font-semibold tracking-tight text-foreground truncate">{command.title}</h2>
@@ -56,6 +64,10 @@ export function RegistryCommandPanel({
           <button type="button" onClick={onFork} className="inline-flex items-center gap-1.5 rounded-md text-xs font-semibold px-3 py-1.5 bg-primary text-primary-foreground hover:bg-primary/95">
             <GitFork className="w-3.5 h-3.5" />
             Fork
+          </button>
+          <button type="button" onClick={onToggleStatus} className="inline-flex items-center gap-1.5 rounded-md text-xs font-semibold px-3 py-1.5 bg-secondary text-secondary-foreground border border-input hover:bg-accent hover:text-accent-foreground">
+            <Power className="w-3.5 h-3.5" />
+            {enabled ? 'Disable' : 'Enable'}
           </button>
           <button type="button" onClick={onUninstall} className="inline-flex items-center gap-1.5 rounded-md text-xs font-semibold px-3 py-1.5 text-destructive border border-destructive/30 hover:bg-destructive/10">
             <Trash2 className="w-3.5 h-3.5" />

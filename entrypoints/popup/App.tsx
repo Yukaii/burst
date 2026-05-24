@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import logoUrl from '@/assets/logo.svg';
 import { loadLocalScripts } from '@/src/lib/localScripts';
+import { isRegistryCommandEnabled, loadInstalledRegistryCommands } from '@/src/lib/registryStorage';
 import { getCurrentUser } from '@/src/lib/registryApi';
 import { loadSettings } from '@/src/lib/settings';
 import './App.css';
@@ -38,9 +39,13 @@ function App() {
         const hasChrome = typeof window !== 'undefined' && 'chrome' in window && !!(window as any).chrome?.userScripts;
         setHasUserScriptsPermission(hasWxt || hasChrome);
 
-        const local = await loadLocalScripts();
-        const enabled = local.filter((s) => s.status === 'enabled').length;
-        setActiveScriptsCount(enabled);
+        const [local, installedRegistryCommands] = await Promise.all([
+          loadLocalScripts(),
+          loadInstalledRegistryCommands(),
+        ]);
+        const enabledLocalCount = local.filter((s) => s.status === 'enabled').length;
+        const enabledRegistryCount = installedRegistryCommands.filter(isRegistryCommandEnabled).length;
+        setActiveScriptsCount(enabledLocalCount + enabledRegistryCount);
 
         const git = await getGitRegistriesCount();
         setGitCount(git);
@@ -78,6 +83,14 @@ function App() {
       return;
     }
     window.open('http://localhost:5174', '_blank');
+  }
+
+  function openDashboardPage() {
+    if (typeof browser !== 'undefined' && browser.tabs?.create && browser.runtime?.getURL) {
+      void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') });
+      return;
+    }
+    window.open('/dashboard.html', '_blank');
   }
 
   return (
@@ -130,6 +143,9 @@ function App() {
       </section>
 
       <footer className="popup-actions">
+        <button type="button" className="btn-secondary" onClick={openDashboardPage}>
+          Dashboard
+        </button>
         <button type="button" className="btn-secondary" onClick={openRegistryPage}>
           Marketplace
         </button>
