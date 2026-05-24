@@ -7,10 +7,20 @@ import {
   Info,
   LogOut,
   ChevronUp,
-  User
+  User,
+  TerminalSquare
 } from 'lucide-react';
 import type { RegistrySessionUser } from '@/src/lib/registryApi';
 import logoUrl from '@/assets/logo.svg';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 
 const navItems = ['Discover', 'Publish', 'Profile', 'Users', 'Audits', 'Settings'] as const;
 
@@ -95,44 +105,66 @@ export function Sidebar({
         })}
       </nav>
 
-      <details className="group grid mt-auto border border-border rounded-lg bg-background p-2 px-3">
-        <summary className="grid grid-cols-[32px_1fr_auto] gap-2.5 items-center cursor-pointer list-none outline-none m-0 p-0 [&::-webkit-details-marker]:hidden">
-          <div className="grid w-8 h-8 place-items-center rounded-lg bg-accent text-accent-foreground text-[11.5px] font-extrabold">
-            {currentUser.avatarInitials}
-          </div>
-          <div className="flex flex-col justify-center min-w-0 h-8 pt-[1px]">
-            <strong className="text-foreground text-[12.5px] font-semibold leading-tight block overflow-hidden text-ellipsis whitespace-nowrap">
-              {currentUser.name}
-            </strong>
-            <span className="mt-[1px] text-muted-foreground text-[11px] leading-tight block overflow-hidden text-ellipsis whitespace-nowrap">
-              {displayHandle} {showGithub ? `• ${currentUser.githubLogin}` : ''}
-            </span>
-          </div>
-          <ChevronUp className="w-3.5 h-3.5 text-muted-foreground transition-transform duration-150 group-open:rotate-180" />
-        </summary>
-        <div className="flex items-center justify-between gap-2.5 border-t border-border pt-2.25 mt-2.5">
-          <span className="rounded bg-muted text-muted-foreground text-[10px] font-extrabold leading-none px-1.5 py-1 uppercase">
-            {currentUser.role || 'publisher'}
-          </span>
-          {onOpenBridgeLogs && (
-            <button
-              type="button"
-              onClick={onOpenBridgeLogs}
-              className="inline-flex items-center gap-1 border-0 bg-transparent text-muted-foreground cursor-pointer text-[11px] font-semibold p-0 hover:text-sky-500 transition-colors"
-            >
-              Bridge logs
-            </button>
-          )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <button
             type="button"
-            onClick={() => void onLogout()}
-            className="inline-flex items-center gap-1 border-0 bg-transparent text-muted-foreground cursor-pointer text-[11px] font-semibold p-0 hover:text-destructive transition-colors"
+            className="group mt-auto grid grid-cols-[32px_1fr_auto] gap-2.5 items-center border border-border rounded-lg bg-background p-2 px-3 text-left outline-none cursor-pointer transition-colors hover:bg-accent/60 focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=open]:bg-accent"
+            aria-label="Open profile menu"
           >
-            <LogOut className="w-3 h-3" />
-            Log out
+            <span className="grid size-8 place-items-center rounded-lg bg-accent text-accent-foreground text-[11.5px] font-extrabold">
+              {currentUser.avatarInitials}
+            </span>
+            <span className="flex flex-col justify-center min-w-0 h-8 pt-[1px]">
+              <strong className="text-foreground text-[12.5px] font-semibold leading-tight block truncate">
+                {currentUser.name}
+              </strong>
+              <span className="mt-[1px] text-muted-foreground text-[11px] leading-tight block truncate">
+                {displayHandle} {showGithub ? `• ${currentUser.githubLogin}` : ''}
+              </span>
+            </span>
+            <ChevronUp className="size-3.5 text-muted-foreground transition-transform duration-150 group-data-[state=open]:rotate-180" />
           </button>
-        </div>
-      </details>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-64">
+          <DropdownMenuLabel className="flex flex-col gap-1">
+            <span className="text-foreground font-semibold truncate">{currentUser.name}</span>
+            <span className="font-normal truncate">
+              {displayHandle} {showGithub ? `• ${currentUser.githubLogin}` : ''}
+            </span>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem disabled className="justify-between">
+              <span>Role</span>
+              <span className="rounded bg-muted text-muted-foreground text-[10px] font-extrabold leading-none px-1.5 py-1 uppercase">
+                {currentUser.role || 'publisher'}
+              </span>
+            </DropdownMenuItem>
+            {!isGuest && (
+              <DropdownMenuItem onSelect={() => setNavTab('Profile')}>
+                <User />
+                Profile
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={() => setNavTab('Settings')}>
+              <Settings />
+              Settings
+            </DropdownMenuItem>
+            {onOpenBridgeLogs && (
+              <DropdownMenuItem onSelect={onOpenBridgeLogs}>
+                <TerminalSquare />
+                Bridge logs
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" onSelect={() => void onLogout()}>
+            <LogOut />
+            Log out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </aside>
   );
 }

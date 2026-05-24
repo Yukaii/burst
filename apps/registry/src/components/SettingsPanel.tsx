@@ -1,24 +1,14 @@
-import { useState } from 'react';
 import { Button } from './ui/button';
+import { Switch } from './ui/switch';
 
 interface SettingsPanelProps {
   bridgeConnected: boolean;
+  theme: 'light' | 'dark';
+  onThemeChange: (theme: 'light' | 'dark') => void;
 }
 
-export function SettingsPanel({ bridgeConnected }: SettingsPanelProps) {
-  const [darkMode, setDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('burst-theme');
-    return savedTheme === 'dark' || (savedTheme !== 'light' && document.querySelector('.registry-app-shell')?.classList.contains('dark'));
-  });
-
-  const toggleTheme = () => {
-    const nextTheme = !darkMode ? 'dark' : 'light';
-    setDarkMode(!darkMode);
-    document.documentElement.setAttribute('data-theme', nextTheme);
-    localStorage.setItem('burst-theme', nextTheme);
-    document.querySelector('.registry-app-shell')?.classList.toggle('dark', nextTheme === 'dark');
-  };
-
+export function SettingsPanel({ bridgeConnected, theme, onThemeChange }: SettingsPanelProps) {
+  const darkMode = theme === 'dark';
   const handleResetStorage = () => {
     if (confirm('Are you sure you want to clear simulated installation states? This will uninstall all packages from this window.')) {
       window.postMessage({ type: 'burst:uninstall-command', commandId: '*' }, '*');
@@ -44,14 +34,12 @@ export function SettingsPanel({ bridgeConnected }: SettingsPanelProps) {
               <strong className="text-sm font-bold text-slate-900 dark:text-white">Dark Color Scheme</strong>
               <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block leading-relaxed">Toggle between high-contrast dark mode and premium light theme.</span>
             </div>
-            <Button
-              variant="outline"
-              onClick={toggleTheme}
-              type="button"
-              className="font-bold text-xs h-9 cursor-pointer select-none"
-            >
-              {darkMode ? 'Use light mode' : 'Use dark mode'}
-            </Button>
+            <Switch
+              checked={darkMode}
+              onCheckedChange={(checked) => onThemeChange(checked ? 'dark' : 'light')}
+              aria-label="Toggle dark color scheme"
+              className="cursor-pointer"
+            />
           </div>
         </div>
 

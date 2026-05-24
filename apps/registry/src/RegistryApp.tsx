@@ -78,6 +78,15 @@ const parseHash = () => {
 const initialRoute = parseHash();
 const hasSessionFlag = typeof window !== 'undefined' && localStorage.getItem('burst_has_session') === 'true';
 const defaultView = initialRoute.view || (hasSessionFlag ? 'app' : 'landing');
+type RegistryTheme = 'light' | 'dark';
+
+function getStoredTheme(): RegistryTheme {
+  if (typeof window === 'undefined') {
+    return 'dark';
+  }
+
+  return localStorage.getItem('burst-theme') === 'light' ? 'light' : 'dark';
+}
 
 function SplashLoadingScreen({ theme }: { theme: 'light' | 'dark' }) {
   return (
@@ -101,6 +110,7 @@ function SplashLoadingScreen({ theme }: { theme: 'light' | 'dark' }) {
 export function RegistryApp() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authConfig, setAuthConfig] = useState<RegistryAuthConfig | null>(null);
+  const [preferredTheme, setPreferredTheme] = useState<RegistryTheme>(getStoredTheme);
   const [navTab, setNavTab] = useState<'Discover' | 'Publish' | 'Profile' | 'Users' | 'Audits' | 'Settings'>(
     initialRoute.tab || 'Discover'
   );
@@ -219,11 +229,11 @@ export function RegistryApp() {
   const canManageRegistry = currentUser.role === 'admin';
   const visibleNavItems = navItems.filter((item) => canManageRegistry || !['Users', 'Audits'].includes(item));
   
-  const preferredTheme = typeof window === 'undefined'
-    ? 'dark'
-    : localStorage.getItem('burst-theme') === 'light'
-    ? 'light'
-    : 'dark';
+  useEffect(() => {
+    localStorage.setItem('burst-theme', preferredTheme);
+    document.documentElement.setAttribute('data-theme', preferredTheme);
+    document.documentElement.classList.toggle('dark', preferredTheme === 'dark');
+  }, [preferredTheme]);
 
   useEffect(() => {
     let active = true;
@@ -683,7 +693,13 @@ export function RegistryApp() {
 
         {navTab === 'Audits' && canManageRegistry && <AuditsPanel />}
 
-        {navTab === 'Settings' && <SettingsPanel bridgeConnected={bridgeConnected} />}
+        {navTab === 'Settings' && (
+          <SettingsPanel
+            bridgeConnected={bridgeConnected}
+            theme={preferredTheme}
+            onThemeChange={setPreferredTheme}
+          />
+        )}
       </main>
 
       <BridgeLogsConsole
