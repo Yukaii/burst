@@ -401,7 +401,7 @@ export function RegistryApp() {
 
   const handleGitHubLogin = () => {
     const loginUrl = new URL(authConfig?.loginUrl ?? '/api/auth/github/start', window.location.origin);
-    loginUrl.searchParams.set('returnTo', `${window.location.origin}/home`);
+    loginUrl.searchParams.set('returnTo', `${window.location.origin}/discover`);
     window.location.assign(loginUrl.toString());
   };
 
@@ -592,6 +592,8 @@ export function RegistryApp() {
         currentUser={currentUser}
         onLogout={handleLogout}
         setView={setView}
+        theme={preferredTheme}
+        onThemeChange={setPreferredTheme}
         onClearPublishToast={() => setPublishSuccessToast(null)}
         onOpenBridgeLogs={() => setIsConsoleOpen(true)}
       />

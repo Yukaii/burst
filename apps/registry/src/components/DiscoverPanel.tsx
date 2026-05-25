@@ -206,7 +206,7 @@ export function DiscoverPanel({
               })}
             </div>
           ) : (
-            <div className="grid flex-1 min-h-[220px] place-content-center gap-2.5 text-muted-foreground text-center">
+            <div className="grid flex-1 min-h-[220px] place-content-center place-items-center gap-2.5 text-muted-foreground text-center">
               <Search className="size-8 text-slate-300 dark:text-slate-700" />
               <strong className="text-sm font-bold text-slate-900 dark:text-white mt-1">No registry commands match</strong>
               <span className="text-xs text-slate-400 dark:text-slate-500 max-w-sm leading-relaxed">Try searching for a different website matching pattern or publisher name.</span>

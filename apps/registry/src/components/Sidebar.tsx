@@ -8,7 +8,9 @@ import {
   LogOut,
   ChevronUp,
   User,
-  TerminalSquare
+  TerminalSquare,
+  Moon,
+  Sun
 } from 'lucide-react';
 import type { RegistrySessionUser } from '@/src/lib/registryApi';
 import logoUrl from '@/assets/logo.svg';
@@ -32,6 +34,8 @@ interface SidebarProps {
   currentUser: RegistrySessionUser;
   onLogout: () => void | Promise<void>;
   setView: (view: 'landing' | 'app') => void;
+  theme: 'light' | 'dark';
+  onThemeChange: (theme: 'light' | 'dark') => void;
   onClearPublishToast?: () => void;
   onOpenBridgeLogs?: () => void;
 }
@@ -42,6 +46,8 @@ export function Sidebar({
   currentUser,
   onLogout,
   setView,
+  theme,
+  onThemeChange,
   onClearPublishToast,
   onOpenBridgeLogs
 }: SidebarProps) {
@@ -139,6 +145,18 @@ export function Sidebar({
               <span>Role</span>
               <span className="rounded bg-muted text-muted-foreground text-[10px] font-extrabold leading-none px-1.5 py-1 uppercase">
                 {currentUser.role || 'publisher'}
+              </span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => onThemeChange(theme === 'dark' ? 'light' : 'dark')}
+              className="justify-between"
+            >
+              <span className="flex items-center gap-2">
+                {theme === 'dark' ? <Sun /> : <Moon />}
+                {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              </span>
+              <span className="rounded bg-muted text-muted-foreground text-[10px] font-extrabold leading-none px-1.5 py-1 uppercase">
+                {theme}
               </span>
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setNavTab('Profile')}>
