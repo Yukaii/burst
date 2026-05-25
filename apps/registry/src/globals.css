@@ -185,16 +185,16 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--border) / 0.5);
+  background: hsl(var(--muted-foreground) / 0.45);
   border-radius: 9999px;
   border: 2px solid hsl(var(--background));
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--border) / 0.8);
+  background: hsl(var(--muted-foreground) / 0.65);
 }
 
 html {
-  scrollbar-color: hsl(var(--border) / 0.5) transparent;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.45) transparent;
   scrollbar-width: thin;
 }
 
