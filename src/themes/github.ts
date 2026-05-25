@@ -5,6 +5,7 @@ export const githubTheme: CommandPaletteTheme = {
   id: 'github',
   name: 'GitHub',
   description: 'Neutral, compact palette for github.com.',
+  appearance: 'light',
   matchHosts: ['github.com', '*.github.com'],
   previewUrl: 'https://github.com',
   variables: {

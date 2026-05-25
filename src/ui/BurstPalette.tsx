@@ -855,7 +855,7 @@ async function runLocalScript(
     }, 700);
 
     function handleResult(event: Event) {
-      const detail = event instanceof CustomEvent ? event.detail as { status?: string; message?: unknown; toast?: unknown; list?: unknown } : {};
+      const detail = parseBurstEventDetail(event) as { status?: string; message?: unknown; toast?: unknown; list?: unknown };
       if (detail.status === 'started') return;
 
       if (detail.status === 'toast') {
@@ -881,7 +881,7 @@ async function runLocalScript(
     document.addEventListener(resultEventName, handleResult);
   });
 
-  document.dispatchEvent(new CustomEvent(getLocalScriptEventName(scriptId), { detail: { selection } }));
+  document.dispatchEvent(new CustomEvent(getLocalScriptEventName(scriptId), { detail: JSON.stringify({ selection }) }));
   return result;
 }
 
@@ -902,7 +902,7 @@ async function runRegistryScript(
     }, 700);
 
     function handleResult(event: Event) {
-      const detail = event instanceof CustomEvent ? event.detail as { status?: string; message?: unknown; toast?: unknown; list?: unknown } : {};
+      const detail = parseBurstEventDetail(event) as { status?: string; message?: unknown; toast?: unknown; list?: unknown };
       if (detail.status === 'started') return;
 
       if (detail.status === 'toast') {
@@ -928,7 +928,7 @@ async function runRegistryScript(
     document.addEventListener(resultEventName, handleResult);
   });
 
-  document.dispatchEvent(new CustomEvent(getRegistryScriptEventName(commandId), { detail: { selection } }));
+  document.dispatchEvent(new CustomEvent(getRegistryScriptEventName(commandId), { detail: JSON.stringify({ selection }) }));
   return result;
 }
 
@@ -962,7 +962,7 @@ async function runListItemAction(
     }, 1200);
 
     function handleResult(event: Event) {
-      const detail = event instanceof CustomEvent ? event.detail as { status?: string; message?: unknown; toast?: unknown } : {};
+      const detail = parseBurstEventDetail(event) as { status?: string; message?: unknown; toast?: unknown };
 
       if (detail.status === 'toast') {
         onToast(normalizeToastPayload(detail.toast ?? detail.message));
@@ -981,15 +981,28 @@ async function runListItemAction(
   });
 
   document.dispatchEvent(new CustomEvent(eventName, {
-    detail: {
+    detail: JSON.stringify({
       kind: 'list-action',
       listId: list.id,
       itemId: item.id,
       actionId: action.id,
-    },
+    }),
   }));
 
   return result;
+}
+
+function parseBurstEventDetail(event: Event): unknown {
+  if (!(event instanceof CustomEvent)) return {};
+  if (typeof event.detail === 'string') {
+    try {
+      const parsed = JSON.parse(event.detail);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return event.detail && typeof event.detail === 'object' ? event.detail : {};
 }
 
 function normalizeToastPayload(payload: unknown): BurstToast {

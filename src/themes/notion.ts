@@ -5,6 +5,7 @@ export const notionTheme: CommandPaletteTheme = {
   id: 'notion',
   name: 'Notion',
   description: 'Paper-like palette for notion.so.',
+  appearance: 'light',
   matchHosts: ['notion.so', '*.notion.so'],
   previewUrl: 'https://notion.so',
   variables: {

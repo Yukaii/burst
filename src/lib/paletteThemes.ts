@@ -21,6 +21,7 @@ export const commandPaletteThemeRegistry = [
     id: 'burst-dark',
     name: 'Burst Dark',
     description: 'Default glassy dark command palette.',
+    appearance: 'dark',
     previewUrl: 'https://example.com',
     modulePath: 'src/themes/burstDark.ts',
     exportName: 'burstDarkTheme',
@@ -30,6 +31,7 @@ export const commandPaletteThemeRegistry = [
     id: 'burst-light',
     name: 'Burst Light',
     description: 'Default light command palette.',
+    appearance: 'light',
     previewUrl: 'https://example.com',
     modulePath: 'src/themes/burstLight.ts',
     exportName: 'burstLightTheme',
@@ -39,6 +41,7 @@ export const commandPaletteThemeRegistry = [
     id: 'github',
     name: 'GitHub',
     description: 'Neutral, compact palette for github.com.',
+    appearance: 'light',
     matchHosts: ['github.com', '*.github.com'],
     previewUrl: 'https://github.com',
     modulePath: 'src/themes/github.ts',
@@ -49,6 +52,7 @@ export const commandPaletteThemeRegistry = [
     id: 'linear',
     name: 'Linear',
     description: 'Dense graphite palette for linear.app.',
+    appearance: 'dark',
     matchHosts: ['linear.app', '*.linear.app'],
     previewUrl: 'https://linear.app',
     modulePath: 'src/themes/linear.ts',
@@ -59,6 +63,7 @@ export const commandPaletteThemeRegistry = [
     id: 'notion',
     name: 'Notion',
     description: 'Paper-like palette for notion.so.',
+    appearance: 'light',
     matchHosts: ['notion.so', '*.notion.so'],
     previewUrl: 'https://notion.so',
     modulePath: 'src/themes/notion.ts',
@@ -95,7 +100,7 @@ export function resolveCommandPaletteThemeMeta(
     ? commandPaletteThemeMetadata.find((theme) => theme.matchHosts?.some((pattern) => hostMatchesPattern(host, pattern)))
     : undefined;
 
-  if (siteTheme) return siteTheme;
+  if (siteTheme?.appearance === fallbackTheme) return siteTheme;
   return fallbackTheme === 'light' ? getCommandPaletteThemeMeta('burst-light') : getCommandPaletteThemeMeta('burst-dark');
 }
 

@@ -5,6 +5,7 @@ export const burstLightTheme: CommandPaletteTheme = {
   id: 'burst-light',
   name: 'Burst Light',
   description: 'Default light command palette.',
+  appearance: 'light',
   previewUrl: 'https://example.com',
   variables: baseLightVariables,
 };

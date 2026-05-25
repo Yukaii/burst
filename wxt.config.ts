@@ -4,9 +4,11 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
 
-  manifest: {
-    minimum_chrome_version: '120',
-    permissions: ['storage', 'userScripts'],
+  manifest: ({ browser, manifestVersion }) => ({
+    minimum_chrome_version: browser === 'firefox' ? undefined : '120',
+    permissions: browser === 'firefox' ? ['storage'] : ['storage', 'userScripts'],
+    optional_permissions: browser === 'firefox' ? ['userScripts'] : undefined,
+    user_scripts: browser === 'firefox' && manifestVersion === 2 ? { api_script: 'firefox-user-script-api.js' } : undefined,
     host_permissions: ['<all_urls>'],
     commands: {
       'toggle-palette': {
@@ -17,5 +19,5 @@ export default defineConfig({
         description: 'Open Burst command palette',
       },
     },
-  },
+  }),
 });

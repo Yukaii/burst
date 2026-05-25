@@ -1,7 +1,7 @@
 import { EditorView } from '@codemirror/view';
 import type { LocalScript } from '@/src/lib/localScripts';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
-import type { CommandIcon } from '@/src/lib/commands';
+import { getFaviconUrl, type CommandIcon } from '@/src/lib/commands';
 import { GIT_REGISTRIES_STORAGE_KEY } from './types';
 import type { GitRegistry } from './types';
 
@@ -143,7 +143,7 @@ export function getLocalIconLabel(icon: CommandIcon): string {
 export function getLocalIconUrl(icon: CommandIcon): string | undefined {
   if (icon.type === 'url' || icon.type === 'asset') return icon.src;
   if (icon.type === 'favicon' && icon.host) {
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(icon.host)}&sz=64`;
+    return getFaviconUrl(icon.host);
   }
   return undefined;
 }

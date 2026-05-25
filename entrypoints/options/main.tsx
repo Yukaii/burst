@@ -190,8 +190,23 @@ function OptionsApp() {
     showFeedback('Cleared all security permission grants', 'success');
   }
 
-  function handleOpenExtensionSettings() {
+  async function handleOpenExtensionSettings() {
     window.sessionStorage.setItem('burst-user-scripts-settings-opened', 'true');
+
+    const permissionApi = typeof browser !== 'undefined' ? browser.permissions : undefined;
+    if (permissionApi?.request) {
+      try {
+        const granted = await permissionApi.request({ permissions: ['userScripts'] });
+        if (granted) {
+          const hasPermission = checkUserScriptsPermission();
+          await browser.runtime.sendMessage({ type: 'burst:sync-local-scripts' }).catch(() => undefined);
+          showFeedback(hasPermission ? 'User Scripts permission enabled.' : 'Permission granted. Reload Burst if scripts do not start immediately.', 'success');
+          return;
+        }
+      } catch {
+        // Chrome exposes userScripts as an install-time permission, so fall through to its settings page.
+      }
+    }
 
     if (typeof browser !== 'undefined' && browser.tabs?.create) {
       void browser.tabs.create({ url: 'chrome://extensions/?id=' + browser.runtime.id });
@@ -223,18 +238,18 @@ function OptionsApp() {
               <div>
                 <h2>Action Required: Enable User Scripts Permission</h2>
                 <p>
-                  Burst requires Chrome's Manifest V3 User Scripts developer feature to be enabled. Without this, custom user scripts and keybind triggers cannot run.
+                  Burst requires the browser User Scripts permission. Firefox asks for this as an optional permission; Chrome requires the extension details toggle.
                 </p>
               </div>
             </div>
             <div className="warning-instructions">
               <div className="instruction-step">
-                <h3>Option 1: Chrome 138+ (Recommended)</h3>
-                <p>Click "Open Extension Settings" below, scroll down, and switch "Allow user scripts" to ON.</p>
+                <h3>Firefox</h3>
+                <p>Click the button below and approve the User Scripts permission prompt.</p>
               </div>
               <div className="instruction-step">
-                <h3>Option 2: Older Chrome</h3>
-                <p>Open <code>chrome://extensions</code> and switch "Developer mode" in the top right to ON.</p>
+                <h3>Chrome / Chromium</h3>
+                <p>Open extension settings, then switch "Allow user scripts" to ON. Older versions may require Developer mode.</p>
               </div>
             </div>
             <div className="warning-actions">
@@ -243,7 +258,7 @@ function OptionsApp() {
                 onClick={handleOpenExtensionSettings}
                 className="btn-warning-action"
               >
-                Open Extension Settings
+                Enable User Scripts
               </button>
               <span className="auto-detect-hint">Will auto-detect on return</span>
             </div>

@@ -5,6 +5,7 @@ export const linearTheme: CommandPaletteTheme = {
   id: 'linear',
   name: 'Linear',
   description: 'Dense graphite palette for linear.app.',
+  appearance: 'dark',
   matchHosts: ['linear.app', '*.linear.app'],
   previewUrl: 'https://linear.app',
   variables: {

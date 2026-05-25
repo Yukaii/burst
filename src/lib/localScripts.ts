@@ -240,12 +240,23 @@ export function createSandboxedUserScriptCode(code: string, eventName: string, r
   const capabilities = ${JSON.stringify(capabilities)};
   const hasCap = (c) => capabilities.includes(c);
   const listActionHandlers = new Map();
+  const parseEventDetail = (detail) => {
+    if (typeof detail === 'string') {
+      try {
+        const parsed = JSON.parse(detail);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+    return detail && typeof detail === 'object' ? detail : {};
+  };
 
   document.addEventListener(${JSON.stringify(eventName)}, async (event) => {
-    const emit = (detail) => document.dispatchEvent(new CustomEvent(${JSON.stringify(resultEventName)}, { detail }));
+    const emit = (detail) => document.dispatchEvent(new CustomEvent(${JSON.stringify(resultEventName)}, { detail: JSON.stringify(detail) }));
     
     try {
-      const eventDetail = (event && event.detail) || {};
+      const eventDetail = parseEventDetail(event && event.detail);
       if (eventDetail.kind === 'list-action') {
         const actionKey = [eventDetail.listId, eventDetail.itemId, eventDetail.actionId].join(':');
         const handler = listActionHandlers.get(actionKey);

@@ -169,10 +169,16 @@ export function getCommandIconUrl(command: BurstCommand): string | undefined {
   if (command.icon.type === 'favicon') {
     const host = command.icon.host ?? command.website;
     if (host === 'all sites' || host === 'Burst') return undefined;
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
+    return getFaviconUrl(host);
   }
 
   return undefined;
+}
+
+export function getFaviconUrl(host: string): string | undefined {
+  const normalizedHost = host.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  if (!normalizedHost || normalizedHost === 'all sites' || normalizedHost === 'Burst') return undefined;
+  return `https://${normalizedHost}/favicon.ico`;
 }
 
 export function getHostFromUrl(url: string): string {

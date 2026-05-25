@@ -10,6 +10,7 @@ export type CommandPaletteTheme = {
   id: Exclude<CommandPaletteThemeId, 'auto'>;
   name: string;
   description: string;
+  appearance: 'dark' | 'light';
   matchHosts?: string[];
   previewUrl: string;
   variables: Record<string, string>;

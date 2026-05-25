@@ -204,6 +204,10 @@ type UserScriptsApi = {
   unregister: (filter?: { ids?: string[] }) => Promise<void>;
 };
 
+type LegacyUserScriptsApi = {
+  register: (script: Omit<UserScriptRegistration, 'id'> & { scriptMetadata?: { id: string } }) => Promise<{ unregister: () => Promise<void> }>;
+};
+
 type UserScriptRegistration = {
   id: string;
   matches: string[];
@@ -217,23 +221,23 @@ type LocalScriptRegistrationResult = {
   message?: string;
 };
 
+type BurstUserScriptsApi = {
+  register: (script: UserScriptRegistration) => Promise<void>;
+  unregisterBurstScripts: () => Promise<void>;
+};
+
+let legacyUserScriptRegistrations: Array<{ unregister: () => Promise<void> }> = [];
+
 async function registerEnabledLocalScripts() {
   const userScripts = getUserScriptsApi();
   if (!userScripts) {
-    const message = 'Chrome userScripts API is unavailable. Enable the browser user scripts toggle, then reload the extension.';
+    const message = 'User Scripts API is unavailable. In Firefox, grant the optional User Scripts permission from Burst settings. In Chrome, enable the browser user scripts toggle, then reload the extension.';
     console.warn(`[Burst] ${message}`);
     return { ok: false, count: 0, message };
   }
 
   try {
-    const existingScripts = await userScripts.getScripts();
-    const existingIds = existingScripts
-      .map((script) => script.id)
-      .filter((id): id is string => Boolean(id?.startsWith('burst-local-script-') || id?.startsWith('burst-registry-script-')));
-
-    if (existingIds.length > 0) {
-      await userScripts.unregister({ ids: existingIds });
-    }
+    await userScripts.unregisterBurstScripts();
 
     let count = 0;
 
@@ -247,14 +251,12 @@ async function registerEnabledLocalScripts() {
     const registryCommands = (await loadInstalledRegistryCommands()).filter(isRegistryCommandEnabled);
     for (const command of registryCommands) {
       const code = command.code || getMockScriptCode(command.id);
-      await userScripts.register([
-        {
-          id: getRegistryScriptRegistrationId(command.id),
-          matches: getRegistryScriptMatchPatterns(command.matchPatterns),
-          js: [{ code: createRegistryUserScriptCode(command.id, code) }],
-          runAt: 'document_idle',
-        },
-      ]);
+      await userScripts.register({
+        id: getRegistryScriptRegistrationId(command.id),
+        matches: getRegistryScriptMatchPatterns(command.matchPatterns),
+        js: [{ code: createRegistryUserScriptCode(command.id, code) }],
+        runAt: 'document_idle',
+      });
       count++;
     }
 
@@ -267,29 +269,68 @@ async function registerEnabledLocalScripts() {
 }
 
 
-async function registerLocalScript(userScripts: UserScriptsApi, script: LocalScript) {
+async function registerLocalScript(userScripts: BurstUserScriptsApi, script: LocalScript) {
+  const registration = {
+    id: getLocalScriptRegistrationId(script.id),
+    matches: getLocalScriptMatchPatterns(script),
+    js: [{ code: createLocalUserScriptCode(script) }],
+    runAt: 'document_idle' as const,
+  };
+
   try {
-    await userScripts.register([
-      {
-        id: getLocalScriptRegistrationId(script.id),
-        matches: getLocalScriptMatchPatterns(script),
-        js: [{ code: createLocalUserScriptCode(script) }],
-        runAt: 'document_idle',
-      },
-    ]);
+    await userScripts.register(registration);
   } catch (error) {
     console.error(`[Burst] Failed to register local script ${script.id}`, error);
   }
 }
 
-function getUserScriptsApi(): UserScriptsApi | undefined {
+function getUserScriptsApi(): BurstUserScriptsApi | undefined {
   const runtime = globalThis as typeof globalThis & {
     browser?: {
-      userScripts?: UserScriptsApi;
+      userScripts?: Partial<UserScriptsApi> | LegacyUserScriptsApi;
+    };
+    chrome?: {
+      userScripts?: Partial<UserScriptsApi>;
     };
   };
 
-  return runtime.browser?.userScripts;
+  const userScripts = runtime.browser?.userScripts ?? runtime.chrome?.userScripts;
+  if (!userScripts?.register) return undefined;
+
+  if ('getScripts' in userScripts && typeof userScripts.getScripts === 'function' && 'unregister' in userScripts && typeof userScripts.unregister === 'function') {
+    const modernApi = userScripts as UserScriptsApi;
+    return {
+      async register(script) {
+        await modernApi.register([script]);
+      },
+      async unregisterBurstScripts() {
+        const existingScripts = await modernApi.getScripts();
+        const existingIds = existingScripts
+          .map((script) => script.id)
+          .filter((id): id is string => Boolean(id?.startsWith('burst-local-script-') || id?.startsWith('burst-registry-script-')));
+
+        if (existingIds.length > 0) {
+          await modernApi.unregister({ ids: existingIds });
+        }
+      },
+    };
+  }
+
+  const legacyApi = userScripts as LegacyUserScriptsApi;
+  return {
+    async register(script) {
+      const { id, ...options } = script;
+      const registered = await legacyApi.register({ ...options, scriptMetadata: { id } });
+      legacyUserScriptRegistrations.push(registered);
+    },
+    async unregisterBurstScripts() {
+      const registrations = legacyUserScriptRegistrations;
+      legacyUserScriptRegistrations = [];
+      await Promise.all(registrations.map((registration) => registration.unregister().catch((error) => {
+        console.warn('[Burst] Failed to unregister legacy Firefox user script', error);
+      })));
+    },
+  };
 }
 
 async function getConfiguredRegistryBaseUrl(): Promise<string> {

@@ -5,6 +5,7 @@ export const burstDarkTheme: CommandPaletteTheme = {
   id: 'burst-dark',
   name: 'Burst Dark',
   description: 'Default glassy dark command palette.',
+  appearance: 'dark',
   previewUrl: 'https://example.com',
   variables: baseDarkVariables,
 };

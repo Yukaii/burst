@@ -92,17 +92,18 @@ describe('command matching', () => {
 
 describe('command palette themes', () => {
   test('resolves website-specific themes in auto mode', () => {
-    expect(resolveCommandPaletteThemeMeta('auto', 'https://github.com/openai/codex', 'dark').id).toBe('github');
-    expect(resolveCommandPaletteThemeMeta('auto', 'https://app.linear.app/acme', 'light').id).toBe('linear');
+    expect(resolveCommandPaletteThemeMeta('auto', 'https://github.com/openai/codex', 'light').id).toBe('github');
+    expect(resolveCommandPaletteThemeMeta('auto', 'https://app.linear.app/acme', 'dark').id).toBe('linear');
   });
 
   test('allows explicit user override and default fallback', () => {
     expect(resolveCommandPaletteThemeMeta('notion', 'https://github.com/openai/codex', 'dark').id).toBe('notion');
+    expect(resolveCommandPaletteThemeMeta('auto', 'https://github.com/openai/codex', 'dark').id).toBe('burst-dark');
     expect(resolveCommandPaletteThemeMeta('auto', 'https://example.com', 'light').id).toBe('burst-light');
   });
 
   test('loads full theme variables on demand', async () => {
-    const theme = await resolveCommandPaletteTheme('auto', 'https://notion.so/workspace', 'dark');
+    const theme = await resolveCommandPaletteTheme('auto', 'https://notion.so/workspace', 'light');
     expect(theme.id).toBe('notion');
     expect(theme.variables['--burst-shell-radius']).toBe('10px');
     expect((await loadCommandPaletteTheme('github')).variables['--burst-font-family']).toContain('Noto Sans');
