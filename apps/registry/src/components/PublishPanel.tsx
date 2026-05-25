@@ -367,11 +367,11 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <Button type="submit" className="font-bold text-xs h-10 px-6 cursor-pointer">
+          <div className="flex gap-2">
+            <Button type="submit" className="font-semibold text-xs h-8 px-4 cursor-pointer">
               Publish Command
             </Button>
-            <Button type="button" variant="outline" className="font-bold text-xs h-10 px-6 cursor-pointer" onClick={() => setNavTab('Discover')}>
+            <Button type="button" variant="outline" className="font-semibold text-xs h-8 px-4 cursor-pointer" onClick={() => setNavTab('Discover')}>
               Cancel
             </Button>
           </div>

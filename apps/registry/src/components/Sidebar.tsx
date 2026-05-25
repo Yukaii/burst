@@ -86,10 +86,10 @@ export function Sidebar({
 
           return (
             <button
-              className={`flex items-center gap-2.5 w-full h-[34px] border rounded-lg bg-transparent cursor-pointer text-[12px] font-[650] px-2.5 text-left transition-all duration-150 ${
+              className={`flex items-center gap-2 w-full h-8 rounded-md bg-transparent cursor-pointer text-xs font-medium px-2.5 text-left transition-all duration-150 ${
                 isActive 
-                  ? 'border-border bg-accent text-accent-foreground' 
-                  : 'border-transparent text-muted-foreground hover:border-border hover:bg-accent hover:text-accent-foreground'
+                  ? 'bg-accent text-accent-foreground' 
+                  : 'text-muted-foreground hover:bg-accent/45 hover:text-foreground'
               }`}
               type="button"
               key={item}
@@ -98,7 +98,7 @@ export function Sidebar({
                 if (onClearPublishToast) onClearPublishToast();
               }}
             >
-              <Icon className="size-[15px]" />
+              <Icon className="size-4" />
               {item}
             </button>
           );
@@ -109,21 +109,21 @@ export function Sidebar({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="group mt-auto grid grid-cols-[32px_1fr_auto] gap-2.5 items-center border border-border rounded-lg bg-background p-2 px-3 text-left outline-none cursor-pointer transition-colors hover:bg-accent/60 focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=open]:bg-accent"
+            className="group mt-auto grid grid-cols-[28px_1fr_auto] gap-2 items-center border border-border rounded-md bg-transparent p-1.5 px-2 text-left outline-none cursor-pointer transition-colors hover:bg-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=open]:bg-accent"
             aria-label="Open profile menu"
           >
-            <span className="grid size-8 place-items-center rounded-lg bg-accent text-accent-foreground text-[11.5px] font-extrabold">
+            <span className="grid size-7 place-items-center rounded bg-accent text-accent-foreground text-[10px] font-extrabold">
               {currentUser.avatarInitials}
             </span>
-            <span className="flex flex-col justify-center min-w-0 h-8 pt-[1px]">
-              <strong className="text-foreground text-[12.5px] font-semibold leading-tight block truncate">
+            <span className="flex flex-col justify-center min-w-0 h-7">
+              <strong className="text-foreground text-xs font-semibold leading-tight block truncate">
                 {currentUser.name}
               </strong>
-              <span className="mt-[1px] text-muted-foreground text-[11px] leading-tight block truncate">
+              <span className="mt-[0.5px] text-muted-foreground text-[10px] leading-tight block truncate">
                 {displayHandle} {showGithub ? `• ${currentUser.githubLogin}` : ''}
               </span>
             </span>
-            <ChevronUp className="size-3.5 text-muted-foreground transition-transform duration-150 group-data-[state=open]:rotate-180" />
+            <ChevronUp className="size-3 text-muted-foreground transition-transform duration-150 group-data-[state=open]:rotate-180" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-64">

@@ -72,24 +72,24 @@ export function DiscoverPanel({
 }: DiscoverPanelProps) {
   return (
     <section className="flex flex-1 min-h-0 flex-col gap-3">
-      <header className="flex items-center gap-2.5 shrink-0">
+      <header className="flex items-center gap-2 shrink-0">
         <div className="relative flex-1 min-w-0 flex items-center">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 size-4 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 size-3.5 pointer-events-none" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search website, publisher, permission, or use case"
-            className="pl-10 pr-3 h-9 w-full bg-background border-border rounded-lg text-xs font-semibold focus-visible:ring-ring"
+            className="pl-8.5 pr-3 h-8 w-full bg-background border-border rounded-lg text-xs font-medium focus-visible:ring-ring"
           />
         </div>
         <Button
-          className="h-9 px-3 rounded-md font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 text-xs shadow-sm transition-colors cursor-pointer border-none shrink-0"
+          className="h-8 px-2.5 rounded-lg font-medium bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 text-xs shadow-sm transition-colors cursor-pointer border-none shrink-0"
           type="button"
           onClick={() => {
             setNavTab('Publish');
           }}
         >
-          <Plus className="size-4" />
+          <Plus className="size-3.5" />
           Publish
         </Button>
       </header>
@@ -104,7 +104,7 @@ export function DiscoverPanel({
             <span className="shrink-0 rounded-full bg-muted text-muted-foreground text-[11px] font-semibold leading-none p-1.25 px-2">{filteredCommands.length} results</span>
           </div>
 
-          <div className="flex flex-wrap gap-1 border-b border-border bg-background p-2">
+          <div className="flex flex-wrap gap-1 border-b border-border bg-background p-1.5">
             {(
               [
                 { id: 'all', label: 'All' },
@@ -119,10 +119,10 @@ export function DiscoverPanel({
                   key={cat.id}
                   type="button"
                   onClick={() => setFilterCategory(cat.id)}
-                  className={`h-6.5 border rounded-lg bg-transparent cursor-pointer text-[11px] font-semibold px-2.25 text-center transition-all duration-150 ${
+                  className={`h-6 border rounded-md bg-transparent cursor-pointer text-[10.5px] font-medium px-2 text-center transition-all duration-150 ${
                     isActive 
                       ? 'border-border bg-accent text-accent-foreground' 
-                      : 'border-transparent text-muted-foreground hover:border-border hover:bg-accent hover:text-accent-foreground'
+                      : 'border-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground'
                   }`}
                 >
                   {cat.label}
