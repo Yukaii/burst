@@ -62,9 +62,9 @@ function parseCookies(cookieHeader: string | null): Record<string, string> {
 }
 
 function normalizeReturnTo(value: string | null, requestUrl: string): string {
-  if (!value) return '/dashboard';
+  if (!value) return '/home';
 
-  const fallback = '/dashboard';
+  const fallback = '/home';
   const request = new URL(requestUrl);
 
   try {
@@ -620,7 +620,7 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
           ? await store.updateUser(user.handle, { role: 'admin' })
           : user;
         const { sessionId } = await store.createSession(sessionUser.handle);
-        const returnTo = normalizeReturnTo(cookies[GITHUB_RETURN_TO_COOKIE] ?? '/dashboard', req.url);
+        const returnTo = normalizeReturnTo(cookies[GITHUB_RETURN_TO_COOKIE] ?? '/home', req.url);
 
         return redirectResponse(returnTo, [
           buildCookie('session_id', sessionId, secureCookie, 86400),

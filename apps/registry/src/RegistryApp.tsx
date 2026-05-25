@@ -1,13 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import type { BurstCommand } from '@/src/lib/commands';
 import { CheckCircle2 } from 'lucide-react';
 import logoUrl from '@/assets/logo.svg';
-
-// Correct /dashboard path to hash routing early
-if (typeof window !== 'undefined' && (window.location.pathname === '/dashboard' || window.location.pathname.startsWith('/dashboard/'))) {
-  const hash = window.location.hash || '#/discover';
-  window.history.replaceState(null, '', '/' + hash);
-}
 import {
   getAuthConfig,
   getCurrentUser,
@@ -37,6 +32,7 @@ import type { HandshakeLog } from './components/BridgeLogsConsole';
 import { DiscoverPanel } from './components/DiscoverPanel';
 
 const navItems = ['Discover', 'Publish', 'Profile', 'Users', 'Audits', 'Settings'] as const;
+type NavTab = typeof navItems[number];
 const PublishPanel = lazy(() => import('./components/PublishPanel').then((module) => ({ default: module.PublishPanel })));
 
 const guestSessionUser: RegistrySessionUser = {
@@ -48,36 +44,37 @@ const guestSessionUser: RegistrySessionUser = {
 
 const bridgeClientId = `registry-${Math.random().toString(36).slice(2)}`;
 
-// Helper to parse hash routing
-const parseHash = () => {
-  const hash = typeof window === 'undefined' ? '' : window.location.hash;
-  if (!hash || hash === '#/') {
-    return { tab: 'Discover' as const, cmdId: null as string | null, open: false, view: null as 'landing' | 'app' | null };
+function parseRoute(pathname: string) {
+  const parts = pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
+  const routeName = parts[0] || 'home';
+
+  if (routeName === 'home') {
+    return { tab: 'Discover' as NavTab, cmdId: null as string | null, open: false, view: 'landing' as const };
   }
 
-  const parts = hash.slice(2).split('/'); // removes '#/'
-  const tabName = parts[0];
-  const cmdId = parts[1] || null;
-
-  const matchedTab = (['Discover', 'Publish', 'Profile', 'Users', 'Audits', 'Settings'] as const).find(
-    (item) => item.toLowerCase() === tabName.toLowerCase()
-  );
-
-  if (matchedTab) {
-    return {
-      tab: matchedTab,
-      cmdId: cmdId,
-      open: matchedTab === 'Discover' && Boolean(cmdId),
-      view: 'app' as const,
-    };
+  const matchedTab = navItems.find((item) => item.toLowerCase() === routeName.toLowerCase());
+  if (!matchedTab) {
+    return { tab: 'Discover' as NavTab, cmdId: null as string | null, open: false, view: 'landing' as const };
   }
 
-  return { tab: 'Discover' as const, cmdId: null, open: false, view: null };
-};
+  const cmdId = matchedTab === 'Discover' ? parts[1] || null : null;
+  return {
+    tab: matchedTab,
+    cmdId,
+    open: matchedTab === 'Discover' && Boolean(cmdId),
+    view: 'app' as const,
+  };
+}
 
-const initialRoute = parseHash();
-const hasSessionFlag = typeof window !== 'undefined' && localStorage.getItem('burst_has_session') === 'true';
-const defaultView = initialRoute.view || (hasSessionFlag ? 'app' : 'landing');
+function pathForTab(tab: NavTab, commandId?: string | null) {
+  const base = `/${tab.toLowerCase()}`;
+  return tab === 'Discover' && commandId ? `${base}/${commandId}` : base;
+}
+
+const initialRoute = typeof window === 'undefined'
+  ? { tab: 'Discover' as NavTab, cmdId: null as string | null, open: false, view: 'landing' as const }
+  : parseRoute(window.location.pathname);
+const defaultView = initialRoute.view;
 type RegistryTheme = 'light' | 'dark';
 
 function getStoredTheme(): RegistryTheme {
@@ -108,10 +105,12 @@ function SplashLoadingScreen({ theme }: { theme: 'light' | 'dark' }) {
 }
 
 export function RegistryApp() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [authLoading, setAuthLoading] = useState(true);
   const [authConfig, setAuthConfig] = useState<RegistryAuthConfig | null>(null);
   const [preferredTheme, setPreferredTheme] = useState<RegistryTheme>(getStoredTheme);
-  const [navTab, setNavTab] = useState<'Discover' | 'Publish' | 'Profile' | 'Users' | 'Audits' | 'Settings'>(
+  const [navTab, setNavTab] = useState<NavTab>(
     initialRoute.tab || 'Discover'
   );
   const [publishSuccessToast, setPublishSuccessToast] = useState<string | null>(null);
@@ -151,19 +150,6 @@ export function RegistryApp() {
         setAuthConfig(config);
         setCurrentUser(user);
 
-        // Parse routing from hash on load
-        const route = parseHash();
-        if (route.view) {
-          setView(route.view);
-          setNavTab(route.tab);
-          if (route.tab === 'Discover' && route.cmdId) {
-            setActiveCommandId(route.cmdId);
-            setIsInspectorOpen(route.open);
-          }
-        } else if (user.handle !== 'guest') {
-          setView('app');
-        }
-
         if (user.handle !== 'guest') {
           localStorage.setItem('burst_has_session', 'true');
         } else {
@@ -187,44 +173,41 @@ export function RegistryApp() {
     };
   }, []);
 
-  // 1. Listen for browser routing hash changes (back/forward history buttons)
+  // Route state is owned by React Router. Keep local panel state in sync with the current path.
   useEffect(() => {
-    const handleHashChange = () => {
-      const route = parseHash();
-      if (route.view) {
-        setView(route.view);
-        setNavTab(route.tab);
-        if (route.tab === 'Discover') {
-          setActiveCommandId(route.cmdId);
-          setIsInspectorOpen(route.open);
-        }
-      } else {
-        setView('landing');
-      }
-    };
+    const route = parseRoute(location.pathname);
+    setView(route.view);
+    setNavTab(route.tab);
 
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+    if (route.view === 'landing') {
+      setActiveCommandId(null);
+      setIsInspectorOpen(false);
+      return;
+    }
 
-  // 2. Synchronize active state -> URL hash
+    if (route.tab === 'Discover') {
+      setActiveCommandId(route.cmdId);
+      setIsInspectorOpen(route.open);
+    } else {
+      setIsInspectorOpen(false);
+    }
+  }, [location.pathname]);
+
+  // Keep app state reflected in the URL path.
   useEffect(() => {
     if (authLoading) return;
     if (view === 'landing') {
-      if (window.location.hash) {
-        window.location.hash = '';
+      if (location.pathname !== '/home') {
+        navigate('/home', { replace: true });
       }
       return;
     }
-    const tabLower = navTab.toLowerCase();
-    let expectedHash = `#/${tabLower}`;
-    if (navTab === 'Discover' && isInspectorOpen && activeCommandId) {
-      expectedHash = `#/${tabLower}/${activeCommandId}`;
+
+    const expectedPath = pathForTab(navTab, isInspectorOpen ? activeCommandId : null);
+    if (location.pathname !== expectedPath) {
+      navigate(expectedPath, { replace: true });
     }
-    if (window.location.hash !== expectedHash) {
-      window.location.hash = expectedHash;
-    }
-  }, [view, navTab, isInspectorOpen, activeCommandId, authLoading]);
+  }, [view, navTab, isInspectorOpen, activeCommandId, authLoading, location.pathname, navigate]);
 
   const isGuest = currentUser.handle === 'guest';
   const canManageRegistry = currentUser.role === 'admin';
@@ -418,7 +401,7 @@ export function RegistryApp() {
 
   const handleGitHubLogin = () => {
     const loginUrl = new URL(authConfig?.loginUrl ?? '/api/auth/github/start', window.location.origin);
-    loginUrl.searchParams.set('returnTo', `${window.location.origin}/#/discover`);
+    loginUrl.searchParams.set('returnTo', `${window.location.origin}/home`);
     window.location.assign(loginUrl.toString());
   };
 
