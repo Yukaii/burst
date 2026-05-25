@@ -38,6 +38,7 @@ import {
   saveConsentGrant,
   setRegistryCommandStatus,
 } from '../src/lib/registryStorage.ts';
+import { loadCommandPaletteTheme, resolveCommandPaletteTheme, resolveCommandPaletteThemeMeta } from '../src/lib/paletteThemes.ts';
 
 const baseCommand = {
   id: 'base-command',
@@ -86,6 +87,25 @@ describe('command matching', () => {
       '*://github.com/*',
       '*://docs.example.com/*',
     ]);
+  });
+});
+
+describe('command palette themes', () => {
+  test('resolves website-specific themes in auto mode', () => {
+    expect(resolveCommandPaletteThemeMeta('auto', 'https://github.com/openai/codex', 'dark').id).toBe('github');
+    expect(resolveCommandPaletteThemeMeta('auto', 'https://app.linear.app/acme', 'light').id).toBe('linear');
+  });
+
+  test('allows explicit user override and default fallback', () => {
+    expect(resolveCommandPaletteThemeMeta('notion', 'https://github.com/openai/codex', 'dark').id).toBe('notion');
+    expect(resolveCommandPaletteThemeMeta('auto', 'https://example.com', 'light').id).toBe('burst-light');
+  });
+
+  test('loads full theme variables on demand', async () => {
+    const theme = await resolveCommandPaletteTheme('auto', 'https://notion.so/workspace', 'dark');
+    expect(theme.id).toBe('notion');
+    expect(theme.variables['--burst-shell-radius']).toBe('10px');
+    expect((await loadCommandPaletteTheme('github')).variables['--burst-font-family']).toContain('Noto Sans');
   });
 });
 

@@ -5,7 +5,7 @@
 .burst-shell *::after {
   box-sizing: border-box;
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    var(--burst-font-family, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
 }
 
 .burst-overlay {
@@ -13,8 +13,8 @@
   inset: 0;
   z-index: 2147483647;
   display: grid;
-  background: rgba(2, 6, 23, 0.34);
-  color: #f8fafc;
+  background: var(--burst-overlay-bg, rgba(2, 6, 23, 0.34));
+  color: var(--burst-strong, #f8fafc);
   backdrop-filter: blur(2px);
 }
 
@@ -23,30 +23,28 @@
 }
 
 .burst-shell {
-  width: min(640px, calc(100vw - 32px));
+  width: var(--burst-shell-width, min(640px, calc(100vw - 32px)));
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  background: rgba(22, 22, 26, 0.75);
-  backdrop-filter: blur(25px) saturate(200%);
-  -webkit-backdrop-filter: blur(25px) saturate(200%);
-  box-shadow: 
-    0 30px 90px rgba(0, 0, 0, 0.6),
-    0 0 1px 1px rgba(255, 255, 255, 0.15) inset;
+  border: 1px solid var(--burst-shell-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--burst-shell-radius, 16px);
+  background: var(--burst-shell-bg, rgba(22, 22, 26, 0.75));
+  backdrop-filter: var(--burst-shell-blur, blur(25px) saturate(200%));
+  -webkit-backdrop-filter: var(--burst-shell-blur, blur(25px) saturate(200%));
+  box-shadow: var(--burst-shell-shadow, 0 30px 90px rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(255, 255, 255, 0.15) inset);
 }
 
 .burst-search {
   display: grid;
-  gap: 6px;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  gap: var(--burst-search-gap, 6px);
+  padding: var(--burst-search-padding, 14px 16px 12px);
+  border-bottom: 1px solid var(--burst-search-border, rgba(255, 255, 255, 0.06));
 }
 
 .burst-search span {
   overflow: hidden;
-  color: #94a3b8;
-  font-size: 11px;
-  font-weight: 600;
+  color: var(--burst-label, #94a3b8);
+  font-size: var(--burst-label-size, 11px);
+  font-weight: var(--burst-label-weight, 600);
   line-height: 1;
   text-overflow: ellipsis;
   text-transform: uppercase;
@@ -55,33 +53,33 @@
 
 .burst-search input {
   width: 100%;
-  height: 38px;
+  height: var(--burst-input-height, 38px);
   border: 0;
   outline: 0;
   padding: 0;
   background: transparent;
-  color: #ffffff;
-  font-size: 19px;
-  font-weight: 500;
+  color: var(--burst-input, #ffffff);
+  font-size: var(--burst-input-size, 19px);
+  font-weight: var(--burst-input-weight, 500);
   letter-spacing: -0.01em;
 }
 
 .burst-search input::placeholder {
-  color: #64748b;
+  color: var(--burst-placeholder, #64748b);
 }
 
 .burst-results {
   max-height: min(420px, 58vh);
   overflow-y: auto;
-  padding: 6px;
+  padding: var(--burst-results-padding, 6px);
 }
 
 .burst-status {
   margin: 4px 4px 6px;
-  border: 1px solid rgba(56, 189, 248, 0.2);
+  border: 1px solid var(--burst-status-border, rgba(56, 189, 248, 0.2));
   border-radius: 8px;
-  background: rgba(14, 165, 233, 0.1);
-  color: #bae6fd;
+  background: var(--burst-status-bg, rgba(14, 165, 233, 0.1));
+  color: var(--burst-status-text, #bae6fd);
   font-size: 12px;
   font-weight: 500;
   line-height: 1.35;
@@ -90,31 +88,31 @@
 
 .burst-command {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: var(--burst-icon-size, 34px) minmax(0, 1fr) auto;
   align-items: center;
   width: 100%;
   max-width: 100%;
-  gap: 12px;
-  min-height: 52px;
+  gap: var(--burst-command-gap, 12px);
+  min-height: var(--burst-command-min-height, 52px);
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--burst-command-radius, 8px);
   background: transparent;
-  color: #cbd5e1;
+  color: var(--burst-text, #cbd5e1);
   cursor: pointer;
-  padding: 8px 12px;
+  padding: var(--burst-command-padding, 8px 12px);
   text-align: left;
   transition: all 0.15s ease;
 }
 
 .burst-list-item {
-  grid-template-columns: 34px minmax(0, 1fr) minmax(0, 14ch) auto;
+  grid-template-columns: var(--burst-icon-size, 34px) minmax(0, 1fr) minmax(0, 14ch) auto;
 }
 
 .burst-list-accessory {
   overflow: hidden;
   min-width: 0;
   max-width: 14ch;
-  color: #94a3b8;
+  color: var(--burst-muted, #94a3b8);
   font-size: 12px;
   line-height: 1.25;
   text-overflow: ellipsis;
@@ -122,19 +120,19 @@
 }
 
 .burst-command.is-active .burst-list-accessory {
-  color: rgba(15, 23, 42, 0.72);
+  color: var(--burst-active-muted, rgba(15, 23, 42, 0.72));
 }
 
 .burst-command-icon {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: var(--burst-icon-size, 34px);
+  height: var(--burst-icon-size, 34px);
   place-items: center;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.04);
-  color: #38bdf8;
+  border: 1px solid var(--burst-icon-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--burst-icon-radius, 7px);
+  background: var(--burst-icon-bg, rgba(255, 255, 255, 0.04));
+  color: var(--burst-icon-text, #38bdf8);
   font-size: 13px;
   font-weight: 700;
   transition: all 0.15s ease;
@@ -146,15 +144,15 @@
 }
 
 .burst-command:hover:not(.is-active) {
-  background: rgba(255, 255, 255, 0.04);
-  color: #ffffff;
+  background: var(--burst-hover-bg, rgba(255, 255, 255, 0.04));
+  color: var(--burst-hover-text, #ffffff);
 }
 
 .burst-command.is-active {
-  background: linear-gradient(180deg, #38bdf8, #0ea5e9);
-  border-color: rgba(56, 189, 248, 0.2);
-  color: #0f172a;
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+  background: var(--burst-active-bg, linear-gradient(180deg, #38bdf8, #0ea5e9));
+  border-color: var(--burst-active-border, rgba(56, 189, 248, 0.2));
+  color: var(--burst-active-text, #0f172a);
+  box-shadow: var(--burst-active-shadow, 0 4px 12px rgba(14, 165, 233, 0.2));
 }
 
 .burst-command-copy {
@@ -176,9 +174,9 @@
 .burst-command-title strong {
   overflow: hidden;
   min-width: 0;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 600;
+  color: var(--burst-strong, #ffffff);
+  font-size: var(--burst-command-title-size, 14px);
+  font-weight: var(--burst-command-title-weight, 600);
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -186,7 +184,7 @@
 }
 
 .burst-command.is-active .burst-command-title strong {
-  color: #0f172a;
+  color: var(--burst-active-text, #0f172a);
 }
 
 .burst-installed-check {
@@ -213,9 +211,9 @@
   overflow: hidden;
   min-width: 0;
   max-width: 45%;
-  color: #94a3b8;
-  font-size: 12px;
-  font-weight: 400;
+  color: var(--burst-muted, #94a3b8);
+  font-size: var(--burst-command-subtitle-size, 12px);
+  font-weight: var(--burst-command-subtitle-weight, 400);
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -223,22 +221,22 @@
 }
 
 .burst-command.is-active .burst-command-subtitle {
-  color: rgba(15, 23, 42, 0.7);
+  color: var(--burst-active-muted, rgba(15, 23, 42, 0.7));
 }
 
 .burst-command.is-active .burst-command-icon {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #0f172a;
+  background: var(--burst-active-icon-bg, rgba(255, 255, 255, 0.2));
+  border-color: var(--burst-active-icon-border, rgba(255, 255, 255, 0.3));
+  color: var(--burst-active-text, #0f172a);
 }
 
 .burst-command kbd {
   min-width: 7ch;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-bottom-color: rgba(255, 255, 255, 0.2);
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #cbd5e1;
+  border: 1px solid var(--burst-kbd-border, rgba(255, 255, 255, 0.1));
+  border-bottom-color: var(--burst-kbd-border-bottom, rgba(255, 255, 255, 0.2));
+  border-radius: var(--burst-kbd-radius, 5px);
+  background: var(--burst-kbd-bg, rgba(255, 255, 255, 0.05));
+  color: var(--burst-kbd-text, #cbd5e1);
   font-size: 10px;
   font-weight: 500;
   line-height: 1;
@@ -254,13 +252,13 @@
 .burst-command.is-active kbd {
   background: rgba(0, 0, 0, 0.15);
   border-color: rgba(0, 0, 0, 0.1);
-  color: #0f172a;
+  color: var(--burst-active-text, #0f172a);
   box-shadow: none;
 }
 
 .burst-empty {
   padding: 24px 12px;
-  color: #94a3b8;
+  color: var(--burst-muted, #94a3b8);
   font-size: 13px;
   font-weight: 650;
   line-height: 1.4;
@@ -1133,4 +1131,93 @@
 
 .theme-light .burst-audit-checklist .check-text span {
   color: #64748b;
+}
+
+/* Registered palette themes own the core command palette colors through CSS variables. */
+.burst-overlay[class*="palette-theme-"] {
+  background: var(--burst-overlay-bg);
+  color: var(--burst-strong);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-shell {
+  border-color: var(--burst-shell-border);
+  background: var(--burst-shell-bg);
+  box-shadow: var(--burst-shell-shadow);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-search {
+  border-bottom-color: var(--burst-search-border);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-search span {
+  color: var(--burst-label);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-search input {
+  color: var(--burst-input);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-search input::placeholder {
+  color: var(--burst-placeholder);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-command {
+  color: var(--burst-text);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-command-title strong {
+  color: var(--burst-strong);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-command-subtitle,
+.burst-overlay[class*="palette-theme-"] .burst-list-accessory,
+.burst-overlay[class*="palette-theme-"] .burst-empty {
+  color: var(--burst-muted);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-command-icon {
+  border-color: var(--burst-icon-border);
+  background: var(--burst-icon-bg);
+  color: var(--burst-icon-text);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-command:hover:not(.is-active) {
+  background: var(--burst-hover-bg);
+  color: var(--burst-hover-text);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-command.is-active {
+  background: var(--burst-active-bg);
+  border-color: var(--burst-active-border);
+  color: var(--burst-active-text);
+  box-shadow: var(--burst-active-shadow);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-command.is-active .burst-command-title strong,
+.burst-overlay[class*="palette-theme-"] .burst-command.is-active .burst-command-icon,
+.burst-overlay[class*="palette-theme-"] .burst-command.is-active kbd {
+  color: var(--burst-active-text);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-command.is-active .burst-command-subtitle,
+.burst-overlay[class*="palette-theme-"] .burst-command.is-active .burst-list-accessory {
+  color: var(--burst-active-muted);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-command.is-active .burst-command-icon {
+  background: var(--burst-active-icon-bg);
+  border-color: var(--burst-active-icon-border);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-command kbd {
+  border-color: var(--burst-kbd-border);
+  border-bottom-color: var(--burst-kbd-border-bottom);
+  background: var(--burst-kbd-bg);
+  color: var(--burst-kbd-text);
+}
+
+.burst-overlay[class*="palette-theme-"] .burst-status {
+  border-color: var(--burst-status-border);
+  background: var(--burst-status-bg);
+  color: var(--burst-status-text);
 }

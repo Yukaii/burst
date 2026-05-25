@@ -1,5 +1,6 @@
 import { Button } from './ui/button';
 import { Switch } from './ui/switch';
+import { ExternalLink, GitPullRequest } from 'lucide-react';
 
 interface SettingsPanelProps {
   bridgeConnected: boolean;
@@ -63,6 +64,35 @@ export function SettingsPanel({ bridgeConnected, theme, onThemeChange }: Setting
                 {bridgeConnected ? '✓ Connected' : 'Not detected'}
               </span>
             </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 min-w-0 border border-border rounded-lg bg-card p-4">
+          <h3 className="m-0 border-b border-border text-muted-foreground text-[10px] font-bold tracking-[0.1em] leading-none pb-2.5 uppercase">Theme Contributions</h3>
+          <div className="flex items-start justify-between gap-4.5 py-2">
+            <div className="flex-1">
+              <strong className="text-sm font-bold text-slate-900 dark:text-white">Command Palette Website Themes</strong>
+              <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block leading-relaxed">
+                Theme configs live in <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">src/themes/*.ts</code> and include domain matching through <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">matchHosts</code>.
+              </span>
+            </div>
+            <div className="flex shrink-0 flex-wrap justify-end gap-2">
+              <Button asChild variant="outline" type="button" className="h-9 cursor-pointer gap-2 text-xs font-bold">
+                <a href="https://github.com/Yukaii/burst/tree/main/src/themes" target="_blank" rel="noreferrer">
+                  <GitPullRequest className="size-3.5" />
+                  Theme Files
+                </a>
+              </Button>
+              <Button asChild variant="outline" type="button" className="h-9 cursor-pointer gap-2 text-xs font-bold">
+                <a href="https://github.com/Yukaii/burst/blob/main/docs/command-palette-themes.md" target="_blank" rel="noreferrer">
+                  <ExternalLink className="size-3.5" />
+                  Guide
+                </a>
+              </Button>
+            </div>
+          </div>
+          <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground">
+            Start from <code className="text-foreground">src/themes/notion.ts</code>, tune spacing and typography variables for the target website, then add the export to <code className="text-foreground">src/lib/paletteThemes.ts</code>.
           </div>
         </div>
 

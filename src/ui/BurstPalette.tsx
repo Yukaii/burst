@@ -31,6 +31,7 @@ import {
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
 import { getMockScriptCode } from '@/src/lib/registryApi';
 import { ExtensionSettings, DEFAULT_SETTINGS, loadSettings } from '@/src/lib/settings';
+import { loadCommandPaletteTheme, resolveCommandPaletteThemeMeta, type CommandPaletteTheme } from '@/src/lib/paletteThemes';
 import { captureSelectionSnapshot, restoreSelectionSnapshot, type SelectionSnapshot } from '@/src/ui/selection';
 
 type BurstPaletteProps = {
@@ -76,6 +77,7 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [capturedSelection, setCapturedSelection] = useState('');
   const [capturedSelectionSnapshot, setCapturedSelectionSnapshot] = useState<SelectionSnapshot | null>(null);
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
+  const [paletteTheme, setPaletteTheme] = useState<CommandPaletteTheme | null>(null);
   const [customList, setCustomList] = useState<BurstCustomList | null>(null);
   const [listCommand, setListCommand] = useState<BurstCommand | null>(null);
   const [isRegistryStoreOpen, setIsRegistryStoreOpen] = useState(false);
@@ -560,11 +562,24 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const activeTheme = settings.theme === 'system'
     ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
     : settings.theme;
+  const paletteThemeMeta = resolveCommandPaletteThemeMeta(settings.commandPaletteTheme, pageUrl, activeTheme);
+  const activePaletteTheme = paletteTheme?.id === paletteThemeMeta.id ? paletteTheme : null;
+
+  useEffect(() => {
+    let active = true;
+    void loadCommandPaletteTheme(paletteThemeMeta.id).then((theme) => {
+      if (active) setPaletteTheme(theme);
+    });
+    return () => {
+      active = false;
+    };
+  }, [paletteThemeMeta.id]);
 
   return (
     <>
       <div
-          className={`burst-overlay position-${settings.position} theme-${activeTheme} ${isOpen ? '' : 'is-hidden'}`}
+          className={`burst-overlay position-${settings.position} theme-${activeTheme} palette-theme-${paletteThemeMeta.id} ${isOpen ? '' : 'is-hidden'}`}
+          style={(activePaletteTheme?.variables ?? {}) as React.CSSProperties}
           hidden={!isOpen}
           aria-hidden={!isOpen}
           role="presentation"

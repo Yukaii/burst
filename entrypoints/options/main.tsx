@@ -9,7 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/src/components/ui/select';
-import { ExtensionSettings, loadSettings, saveSettings } from '@/src/lib/settings';
+import { ExtensionSettings, getRegistryServerBaseUrl, loadSettings, saveSettings } from '@/src/lib/settings';
+import {
+  commandPaletteThemeMetadata,
+  commandPaletteThemeOptions,
+  getCommandPaletteThemeMeta,
+  loadCommandPaletteTheme,
+  type CommandPaletteTheme,
+} from '@/src/lib/paletteThemes';
 import { clearConsentGrants } from '@/src/lib/registryStorage';
 import './style.css';
 
@@ -41,6 +48,7 @@ const REGISTRY_SERVER_OPTIONS: Array<{
 
 function OptionsApp() {
   const [settings, setSettings] = useState<ExtensionSettings | null>(null);
+  const [previewTheme, setPreviewTheme] = useState<CommandPaletteTheme | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusType, setStatusType] = useState<'success' | 'info'>('info');
 
@@ -113,6 +121,17 @@ function OptionsApp() {
     }
   }, [settings?.theme]);
 
+  useEffect(() => {
+    if (!settings) return;
+    let active = true;
+    void loadCommandPaletteTheme(settings.commandPaletteTheme).then((theme) => {
+      if (active) setPreviewTheme(theme);
+    });
+    return () => {
+      active = false;
+    };
+  }, [settings?.commandPaletteTheme]);
+
   if (!settings) {
     return (
       <div className="options-loading">
@@ -144,6 +163,11 @@ function OptionsApp() {
     await saveSettings(next);
     showFeedback('Registry server saved successfully', 'success');
   }
+
+  const selectedPaletteTheme = getCommandPaletteThemeMeta(settings.commandPaletteTheme);
+  const activePreviewTheme = previewTheme?.id === selectedPaletteTheme.id ? previewTheme : null;
+  const selectedThemePath = selectedPaletteTheme.modulePath;
+  const registryThemeContributionUrl = `${getRegistryServerBaseUrl(settings)}/#/settings`;
 
   function showFeedback(msg: string, type: 'success' | 'info' = 'info') {
     setStatusMessage(msg);
@@ -242,6 +266,71 @@ function OptionsApp() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="setting-card palette-theme-card">
+            <div className="setting-info">
+              <h2>Command Palette Theme</h2>
+              <p>Choose the registered palette look. Auto uses website matches first, then the default appearance theme.</p>
+            </div>
+            <div className="setting-control palette-theme-control">
+              <Select
+                value={settings.commandPaletteTheme}
+                onValueChange={(value) => updateSetting('commandPaletteTheme', value as ExtensionSettings['commandPaletteTheme'])}
+              >
+                <SelectTrigger className="w-full sm:w-[220px]" aria-label="Command palette theme">
+                  <SelectValue placeholder="Select palette theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {commandPaletteThemeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <div
+                className="palette-preview"
+                style={(activePreviewTheme?.variables ?? {}) as React.CSSProperties}
+                aria-label={`${selectedPaletteTheme.name} preview`}
+              >
+                <div className="palette-preview-shell">
+                  <div className="palette-preview-search">
+                    <span>{selectedPaletteTheme.previewUrl.replace(/^https?:\/\//, '')}</span>
+                    <strong>Search commands</strong>
+                  </div>
+                  <div className="palette-preview-command active">
+                    <span>⌘</span>
+                    <div>
+                      <strong>{selectedPaletteTheme.name}</strong>
+                      <small>{selectedPaletteTheme.description}</small>
+                    </div>
+                  </div>
+                  <div className="palette-preview-command">
+                    <span>↵</span>
+                    <div>
+                      <strong>Open command</strong>
+                      <small>{selectedPaletteTheme.matchHosts?.join(', ') ?? 'Default fallback'}</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p className="palette-registry-note">
+                Registry: {commandPaletteThemeMetadata.length} contributed themes are available for matching and preview.
+                Add a file like <code>src/themes/notion.ts</code>, set <code>matchHosts</code>, then register it in <code>src/lib/paletteThemes.ts</code>.
+                Current config: <code>{selectedThemePath}</code>
+              </p>
+              <div className="palette-contribution-links" aria-label="Theme contribution links">
+                <a href={registryThemeContributionUrl} target="_blank" rel="noreferrer">
+                  Open Registry
+                </a>
+                <a href="https://github.com/Yukaii/burst/tree/main/src/themes" target="_blank" rel="noreferrer">
+                  GitHub Themes
+                </a>
+              </div>
             </div>
           </div>
 

@@ -1,5 +1,6 @@
 export type ExtensionSettings = {
   theme: 'dark' | 'light' | 'system';
+  commandPaletteTheme: import('./paletteThemes').CommandPaletteThemeId;
   position: 'top' | 'center';
   backdropClickClose: boolean;
   showConsoleLogs: boolean;
@@ -14,6 +15,7 @@ export type ExtensionSettings = {
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   theme: 'dark',
+  commandPaletteTheme: 'auto',
   position: 'top',
   backdropClickClose: true,
   showConsoleLogs: false,
