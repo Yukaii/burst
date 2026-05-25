@@ -15,7 +15,10 @@ import { Github } from './icons';
 import {
   ArrowRight,
   CheckCircle2,
+  Code2,
+  GitFork,
   Info,
+  PackageCheck,
   Search,
   ShieldCheck,
   Sparkles,
@@ -99,19 +102,37 @@ export function LandingPage({
 
   const landingHighlights = [
     {
-      title: 'Website-aware discovery',
-      description: 'Find commands by site, publisher, permission, and use case from the live registry catalog.',
+      title: 'Discover by website',
+      description: 'Open Burst on any page to find commands matched to the current domain, task, publisher, and permission set.',
       icon: Search,
     },
     {
-      title: 'Publisher identity',
-      description: 'Profiles and GitHub-backed sessions make command ownership easier to inspect before install.',
-      icon: Github,
+      title: 'Install with context',
+      description: 'Review source, publisher identity, risk, and declared capabilities before a command can run in your browser.',
+      icon: PackageCheck,
     },
     {
-      title: 'Static analysis signals',
-      description: 'Trust, risk, and declared permissions are surfaced before a command runs in the browser.',
+      title: 'Fork and extend',
+      description: 'Turn useful automations into live scripts you can customize, publish, or keep local for one website workflow.',
+      icon: GitFork,
+    },
+  ];
+
+  const workflowSteps = [
+    {
+      title: 'Find the action',
+      description: 'Search the active site for commands built by the community or by your own team.',
+      icon: Search,
+    },
+    {
+      title: 'Read the contract',
+      description: 'Inspect the manifest, source URL, capabilities, risk level, and audit state before installing.',
       icon: ShieldCheck,
+    },
+    {
+      title: 'Run or remix',
+      description: 'Install the command, fork the script, and adapt it with Burst APIs for DOM, selection, clipboard, toasts, and lists.',
+      icon: Code2,
     },
   ];
 
@@ -162,12 +183,12 @@ export function LandingPage({
           <div className="flex max-w-2xl flex-col gap-6 pt-6">
             <Badge variant="secondary" className="self-start">
               <Sparkles data-icon="inline-start" />
-              Trusted command registry
+              Website command palette
             </Badge>
             <div className="flex flex-col gap-4">
-              <h1 className="m-0 text-4xl font-semibold leading-tight tracking-normal lg:text-5xl">Run webpage commands with inspectable trust signals.</h1>
+              <h1 className="m-0 text-4xl font-semibold leading-tight tracking-normal lg:text-5xl">Make every website a command palette.</h1>
               <p className="m-0 max-w-xl text-base font-medium leading-relaxed text-muted-foreground">
-                Burst helps you discover browser commands, review publisher identity, and inspect risk signals before installing anything from the registry.
+                Burst lets users discover, install, fork, and customize website features as commands. Use live scripts and a small browser API to extend pages without waiting for the site to ship the workflow you need.
               </p>
             </div>
 
@@ -180,11 +201,11 @@ export function LandingPage({
               ) : (
                 <Button size="lg" onClick={() => void onGitHubLogin()} disabled={!githubEnabled || authLoading}>
                   <Github data-icon="inline-start" />
-                  Continue with GitHub
+                  Start with GitHub
                 </Button>
               )}
               <Button size="lg" variant="outline" onClick={onGoToDashboard}>
-                Browse catalog
+                Explore commands
                 <ArrowRight data-icon="inline-end" />
               </Button>
             </div>
@@ -210,9 +231,9 @@ export function LandingPage({
             <CardHeader className="border-b">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Terminal className="size-4 text-muted-foreground" />
-                Registry preview
+                Command palette preview
               </CardTitle>
-              <CardDescription>Live examples loaded from the command catalog.</CardDescription>
+              <CardDescription>Live website commands loaded from the registry catalog.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3 pt-0">
               <div className="flex h-10 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm">
@@ -249,10 +270,10 @@ export function LandingPage({
               </div>
             </CardContent>
             <CardFooter className="justify-between text-xs text-muted-foreground">
-              <span>Context-aware catalog</span>
+              <span>Discover, install, fork</span>
               <span className="inline-flex items-center gap-1">
                 <CheckCircle2 className="size-3.5" />
-                Review before install
+                Inspect before run
               </span>
             </CardFooter>
           </Card>
@@ -275,10 +296,35 @@ export function LandingPage({
           })}
         </section>
 
+        <section className="grid grid-cols-1 gap-5 lg:grid-cols-[0.75fr_1.25fr] lg:items-start">
+          <div className="flex max-w-xl flex-col gap-2">
+            <h2 className="m-0 text-2xl font-semibold leading-tight tracking-normal">From webpage to workflow</h2>
+            <p className="m-0 text-sm font-medium leading-relaxed text-muted-foreground">
+              Burst turns page-specific scripts into searchable commands with a manifest, permissions, source links, and a runtime API for practical browser automation.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            {workflowSteps.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Card key={item.title} size="sm">
+                  <CardHeader>
+                    <div className="flex size-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground">
+                      <Icon className="size-4" />
+                    </div>
+                    <CardTitle>{item.title}</CardTitle>
+                    <CardDescription>{item.description}</CardDescription>
+                  </CardHeader>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
         <section className="flex flex-col gap-5" id="featured-commands">
           <div className="flex max-w-2xl flex-col gap-2">
-            <h2 className="m-0 text-2xl font-semibold leading-tight tracking-normal">Featured commands</h2>
-            <p className="m-0 text-sm font-medium leading-relaxed text-muted-foreground">These cards are populated from the current registry command data.</p>
+            <h2 className="m-0 text-2xl font-semibold leading-tight tracking-normal">Featured website commands</h2>
+            <p className="m-0 text-sm font-medium leading-relaxed text-muted-foreground">Examples from the registry show how narrow page features become installable, inspectable commands.</p>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {featuredCommands.map((command) => (

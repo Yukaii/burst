@@ -1,6 +1,18 @@
 # API Guide
 
+Burst commands turn website features into command palette actions. A command declares where it runs, what it needs, where the source lives, and which runtime capabilities it can use. Users can then discover the command on matching websites, inspect it before installing, fork it into a live local script, or publish a customized version back to a registry.
+
 This guide captures the current intended contracts. Treat this as a working draft rather than a stable public API.
+
+## Authoring Model
+
+Every command has three pieces:
+
+1. A `burst.command.json` manifest that describes identity, website matching, publisher metadata, source, permissions, runtime entrypoint, risk, and version.
+2. A script entrypoint that receives a sandboxed runtime context instead of raw page globals.
+3. A review path through the registry or local dashboard so users can inspect, install, fork, customize, and update the command.
+
+Burst is designed for narrow website actions rather than broad extensions. Good commands should be easy to read, declare only the capabilities they need, and do one workflow well.
 
 ## Command Manifest
 
