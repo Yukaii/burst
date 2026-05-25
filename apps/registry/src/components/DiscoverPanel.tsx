@@ -72,18 +72,18 @@ export function DiscoverPanel({
 }: DiscoverPanelProps) {
   return (
     <section className="flex flex-1 min-h-0 flex-col gap-3">
-      <header className="flex items-center gap-2 shrink-0">
+      <header className="flex items-center gap-2.5 shrink-0">
         <div className="relative flex-1 min-w-0 flex items-center">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 size-3.5 pointer-events-none" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 size-4 pointer-events-none" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search website, publisher, permission, or use case"
-            className="pl-8.5 pr-3 h-8 w-full bg-background border-border rounded-lg text-xs font-medium focus-visible:ring-ring"
+            className="pl-11 pr-4 h-9 w-full bg-background border-border rounded-lg text-xs font-medium focus-visible:ring-ring"
           />
         </div>
         <Button
-          className="h-7.5 px-3.5 rounded-md font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 text-[11px] shadow-sm transition-colors cursor-pointer border-none shrink-0"
+          className="h-9 px-4 rounded-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 text-xs shadow-sm transition-colors cursor-pointer border-none shrink-0"
           type="button"
           onClick={() => {
             setNavTab('Publish');
