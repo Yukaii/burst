@@ -29,7 +29,7 @@ export function AuditsPanel() {
             <Input
               value={patterns}
               onChange={(e) => setPatterns(e.target.value)}
-              className="font-medium text-[11px] h-8.5 px-3"
+              className="font-medium"
             />
           </div>
 
@@ -39,14 +39,14 @@ export function AuditsPanel() {
               value={testCode}
               onChange={(e) => setTestCode(e.target.value)}
               rows={10}
-              className="font-mono font-medium text-[11px] p-4 bg-slate-950 text-slate-100 dark:bg-slate-950/80 rounded-xl border-slate-800"
+              className="font-mono font-medium p-3.5 bg-slate-950 text-slate-100 dark:bg-slate-950/80 rounded-xl border-slate-800"
             />
           </div>
 
           <div className="p-5 bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-900/60 rounded-2xl flex flex-col gap-4">
             <div className="flex items-center justify-between gap-3 border-b border-slate-200/55 dark:border-slate-800/40 pb-3">
               <h4 className="text-xs font-bold text-slate-900 dark:text-white">Sandbox Analysis Report</h4>
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+              <span className={`px-2.5 py-1 rounded-full text-[9px] leading-none font-extrabold uppercase border ${
                 report.status === 'pass' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/30' :
                 report.status === 'warning' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/30' :
                 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/30'

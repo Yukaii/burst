@@ -86,7 +86,7 @@ export function Sidebar({
 
           return (
             <button
-              className={`flex items-center gap-2 w-full h-8 rounded-md cursor-pointer text-xs px-2.5 text-left transition-all duration-150 border ${
+              className={`flex items-center gap-2 w-full h-8 rounded-md cursor-pointer text-sm px-2.5 text-left transition-all duration-150 border ${
                 isActive 
                   ? 'bg-accent text-foreground font-semibold border-border' 
                   : 'bg-transparent text-muted-foreground hover:bg-accent/45 hover:text-foreground border-transparent'

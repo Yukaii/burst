@@ -151,10 +151,10 @@ export function ProfilePanel({
               <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight truncate">{publisher.name}</h2>
               <span className="text-xs text-slate-400 dark:text-slate-500 block truncate mt-0.5">{displayHandle}</span>
               <div className="flex flex-wrap gap-1.5 mt-2">
-                <Badge variant="secondary" className="font-bold text-[9px] px-2 py-0.2 rounded-full uppercase tracking-wider">
+                <Badge variant="secondary" className="font-bold text-[9px] px-2.5 py-1 rounded-full uppercase tracking-wider">
                   {publisher.role || 'publisher'}
                 </Badge>
-                <Badge variant={publisher.verified ? 'default' : 'outline'} className={`font-bold text-[9px] px-2 py-0.2 rounded-full uppercase tracking-wider ${publisher.verified ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-none' : 'border-slate-200 dark:border-slate-800 text-slate-500'}`}>
+                <Badge variant={publisher.verified ? 'default' : 'outline'} className={`font-bold text-[9px] px-2.5 py-1 rounded-full uppercase tracking-wider ${publisher.verified ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-none' : 'border-slate-200 dark:border-slate-800 text-slate-500'}`}>
                   {publisher.verified ? 'Verified' : 'Community'}
                 </Badge>
               </div>
@@ -182,7 +182,7 @@ export function ProfilePanel({
               value={draft.name}
               onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
               placeholder="Your full name or display name"
-              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl font-medium text-[11px] h-8.5 px-3"
+              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl font-medium"
             />
           </div>
 
@@ -193,7 +193,7 @@ export function ProfilePanel({
               value={draft.bio}
               onChange={(event) => setDraft((prev) => ({ ...prev, bio: event.target.value }))}
               placeholder="Tell others about yourself, what you build, and your development experience."
-              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl font-medium text-[11px] px-3 py-2"
+              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl font-medium"
             />
           </div>
 
@@ -204,7 +204,7 @@ export function ProfilePanel({
               value={draft.verifiedSources}
               onChange={(event) => setDraft((prev) => ({ ...prev, verifiedSources: event.target.value }))}
               placeholder="e.g. github.com/username&#10;yourdomain.com"
-              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl font-mono font-medium text-[11px] px-3 py-2"
+              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl font-mono font-medium"
             />
           </div>
         </div>
@@ -225,7 +225,7 @@ export function ProfilePanel({
             type="button"
             onClick={() => void handleSave()}
             disabled={saving || loadingProfile}
-            className="font-semibold text-[11px] h-7.5 px-4"
+            className="font-semibold h-8 px-4"
           >
             {saving ? 'Saving changes...' : loadingProfile ? 'Loading profile...' : 'Save profile changes'}
           </Button>
@@ -283,7 +283,7 @@ export function ProfilePanel({
               <Terminal className="size-4 text-sky-500" />
               My Published Actions
             </h3>
-            <Badge variant="outline" className="font-extrabold text-[9px] px-1.5 py-0.2 rounded-full border-slate-200 dark:border-slate-800 text-slate-500">
+            <Badge variant="outline" className="font-extrabold text-[9px] px-2 py-1 rounded-full border-slate-200 dark:border-slate-800 text-slate-500">
               {myCommands.length}
             </Badge>
           </div>
@@ -314,7 +314,7 @@ export function ProfilePanel({
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="text-[10px] h-7 px-2.5 rounded-lg border-slate-200 dark:border-slate-800 text-sky-500 hover:text-sky-600"
+                  className="h-7 px-3 rounded-lg border-slate-200 dark:border-slate-800 text-sky-500 hover:text-sky-600"
                   onClick={() => setNavTab('Publish')}
                 >
                   Publish your first command

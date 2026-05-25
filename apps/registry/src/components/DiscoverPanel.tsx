@@ -79,11 +79,11 @@ export function DiscoverPanel({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search website, publisher, permission, or use case"
-            className="pl-11 pr-4 h-9 w-full bg-background border-border rounded-lg text-[11px] font-medium focus-visible:ring-ring"
+            className="pl-11 pr-4 w-full bg-background border-border rounded-lg font-medium focus-visible:ring-ring"
           />
         </div>
         <Button
-          className="h-9 px-4 rounded-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 text-xs shadow-sm transition-colors cursor-pointer border-none shrink-0"
+          className="h-8.5 px-3 rounded-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer border-none shrink-0"
           type="button"
           onClick={() => {
             setNavTab('Publish');
@@ -101,7 +101,7 @@ export function DiscoverPanel({
               <h2 className="m-0 text-foreground text-base font-semibold leading-none">Discover commands</h2>
               <p className="m-0 mt-1.5 text-muted-foreground text-xs leading-normal">Find actions that match the current website, then inspect trust signals before installing.</p>
             </div>
-            <span className="shrink-0 rounded-full bg-muted text-muted-foreground text-[11px] font-semibold leading-none p-1.25 px-2">{filteredCommands.length} results</span>
+            <span className="shrink-0 rounded-full bg-muted text-muted-foreground text-[10px] font-semibold leading-none px-2.5 py-1.5">{filteredCommands.length} results</span>
           </div>
 
           <div className="flex flex-wrap gap-1 border-b border-border bg-background p-1.5">
@@ -119,7 +119,7 @@ export function DiscoverPanel({
                   key={cat.id}
                   type="button"
                   onClick={() => setFilterCategory(cat.id)}
-                  className={`rounded-full bg-transparent cursor-pointer text-[9px] font-medium px-2.5 py-0.5 text-center transition-all duration-150 border ${
+                  className={`rounded-md bg-transparent cursor-pointer text-2xs font-medium leading-none px-2.5 py-1 text-center transition-all duration-150 border ${
                     isActive 
                       ? 'border-border bg-accent text-accent-foreground' 
                       : 'border-transparent text-muted-foreground hover:bg-accent/35 hover:text-foreground'
@@ -179,7 +179,7 @@ export function DiscoverPanel({
                       <strong className="text-[13px] font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 leading-tight truncate">
                         {command.title}
                         {installedCommandIds.includes(command.id) && (
-                          <Badge variant="secondary" className="h-4.5 px-1.5 py-0 rounded text-[9px] font-extrabold uppercase bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shrink-0">Installed</Badge>
+                          <Badge variant="secondary" className="px-2 py-1 rounded text-[9px] font-extrabold uppercase bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shrink-0">Installed</Badge>
                         )}
                         {pinnedCommandIds.includes(command.id) && (
                           <span className="text-[10px] text-sky-500 shrink-0" title="Pinned">📌</span>
@@ -191,12 +191,12 @@ export function DiscoverPanel({
                     </span>
                     <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 truncate pr-2">{command.website}</span>
                     <div>
-                      <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${trustColors}`}>
+                      <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[9px] leading-none font-extrabold uppercase border ${trustColors}`}>
                         {trustCopy[command.trustLevel]}
                       </span>
                     </div>
                     <div>
-                      <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${riskColors}`}>
+                      <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[9px] leading-none font-extrabold uppercase border ${riskColors}`}>
                         {riskCopy[command.risk]}
                       </span>
                     </div>

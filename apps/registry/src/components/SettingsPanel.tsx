@@ -97,7 +97,7 @@ export function SettingsPanel({ bridgeConnected, theme, onThemeChange }: Setting
                     : 'No extension response has been detected in this browser session.'}
                 </span>
               </div>
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+              <span className={`px-2.5 py-1 rounded-full text-[9px] leading-none font-extrabold uppercase border ${
                 bridgeConnected
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                   : 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border-slate-500/20'
@@ -118,13 +118,13 @@ export function SettingsPanel({ bridgeConnected, theme, onThemeChange }: Setting
               </span>
             </div>
             <div className="flex shrink-0 flex-wrap justify-end gap-2">
-              <Button asChild variant="outline" type="button" className="h-7.5 px-3 cursor-pointer gap-1.5 text-[11px] font-semibold">
+              <Button asChild variant="outline" type="button" className="h-7.5 px-3 cursor-pointer gap-1.5 font-semibold">
                 <a href="https://github.com/Yukaii/burst/tree/main/src/themes" target="_blank" rel="noreferrer">
                   <GitPullRequest className="size-3" />
                   Theme Files
                 </a>
               </Button>
-              <Button asChild variant="outline" type="button" className="h-7.5 px-3 cursor-pointer gap-1.5 text-[11px] font-semibold">
+              <Button asChild variant="outline" type="button" className="h-7.5 px-3 cursor-pointer gap-1.5 font-semibold">
                 <a href="https://github.com/Yukaii/burst/blob/main/docs/command-palette-themes.md" target="_blank" rel="noreferrer">
                   <ExternalLink className="size-3" />
                   Guide
@@ -146,7 +146,7 @@ export function SettingsPanel({ bridgeConnected, theme, onThemeChange }: Setting
                 Generate a bearer token for the extension to call this registry app when Chrome built-in AI is unavailable.
               </span>
             </div>
-            <Button onClick={() => void handleCreateToken()} type="button" className="h-7.5 px-3 cursor-pointer gap-1.5 text-[11px] font-semibold">
+            <Button onClick={() => void handleCreateToken()} type="button" className="h-7.5 px-3 cursor-pointer gap-1.5 font-semibold">
               <KeyRound className="size-3" />
               Generate Token
             </Button>
@@ -197,7 +197,7 @@ export function SettingsPanel({ bridgeConnected, theme, onThemeChange }: Setting
               variant="destructive"
               onClick={handleResetStorage}
               type="button"
-              className="font-semibold text-[11px] h-7.5 px-3.5 cursor-pointer border-none"
+              className="font-semibold h-7.5 px-3.5 cursor-pointer border-none"
             >
               Reset Installed Cache
             </Button>

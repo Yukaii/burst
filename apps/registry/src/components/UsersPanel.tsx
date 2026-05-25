@@ -128,7 +128,7 @@ export function UsersPanel({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search publisher directory..."
-              className="pl-9 h-9 text-[11px] font-medium bg-slate-50/50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 focus-visible:ring-sky-500"
+              className="pl-9 font-medium bg-slate-50/50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 focus-visible:ring-sky-500"
             />
           </div>
           <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -180,7 +180,7 @@ export function UsersPanel({
                       {user.handle.startsWith('@') ? user.handle : `@${user.handle}`}
                     </span>
                     <div className="flex items-center gap-2 mt-1.5">
-                      <span className={`px-1.5 py-0.2 rounded text-[8px] font-extrabold uppercase ${roleColors}`}>
+                      <span className={`px-2 py-0.5 rounded text-[8px] leading-none font-extrabold uppercase ${roleColors}`}>
                         {user.role || 'publisher'}
                       </span>
                       <span className="text-[9px] font-semibold text-slate-400">{user.publishedCommandsCount} actions</span>
@@ -215,13 +215,13 @@ export function UsersPanel({
                     {selectedUser.handle.startsWith('@') ? selectedUser.handle : `@${selectedUser.handle}`}
                   </span>
                   <div className="flex flex-wrap gap-1.5 mt-2">
-                    <Badge variant="secondary" className="font-bold text-[9px] px-2 py-0.2 rounded-full uppercase tracking-wider">
+                    <Badge variant="secondary" className="font-bold text-[9px] px-2.5 py-1 rounded-full uppercase tracking-wider">
                       {selectedRole}
                     </Badge>
-                    <Badge variant="outline" className="font-bold text-[9px] px-2 py-0.2 rounded-full uppercase tracking-wider border-slate-200 dark:border-slate-800 text-slate-500">
+                    <Badge variant="outline" className="font-bold text-[9px] px-2.5 py-1 rounded-full uppercase tracking-wider border-slate-200 dark:border-slate-800 text-slate-500">
                       {selectedAccess}
                     </Badge>
-                    <Badge variant={selectedUser.verified ? 'default' : 'outline'} className={`font-bold text-[9px] px-2 py-0.2 rounded-full uppercase tracking-wider ${selectedUser.verified ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-none' : 'border-slate-200 dark:border-slate-800 text-slate-500'}`}>
+                    <Badge variant={selectedUser.verified ? 'default' : 'outline'} className={`font-bold text-[9px] px-2.5 py-1 rounded-full uppercase tracking-wider ${selectedUser.verified ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-none' : 'border-slate-200 dark:border-slate-800 text-slate-500'}`}>
                       {selectedUser.verified ? 'Verified' : 'Community'}
                     </Badge>
                   </div>
@@ -252,7 +252,7 @@ export function UsersPanel({
                     value={draft.name}
                     onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
                     disabled={!canEditSelected}
-                    className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl font-medium text-[11px] h-8.5 px-3"
+                    className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl font-medium"
                   />
                 </div>
 
@@ -262,7 +262,7 @@ export function UsersPanel({
                     value={draft.role}
                     onChange={(event) => setDraft((prev) => ({ ...prev, role: event.target.value as typeof draft.role }))}
                     disabled={!canEditAll}
-                    className="h-8.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-1.5 text-[11px] font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 disabled:opacity-50"
+                    className="h-8.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-1.5 text-[13px] font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 disabled:opacity-50"
                   >
                     <option value="publisher">Publisher</option>
                     <option value="member">Member</option>
@@ -277,7 +277,7 @@ export function UsersPanel({
                     value={draft.bio}
                     onChange={(event) => setDraft((prev) => ({ ...prev, bio: event.target.value }))}
                     disabled={!canEditSelected}
-                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl font-medium text-[11px] px-3 py-2"
+                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl font-medium"
                   />
                 </div>
 
@@ -288,7 +288,7 @@ export function UsersPanel({
                     value={draft.verifiedSources}
                     onChange={(event) => setDraft((prev) => ({ ...prev, verifiedSources: event.target.value }))}
                     disabled={!canEditAll && selectedUser.handle !== currentUser.handle}
-                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl font-mono font-medium text-[11px] px-3 py-2"
+                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl font-mono font-medium"
                   />
                 </div>
 
@@ -365,7 +365,7 @@ export function UsersPanel({
                 type="button"
                 onClick={() => void handleSave()}
                 disabled={saving || !canEditSelected}
-                className="font-semibold text-[11px] h-7.5 px-4"
+                className="font-semibold h-7.5 px-4"
               >
                 {saving ? 'Saving changes...' : 'Save profile changes'}
               </Button>

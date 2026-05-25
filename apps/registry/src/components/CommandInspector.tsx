@@ -262,13 +262,13 @@ export function CommandInspector({
         <div className="flex-1 min-h-0 overflow-y-auto">
           <TabsContent value="details" className="flex flex-col gap-3 m-0 p-3.5">
             <div className="flex gap-2">
-              <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+              <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[9px] leading-none font-extrabold uppercase border ${
                 command.trustLevel === 'verified' ? 'bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 border-cyan-100 dark:border-cyan-900/30' :
                 command.trustLevel === 'reviewed' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/30' :
                 command.trustLevel === 'community' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/30' :
                 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/30'
               }`}>{trustCopy[command.trustLevel]}</span>
-              <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+              <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[9px] leading-none font-extrabold uppercase border ${
                 command.risk === 'low' ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700/40' :
                 command.risk === 'medium' ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-900/30' :
                 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/30'
@@ -305,7 +305,7 @@ export function CommandInspector({
                   return (
                     <span 
                       key={permission} 
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                      className={`px-2.5 py-1 rounded-full text-[10px] leading-none font-bold border ${
                         isSensitive 
                           ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20' 
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200/60 dark:border-slate-700/60'

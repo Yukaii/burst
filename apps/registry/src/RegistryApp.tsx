@@ -602,7 +602,7 @@ export function RegistryApp() {
   }
 
   return (
-    <div className={`grid grid-cols-[280px_minmax(0,_1fr)] w-screen h-screen overflow-hidden bg-background text-foreground ${preferredTheme === 'dark' ? 'dark' : ''}`}>
+    <div className={`registry-workspace grid grid-cols-[280px_minmax(0,_1fr)] w-screen h-screen overflow-hidden bg-background text-foreground ${preferredTheme === 'dark' ? 'dark' : ''}`}>
       <Sidebar
         navTab={navTab}
         setNavTab={setNavTab}
@@ -614,18 +614,6 @@ export function RegistryApp() {
       />
 
       <main className="flex min-w-0 min-h-0 flex-col gap-3 overflow-hidden p-3.5">
-        <header className="flex min-h-10 items-center border border-border rounded-lg bg-card px-3">
-          <button
-            type="button"
-            className="border-0 bg-transparent p-0 text-[11px] font-semibold leading-none text-muted-foreground hover:text-foreground cursor-pointer"
-            onClick={() => setView('landing')}
-          >
-            Registry
-          </button>
-          <span className="mx-1.5 text-[11px] font-semibold leading-none text-muted-foreground">/</span>
-          <strong className="text-[11px] font-semibold leading-none text-foreground">{navTab}</strong>
-        </header>
-
         {publishSuccessToast && (
           <div className="flex items-center justify-between gap-2.5 border border-emerald-500/25 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold p-2 px-[11px]">
             <span className="font-semibold flex items-center gap-2">

@@ -118,6 +118,12 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --text-3xs: 0.6875rem;
+  --text-3xs--line-height: 1;
+  --text-2xs: 0.75rem;
+  --text-2xs--line-height: 1;
+  --text-1xs: 0.8125rem;
+  --text-1xs--line-height: 1;
 
   --animate-float-slow: float 12s ease-in-out infinite;
   --animate-float-slow-reverse: float-reverse 15s ease-in-out infinite;
@@ -208,11 +214,6 @@ body {
   overflow: hidden;
 }
 
-button,
-input {
-  font: inherit;
-}
-
 #root {
   min-height: 100vh;
 }
@@ -250,6 +251,3 @@ input {
 .cm-scroller {
   line-height: 1.6 !important;
 }
-
-
-

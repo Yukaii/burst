@@ -233,11 +233,11 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Define manifest capabilities, declare host scopes, and write the execution block.</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-800 px-2.5 py-1 text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">
+            <span className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 px-3 text-2xs font-bold text-slate-500 dark:text-slate-400">
               <Save className="size-3" />
               {draftStatus === 'restored' ? 'Draft restored' : draftStatus === 'saved' ? 'Draft saved' : 'Draft ready'}
             </span>
-            <Button type="button" variant="outline" className="h-8 px-2 text-xs font-bold" onClick={clearDraft}>
+            <Button type="button" variant="outline" className="h-8 px-3 font-bold" onClick={clearDraft}>
               <RotateCcw className="size-3.5" />
               Reset
             </Button>
@@ -261,7 +261,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
                   value={title}
                   onChange={(e) => handleTitleChange(e.target.value)}
                   placeholder="e.g. Copy GitHub branch name"
-                  className="font-medium text-[11px] h-8.5 px-3"
+                  className="font-medium"
                 />
                 {errors.title && <span className="text-[10px] font-bold text-rose-500">{errors.title}</span>}
               </div>
@@ -272,7 +272,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
                   value={id}
                   onChange={(e) => setId(e.target.value)}
                   placeholder="e.g. copy-github-branch"
-                  className="font-medium text-[11px] h-8.5 px-3"
+                  className="font-medium"
                 />
                 {errors.id && <span className="text-[10px] font-bold text-rose-500">{errors.id}</span>}
               </div>
@@ -285,7 +285,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Provide a clear description of the command and its features..."
                 rows={3}
-                className="font-medium text-[11px] px-3 py-2 min-h-[80px]"
+                className="font-medium min-h-[88px]"
               />
               {errors.description && <span className="text-[10px] font-bold text-rose-500">{errors.description}</span>}
             </div>
@@ -297,7 +297,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
                   value={website}
                   onChange={(e) => setWebsite(e.target.value)}
                   placeholder="e.g. github.com or all sites"
-                  className="font-medium text-[11px] h-8.5 px-3"
+                  className="font-medium"
                 />
                 {errors.website && <span className="text-[10px] font-bold text-rose-500">{errors.website}</span>}
               </div>
@@ -308,7 +308,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
                   value={matchPattern}
                   onChange={(e) => setMatchPattern(e.target.value)}
                   placeholder="e.g. github.com/*, *://*.github.com/*"
-                  className="font-medium text-[11px] h-8.5 px-3"
+                  className="font-medium"
                 />
                 {errors.matchPattern && <span className="text-[10px] font-bold text-rose-500">{errors.matchPattern}</span>}
               </div>
@@ -320,7 +320,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
                 value={sourceUrl}
                 onChange={(e) => setSourceUrl(e.target.value)}
                 placeholder="https://github.com/username/repo"
-                className="font-medium text-[11px] h-8.5 px-3"
+                className="font-medium"
               />
               <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Used for publisher verification checks. Must match verified sources.</span>
               {errors.sourceUrl && <span className="text-[10px] font-bold text-rose-500">{errors.sourceUrl}</span>}
@@ -368,10 +368,10 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
           </div>
 
           <div className="flex gap-2">
-            <Button type="submit" className="font-semibold text-xs h-8 px-4 cursor-pointer">
+            <Button type="submit" className="font-semibold h-8 px-4 cursor-pointer">
               Publish Command
             </Button>
-            <Button type="button" variant="outline" className="font-semibold text-xs h-8 px-4 cursor-pointer" onClick={() => setNavTab('Discover')}>
+            <Button type="button" variant="outline" className="font-semibold h-8 px-4 cursor-pointer" onClick={() => setNavTab('Discover')}>
               Cancel
             </Button>
           </div>
@@ -382,7 +382,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
             <div className="flex flex-col gap-1.5 border-b border-slate-100 dark:border-slate-800/60 pb-4">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">Live Safety Audit</h3>
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+                <span className={`px-2.5 py-1 rounded-full text-[9px] leading-none font-extrabold uppercase border ${
                   auditResult.status === 'pass' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/30' :
                   auditResult.status === 'warning' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/30' :
                   'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/30'
