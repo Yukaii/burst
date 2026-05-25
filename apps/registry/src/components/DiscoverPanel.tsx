@@ -70,6 +70,13 @@ export function DiscoverPanel({
   isInspectorOpen,
   setIsInspectorOpen
 }: DiscoverPanelProps) {
+  const filterPillClass = (active: boolean) =>
+    `rounded-md cursor-pointer text-2xs font-medium leading-none px-2.5 py-1 text-center transition-all duration-150 border ${
+      active
+        ? 'border-foreground bg-foreground text-background shadow-sm'
+        : 'border-transparent bg-transparent text-muted-foreground hover:bg-accent/35 hover:text-foreground'
+    }`;
+
   return (
     <section className="flex flex-1 min-h-0 flex-col gap-3">
       <header className="flex items-center gap-2.5 shrink-0">
@@ -119,11 +126,7 @@ export function DiscoverPanel({
                   key={cat.id}
                   type="button"
                   onClick={() => setFilterCategory(cat.id)}
-                  className={`rounded-md bg-transparent cursor-pointer text-2xs font-medium leading-none px-2.5 py-1 text-center transition-all duration-150 border ${
-                    isActive 
-                      ? 'border-border bg-accent text-accent-foreground' 
-                      : 'border-transparent text-muted-foreground hover:bg-accent/35 hover:text-foreground'
-                  }`}
+                  className={filterPillClass(isActive)}
                 >
                   {cat.label}
                 </button>
