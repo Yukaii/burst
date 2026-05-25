@@ -272,12 +272,6 @@ export function RegistryApp() {
     }
   }, [canManageRegistry, navTab]);
 
-  const workspaceStatus = [
-    currentUser.handle === 'guest' ? 'Guest session' : currentUser.role || 'publisher',
-    `${registryCommandsData.length} commands`,
-    `${registryCommandsData.filter((command) => command.trustLevel !== 'community').length} audited`,
-  ];
-
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -616,19 +610,16 @@ export function RegistryApp() {
       />
 
       <main className="flex min-w-0 min-h-0 flex-col gap-3 overflow-hidden p-3.5">
-        <header className="grid grid-cols-[minmax(0,_1fr)_auto] items-center gap-4 border border-border rounded-lg bg-card p-2.5 px-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] font-semibold leading-none">
-              <button type="button" className="border-0 bg-transparent text-inherit cursor-pointer font-inherit p-0 hover:text-foreground" onClick={() => setView('landing')}>Registry</button>
-              <span>/</span>
-              <strong className="text-foreground">{navTab}</strong>
-            </div>
-          </div>
-          <div className="flex flex-wrap justify-end gap-1.5" aria-label="Workspace status">
-            {workspaceStatus.map((item) => (
-              <span key={item} className="border border-border rounded-full bg-background text-muted-foreground text-[11px] font-semibold leading-none p-1.5 px-2">{item}</span>
-            ))}
-          </div>
+        <header className="flex min-h-10 items-center border border-border rounded-lg bg-card px-3">
+          <button
+            type="button"
+            className="border-0 bg-transparent p-0 text-[11px] font-semibold leading-none text-muted-foreground hover:text-foreground cursor-pointer"
+            onClick={() => setView('landing')}
+          >
+            Registry
+          </button>
+          <span className="mx-1.5 text-[11px] font-semibold leading-none text-muted-foreground">/</span>
+          <strong className="text-[11px] font-semibold leading-none text-foreground">{navTab}</strong>
         </header>
 
         {publishSuccessToast && (

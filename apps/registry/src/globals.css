@@ -150,7 +150,6 @@ input {
   min-height: 100vh;
 }
 
-/* Syntax Highlighting */
 .syntax-comment {
   color: hsl(215 16% 55%);
   font-style: italic;
@@ -176,7 +175,6 @@ input {
   color: hsl(214 32% 91%);
 }
 
-/* CodeMirror overrides */
 .cm-editor {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
   font-size: 12px !important;
