@@ -83,7 +83,7 @@ export function DiscoverPanel({
           />
         </div>
         <Button
-          className="h-8 px-2.5 rounded-lg font-medium bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 text-xs shadow-sm transition-colors cursor-pointer border-none shrink-0"
+          className="h-7.5 px-3.5 rounded-md font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 text-[11px] shadow-sm transition-colors cursor-pointer border-none shrink-0"
           type="button"
           onClick={() => {
             setNavTab('Publish');
@@ -119,10 +119,10 @@ export function DiscoverPanel({
                   key={cat.id}
                   type="button"
                   onClick={() => setFilterCategory(cat.id)}
-                  className={`h-6 border rounded-md bg-transparent cursor-pointer text-[10.5px] font-medium px-2 text-center transition-all duration-150 ${
+                  className={`rounded-full bg-transparent cursor-pointer text-[9.5px] font-bold uppercase tracking-wider px-3 py-1 text-center transition-all duration-150 border ${
                     isActive 
                       ? 'border-border bg-accent text-accent-foreground' 
-                      : 'border-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground'
+                      : 'border-transparent text-muted-foreground hover:bg-accent/35 hover:text-foreground'
                   }`}
                 >
                   {cat.label}

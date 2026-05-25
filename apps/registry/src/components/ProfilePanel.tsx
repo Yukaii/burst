@@ -225,7 +225,7 @@ export function ProfilePanel({
             type="button"
             onClick={() => void handleSave()}
             disabled={saving || loadingProfile}
-            className="font-bold text-xs h-9"
+            className="font-semibold text-[11px] h-7.5 px-4"
           >
             {saving ? 'Saving changes...' : loadingProfile ? 'Loading profile...' : 'Save profile changes'}
           </Button>

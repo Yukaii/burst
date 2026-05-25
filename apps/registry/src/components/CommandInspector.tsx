@@ -484,17 +484,17 @@ export function CommandInspector({
         </div>
       </Tabs>
 
-      <div className="flex gap-2.5 shrink-0 border-t border-border bg-background p-3">
+      <div className="flex gap-2 shrink-0 border-t border-border bg-background p-2.5">
         <Button
           variant={isInstalled ? "destructive" : "default"}
-          className="flex-1 font-bold text-xs h-9 cursor-pointer border-none"
+          className="flex-1 font-semibold text-[11px] h-7.5 cursor-pointer border-none"
           onClick={() => (isInstalled ? onUninstall(command.id) : onInstall(command))}
         >
           {isInstalled ? 'Uninstall' : 'Install'}
         </Button>
         <Button
           variant="outline"
-          className="flex-1 font-bold text-xs h-9 cursor-pointer"
+          className="flex-1 font-semibold text-[11px] h-7.5 cursor-pointer"
           disabled={!isInstalled}
           onClick={() => (isPinned ? onUnpin(command.id) : onPin(command.id))}
         >
