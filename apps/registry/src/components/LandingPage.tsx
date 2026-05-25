@@ -326,7 +326,7 @@ export function LandingPage({
             <div className="flex flex-col gap-4 items-center">
               <h1 className="m-0 text-4xl font-extrabold leading-tight tracking-tight lg:text-6xl text-center">
                 Make any website a <br />
-                <span className="text-gradient-primary">Command Palette.</span>
+                <span className="bg-linear-to-r from-slate-900 via-indigo-600 to-cyan-600 dark:from-white dark:via-indigo-300 dark:to-cyan-300 bg-clip-text text-transparent">Command Palette.</span>
               </h1>
               <p className="m-0 max-w-2xl text-base md:text-lg font-medium leading-relaxed text-muted-foreground text-center">
                 Burst is a lightweight, local-first browser extension that helps you discover, install, fork, and publish website scripts as search-ready commands. Automate workflows directly in the browser DOM.
