@@ -119,7 +119,7 @@ export function DiscoverPanel({
                   key={cat.id}
                   type="button"
                   onClick={() => setFilterCategory(cat.id)}
-                  className={`rounded-full bg-transparent cursor-pointer text-[9.5px] font-bold uppercase tracking-wider px-3 py-1 text-center transition-all duration-150 border ${
+                  className={`rounded-full bg-transparent cursor-pointer text-[9px] font-medium px-2.5 py-0.5 text-center transition-all duration-150 border ${
                     isActive 
                       ? 'border-border bg-accent text-accent-foreground' 
                       : 'border-transparent text-muted-foreground hover:bg-accent/35 hover:text-foreground'
