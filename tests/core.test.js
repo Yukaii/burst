@@ -435,7 +435,7 @@ describe('extension settings storage', () => {
 
   test('resolves registry server base URLs', () => {
     expect(getRegistryServerBaseUrl({ registryServer: 'local', registryServerUrl: '' })).toBe('http://localhost:5174');
-    expect(getRegistryServerBaseUrl({ registryServer: 'production', registryServerUrl: '' })).toBe('https://burst-registry.pages.dev');
+    expect(getRegistryServerBaseUrl({ registryServer: 'production', registryServerUrl: '' })).toBe('https://burst.yukai.dev');
     expect(getRegistryServerBaseUrl({ registryServer: 'custom', registryServerUrl: 'https://registry.example.test/' })).toBe('https://registry.example.test');
   });
 });

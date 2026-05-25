@@ -335,6 +335,6 @@ function getUserScriptsApi(): BurstUserScriptsApi | undefined {
 
 async function getConfiguredRegistryBaseUrl(): Promise<string> {
   const settings = await loadSettings().catch((): ExtensionSettings | undefined => undefined);
-  if (!settings) return 'http://localhost:5174';
+  if (!settings) return import.meta.env.PROD ? 'https://burst.yukai.dev' : 'http://localhost:5174';
   return getRegistryServerBaseUrl(settings);
 }

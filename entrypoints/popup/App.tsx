@@ -3,7 +3,7 @@ import logoUrl from '@/assets/logo.svg';
 import { loadLocalScripts } from '@/src/lib/localScripts';
 import { isRegistryCommandEnabled, loadInstalledRegistryCommands } from '@/src/lib/registryStorage';
 import { getCurrentUser } from '@/src/lib/registryApi';
-import { loadSettings } from '@/src/lib/settings';
+import { loadSettings, getRegistryServerBaseUrl } from '@/src/lib/settings';
 import './App.css';
 
 const GIT_REGISTRIES_STORAGE_KEY = 'burst.gitRegistries.v1';
@@ -77,12 +77,14 @@ function App() {
     void browser.runtime.openOptionsPage();
   }
 
-  function openRegistryPage() {
+  async function openRegistryPage() {
+    const settings = await loadSettings();
+    const url = getRegistryServerBaseUrl(settings);
     if (typeof browser !== 'undefined' && browser.tabs?.create) {
-      void browser.tabs.create({ url: 'http://localhost:5174' });
+      void browser.tabs.create({ url });
       return;
     }
-    window.open('http://localhost:5174', '_blank');
+    window.open(url, '_blank');
   }
 
   function openDashboardPage() {

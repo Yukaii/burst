@@ -15,14 +15,16 @@ export type ExtensionSettings = {
   registryApiToken?: string;
 };
 
+const isProduction = import.meta.env.PROD;
+
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   theme: 'dark',
   commandPaletteTheme: 'auto',
   position: 'top',
   backdropClickClose: true,
   showConsoleLogs: false,
-  registryServer: 'local',
-  registryServerUrl: 'http://localhost:5174',
+  registryServer: isProduction ? 'production' : 'local',
+  registryServerUrl: isProduction ? 'https://burst.yukai.dev' : 'http://localhost:5174',
   editorFontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
   editorFontSize: 13,
   editorTheme: 'default',
@@ -113,7 +115,7 @@ export async function saveSettings(settings: ExtensionSettings): Promise<void> {
 }
 
 export function getRegistryServerBaseUrl(settings: Pick<ExtensionSettings, 'registryServer' | 'registryServerUrl'>): string {
-  if (settings.registryServer === 'production') return 'https://burst-registry.pages.dev';
+  if (settings.registryServer === 'production') return 'https://burst.yukai.dev';
   if (settings.registryServer === 'custom') return normalizeRegistryServerUrl(settings.registryServerUrl);
   return 'http://localhost:5174';
 }

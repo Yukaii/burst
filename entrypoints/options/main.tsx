@@ -163,7 +163,7 @@ function OptionsApp() {
       ...settings,
       registryServer: value,
       registryServerUrl: value === 'production'
-        ? 'https://burst-registry.pages.dev'
+        ? 'https://burst.yukai.dev'
         : value === 'local'
         ? 'http://localhost:5174'
         : settings.registryServerUrl || 'http://localhost:5174',
