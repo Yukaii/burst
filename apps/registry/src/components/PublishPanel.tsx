@@ -3,6 +3,7 @@ import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { EditorView } from '@codemirror/view';
 import type { BurstCommand } from '@/src/lib/commands';
+import type { LocalScript } from '@/src/lib/localScripts';
 import type { RegistrySessionUser } from '@/src/lib/registryApi';
 import { publishCommand } from '@/src/lib/registryApi';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
@@ -10,15 +11,32 @@ import { ChecklistItem } from './CommandInspector';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
-import { Lock, RotateCcw, Save } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+import { Eraser, FileCode2, Lock, PlugZap, RefreshCw, RotateCcw, Save } from 'lucide-react';
 
 interface PublishPanelProps {
   currentUser: RegistrySessionUser;
   onPublishSuccess: (newCommand: BurstCommand) => void;
   setNavTab: (tab: 'Discover' | 'Publish' | 'Users' | 'Audits' | 'Settings') => void;
+  bridgeConnected: boolean;
+  localScripts: LocalScript[];
+  onRefreshLocalScripts: () => void;
 }
 
-export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: PublishPanelProps) {
+export function PublishPanel({
+  currentUser,
+  onPublishSuccess,
+  setNavTab,
+  bridgeConnected,
+  localScripts,
+  onRefreshLocalScripts,
+}: PublishPanelProps) {
   const isGuest = currentUser.handle === 'guest';
   const draftKey = currentUser.handle === 'guest' ? null : `burst.registry.publishDraft.${currentUser.handle}.v1`;
 
@@ -32,10 +50,23 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
   const [permissions, setPermissions] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [draftStatus, setDraftStatus] = useState<'idle' | 'saved' | 'restored'>('idle');
+  const [selectedLocalScriptId, setSelectedLocalScriptId] = useState('');
 
   const editorExtensions = useMemo(() => [
     javascript({ jsx: true, typescript: true }),
     EditorView.lineWrapping,
+    EditorView.theme({
+      '&': {
+        fontSize: '13px',
+      },
+      '.cm-content': {
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
+        lineHeight: '1.55',
+      },
+      '.cm-gutters': {
+        fontSize: '12px',
+      },
+    }),
   ], []);
 
   useEffect(() => {
@@ -89,6 +120,10 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
 
   const clearDraft = () => {
     if (draftKey) localStorage.removeItem(draftKey);
+    clearForm();
+  };
+
+  const clearForm = () => {
     setTitle('');
     setId('');
     setDescription('');
@@ -99,6 +134,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
     setPermissions([]);
     setErrors({});
     setDraftStatus('idle');
+    setSelectedLocalScriptId('');
   };
 
   if (isGuest) {
@@ -136,6 +172,31 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
       prev.includes(perm) ? prev.filter((p) => p !== perm) : [...prev, perm]
     );
   };
+
+  const fillFromLocalScript = (scriptId: string) => {
+    const script = localScripts.find((item) => item.id === scriptId);
+    if (!script) return;
+
+    handleTitleChange(script.name);
+    const patterns = script.matchPatterns.length > 0 ? script.matchPatterns : ['<all_urls>'];
+    setMatchPattern(patterns.join(', '));
+    setWebsite(patterns.includes('<all_urls>')
+      ? 'All websites'
+      : patterns.map((pattern) => pattern.replace(/^\*:\/\/|\/\*$/g, '')).join(', '));
+    setDescription(`Publishes the local Burst command "${script.name}" for reuse from the registry.`);
+    setSourceUrl(script.originRegistryUrl?.startsWith('https://') ? script.originRegistryUrl : '');
+    setCode(script.code);
+    setPermissions([]);
+    setErrors({});
+    setDraftStatus('saved');
+  };
+
+  const describeLocalScriptScope = (script: LocalScript) => {
+    const patterns = script.matchPatterns.length > 0 ? script.matchPatterns : ['<all_urls>'];
+    return patterns.includes('<all_urls>') ? 'All websites' : patterns.join(', ');
+  };
+
+  const selectedLocalScript = localScripts.find((script) => script.id === selectedLocalScriptId);
 
   const parsedMatchPatterns = matchPattern
     .split(',')
@@ -243,6 +304,107 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
             </Button>
           </div>
         </div>
+      </div>
+
+      <div className={`flex flex-col gap-3 rounded-lg border p-3.5 ${
+        bridgeConnected
+          ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+          : 'border-border bg-card text-muted-foreground'
+      }`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <span className={`grid size-7 shrink-0 place-items-center rounded-md border ${
+              bridgeConnected
+                ? 'border-emerald-500/25 bg-emerald-500/10'
+                : 'border-border bg-muted/40'
+            }`}>
+              <PlugZap className="size-3.5" />
+            </span>
+            <div className="min-w-0">
+              <strong className="block text-xs font-bold text-foreground">
+                {bridgeConnected ? 'Extension connected' : 'Extension bridge not detected'}
+              </strong>
+              <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+                {bridgeConnected
+                  ? 'Select a local development script to prefill the publish form. Add a secure source URL before submitting.'
+                  : 'Open this registry page with the Burst extension enabled to import local development scripts.'}
+              </span>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0 font-semibold"
+            onClick={onRefreshLocalScripts}
+            disabled={!bridgeConnected}
+          >
+            <RefreshCw className="size-3.5" />
+            Refresh
+          </Button>
+        </div>
+
+        {bridgeConnected && (
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
+            <label className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground sm:w-40">
+              <FileCode2 className="size-3.5" />
+              Local script
+            </label>
+            <Select
+              value={selectedLocalScriptId}
+              disabled={localScripts.length === 0}
+              onValueChange={(value) => {
+                setSelectedLocalScriptId(value);
+                fillFromLocalScript(value);
+              }}
+            >
+              <SelectTrigger className="h-11 min-w-0 flex-1 bg-background px-3 text-[13px] font-medium">
+                {selectedLocalScript ? (
+                  <span className="flex min-w-0 flex-col items-start gap-0.5 overflow-hidden">
+                    <span className="max-w-full truncate text-xs font-semibold text-foreground">
+                      {selectedLocalScript.name}
+                    </span>
+                    <span className="max-w-full truncate font-mono text-[10px] leading-none text-muted-foreground">
+                      {describeLocalScriptScope(selectedLocalScript)}
+                    </span>
+                  </span>
+                ) : (
+                  <SelectValue placeholder={localScripts.length > 0 ? 'Select a script to fill this form...' : 'No local scripts found'} />
+                )}
+              </SelectTrigger>
+              <SelectContent position="popper" align="start" className="w-(--radix-select-trigger-width) max-h-[320px] p-1.5">
+                {localScripts.map((script) => (
+                  <SelectItem
+                    key={script.id}
+                    value={script.id}
+                    className="min-h-[72px] items-start gap-2 py-2.5 pr-8 pl-2.5"
+                  >
+                    <span className="flex min-w-0 flex-col gap-1">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-xs font-semibold text-foreground">{script.name}</span>
+                        <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none ${
+                          script.status === 'enabled'
+                            ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            : script.status === 'draft'
+                              ? 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                              : 'border-slate-500/20 bg-slate-500/10 text-slate-500 dark:text-slate-400'
+                        }`}>
+                          {script.status}
+                        </span>
+                      </span>
+                      <span className="truncate font-mono text-[10px] text-muted-foreground">
+                        {describeLocalScriptScope(script)}
+                      </span>
+                      <span className="text-[10px] font-medium text-muted-foreground">
+                        Updated {script.updatedAt}{script.version ? ` - v${script.version}` : ''}
+                      </span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <form onSubmit={(e) => void handleSubmit(e)} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -370,6 +532,10 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
           <div className="flex gap-2">
             <Button type="submit" className="font-semibold h-8 px-4 cursor-pointer">
               Publish Command
+            </Button>
+            <Button type="button" variant="outline" className="font-semibold h-8 px-4 cursor-pointer" onClick={clearForm}>
+              <Eraser className="size-3.5" />
+              Clear form
             </Button>
             <Button type="button" variant="outline" className="font-semibold h-8 px-4 cursor-pointer" onClick={() => setNavTab('Discover')}>
               Cancel

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import type { BurstCommand } from '@/src/lib/commands';
+import type { LocalScript } from '@/src/lib/localScripts';
 import { CheckCircle2 } from 'lucide-react';
 import logoUrl from '@/assets/logo.svg';
 import {
@@ -131,6 +132,7 @@ export function RegistryApp() {
   const [registryUserStats, setRegistryUserStats] = useState<{ total: number; admins: number; verified: number } | null>(null);
   const [installedCommandIds, setInstalledCommandIds] = useState<string[]>([]);
   const [pinnedCommandIds, setPinnedCommandIds] = useState<string[]>([]);
+  const [localScripts, setLocalScripts] = useState<LocalScript[]>([]);
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
 
   // Productivity-grade workspace states
@@ -373,6 +375,8 @@ export function RegistryApp() {
       if (type === 'burst:bridge-ready') {
         bridgeConnectedRef.current = true;
         setBridgeConnected(true);
+        sendBridgeMessage({ type: 'burst:get-installed-commands' });
+        sendBridgeMessage({ type: 'burst:get-local-scripts' });
       }
 
       if (type === 'burst:installed-commands-response') {
@@ -380,17 +384,26 @@ export function RegistryApp() {
         setBridgeConnected(true);
         setInstalledCommandIds(event.data.installedIds || []);
         setPinnedCommandIds(event.data.pinnedIds || []);
+        sendBridgeMessage({ type: 'burst:get-local-scripts' });
+      }
+
+      if (type === 'burst:local-scripts-response') {
+        bridgeConnectedRef.current = true;
+        setBridgeConnected(true);
+        setLocalScripts(Array.isArray(event.data.scripts) ? event.data.scripts : []);
       }
     };
 
     window.addEventListener('message', handler);
     sendBridgeMessage({ type: 'burst:bridge-ping' });
     sendBridgeMessage({ type: 'burst:get-installed-commands' });
+    sendBridgeMessage({ type: 'burst:get-local-scripts' });
 
     const retryTimer = window.setInterval(() => {
       if (bridgeConnectedRef.current) return;
       sendBridgeMessage({ type: 'burst:bridge-ping' });
       sendBridgeMessage({ type: 'burst:get-installed-commands' });
+      sendBridgeMessage({ type: 'burst:get-local-scripts' });
     }, 1500);
 
     return () => {
@@ -434,6 +447,15 @@ export function RegistryApp() {
   const handleUnpin = (commandId: string) => {
     sendBridgeMessage({ type: 'burst:unpin-command', commandId });
   };
+
+  const handleRefreshLocalScripts = () => {
+    sendBridgeMessage({ type: 'burst:get-local-scripts' });
+  };
+
+  useEffect(() => {
+    if (!bridgeConnected || navTab !== 'Publish') return;
+    sendBridgeMessage({ type: 'burst:get-local-scripts' });
+  }, [bridgeConnected, navTab]);
 
   // Filter commands by quick filter tabs
   const filteredCommands = commands.filter((cmd) => {
@@ -648,6 +670,9 @@ export function RegistryApp() {
                 setPublishSuccessToast(`Successfully published "${newCmd.title}"!`);
               }}
               setNavTab={setNavTab}
+              bridgeConnected={bridgeConnected}
+              localScripts={localScripts}
+              onRefreshLocalScripts={handleRefreshLocalScripts}
             />
           </Suspense>
         )}

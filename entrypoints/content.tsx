@@ -60,6 +60,12 @@ export default defineContentScript({
             window.postMessage({ type: 'burst:installed-commands-response', ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
           })
           .catch((err) => postBridgeError(type, err, bridgeMeta));
+      } else if (type === 'burst:get-local-scripts') {
+        browser.runtime.sendMessage({ type })
+          .then((response) => {
+            window.postMessage({ type: 'burst:local-scripts-response', ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
+          })
+          .catch((err) => postBridgeError(type, err, bridgeMeta));
       } else if (type === 'burst:install-command') {
         const { command } = data as { command: any };
         browser.runtime.sendMessage({ type, command })
@@ -102,6 +108,7 @@ function isBridgeResponseType(type: string) {
     'burst:bridge-ready',
     'burst:bridge-error',
     'burst:installed-commands-response',
+    'burst:local-scripts-response',
     'burst:install-success',
     'burst:uninstall-success',
     'burst:pin-success',

@@ -138,7 +138,7 @@ export function ChecklistItem({
 
 export function EmptyInspector() {
   return (
-    <aside className="absolute top-3.5 right-3.5 bottom-3.5 flex flex-col w-[calc(100vw-308px)] max-w-[760px] min-h-0 overflow-hidden border border-border rounded-lg bg-card shadow-[0_24px_90px_hsl(var(--foreground)/0.22)] p-6 gap-6" aria-label="Registry status">
+    <aside className="absolute top-3.5 right-3.5 bottom-3.5 flex flex-col w-[calc(100vw-308px)] max-w-[760px] min-h-0 overflow-hidden border border-border rounded-lg bg-card shadow-[0_24px_90px_hsl(var(--foreground)/0.22)] dark:shadow-none p-6 gap-6" aria-label="Registry status">
       <div className="flex items-start gap-4 border-b border-slate-100 dark:border-slate-800/60 pb-5">
         <img className="size-11 rounded-xl object-cover" src={logoUrl} alt="Burst Logo" />
         <div>
@@ -202,7 +202,7 @@ export function CommandInspector({
 
   if (loading) {
     return (
-      <aside className="absolute top-3.5 right-3.5 bottom-3.5 flex flex-col w-[calc(100vw-308px)] max-w-[760px] min-h-0 overflow-hidden border border-border rounded-lg bg-card shadow-[0_24px_90px_hsl(var(--foreground)/0.22)] items-center justify-center p-8" aria-label="Loading details">
+      <aside className="absolute top-3.5 right-3.5 bottom-3.5 flex flex-col w-[calc(100vw-308px)] max-w-[760px] min-h-0 overflow-hidden border border-border rounded-lg bg-card shadow-[0_24px_90px_hsl(var(--foreground)/0.22)] dark:shadow-none items-center justify-center p-8" aria-label="Loading details">
         <RefreshCw className="size-6 animate-spin text-sky-500" />
         <span className="text-sm font-semibold text-slate-400 dark:text-slate-500 mt-3">Loading details...</span>
       </aside>
@@ -226,7 +226,7 @@ export function CommandInspector({
 
   return (
     <aside
-      className="absolute top-3.5 right-3.5 bottom-3.5 flex flex-col w-[calc(100vw-308px)] max-w-[760px] min-h-0 overflow-hidden border border-border rounded-lg bg-card shadow-[0_24px_90px_hsl(var(--foreground)/0.22)]"
+      className="absolute top-3.5 right-3.5 bottom-3.5 flex flex-col w-[calc(100vw-308px)] max-w-[760px] min-h-0 overflow-hidden border border-border rounded-lg bg-card shadow-[0_24px_90px_hsl(var(--foreground)/0.22)] dark:shadow-none"
       aria-label="Selected command audit details"
       onPointerDown={onPointerDown}
       onClick={onClick}
@@ -343,7 +343,7 @@ export function CommandInspector({
                   )}
                 </button>
               </div>
-              <pre className="max-h-[320px] m-0 overflow-auto border border-[#1e293b] rounded-lg bg-[#0b0f19] text-[#e2e8f0] font-mono text-[11px] leading-relaxed p-3.5 whitespace-pre-wrap overflow-wrap-anywhere break-all">
+              <pre className="max-h-[320px] m-0 overflow-auto border border-[#1e293b] rounded-lg bg-[#0b0f19] text-[#e2e8f0] font-mono text-[13px] leading-relaxed p-3.5 whitespace-pre-wrap overflow-wrap-anywhere break-all">
                 <code>{highlightJavaScript(sourceCode)}</code>
               </pre>
             </div>

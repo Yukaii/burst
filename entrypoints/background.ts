@@ -42,6 +42,14 @@ export default defineBackground(() => {
       return promise;
     }
 
+    if (type === 'burst:get-local-scripts') {
+      const promise = (async () => {
+        const scripts = await loadLocalScripts();
+        return { scripts };
+      })();
+      return promise;
+    }
+
     if (type === 'burst:search-registry-commands') {
       const { query = '', host = '', offset = 0, limit = 20 } = message as { query?: string; host?: string; offset?: number; limit?: number };
       const promise = (async () => {
