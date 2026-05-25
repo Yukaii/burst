@@ -210,7 +210,7 @@ export function UsersPanel({
                   {selectedUser.avatarInitials}
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-tight truncate">{selectedUser.name}</h2>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight truncate">{selectedUser.name}</h2>
                   <span className="text-xs text-slate-400 dark:text-slate-500 block truncate mt-0.5">
                     {selectedUser.handle.startsWith('@') ? selectedUser.handle : `@${selectedUser.handle}`}
                   </span>
@@ -232,7 +232,7 @@ export function UsersPanel({
               <div className="flex gap-3 text-right">
                 <div className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/60 text-left min-w-[100px]">
                   <span className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Published</span>
-                  <strong className="text-base font-extrabold text-slate-900 dark:text-white block mt-0.5">{selectedUser.publishedCommandsCount}</strong>
+                  <strong className="text-sm font-bold text-slate-900 dark:text-white block mt-0.5">{selectedUser.publishedCommandsCount}</strong>
                 </div>
                 <div className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/60 text-left min-w-[110px]">
                   <span className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Joined</span>

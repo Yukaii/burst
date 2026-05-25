@@ -64,7 +64,7 @@ export function SettingsPanel({ bridgeConnected, theme, onThemeChange }: Setting
     <div className="min-h-0 flex-1 overflow-y-auto pr-1 pb-1">
       <div className="flex max-w-3xl flex-col gap-3">
         <div className="grid gap-1 border-b border-border pb-2.5">
-          <h2 className="m-0 text-foreground text-[15px] font-semibold leading-normal">Registry Settings</h2>
+          <h2 className="m-0 text-foreground text-base font-bold tracking-tight">Registry Settings</h2>
           <p className="m-0 text-muted-foreground text-xs leading-normal">Configure interface options, developer tools, and view synchronization posture.</p>
         </div>
 
@@ -73,7 +73,7 @@ export function SettingsPanel({ bridgeConnected, theme, onThemeChange }: Setting
           <h3 className="m-0 border-b border-border text-muted-foreground text-[10px] font-bold tracking-[0.1em] leading-none pb-2.5 uppercase">Interface Preferences</h3>
           <div className="flex items-center justify-between gap-4.5 py-2">
             <div className="flex-1">
-              <strong className="text-sm font-bold text-slate-900 dark:text-white">Dark Color Scheme</strong>
+              <strong className="text-sm font-semibold text-slate-900 dark:text-white">Dark Color Scheme</strong>
               <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block leading-relaxed">Toggle between high-contrast dark mode and premium light theme.</span>
             </div>
             <Switch
@@ -90,7 +90,7 @@ export function SettingsPanel({ bridgeConnected, theme, onThemeChange }: Setting
           <div className="flex flex-col">
             <div className="flex items-center justify-between gap-4.5 py-2 border-b border-slate-100 dark:border-slate-800/60">
               <div className="flex-1">
-                <strong className="text-sm font-bold text-slate-900 dark:text-white">Burst Bridge Connection</strong>
+                <strong className="text-sm font-semibold text-slate-900 dark:text-white">Burst Bridge Connection</strong>
                 <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block leading-relaxed">
                   {bridgeConnected
                     ? 'The registry received a response from the installed Burst extension.'
@@ -112,7 +112,7 @@ export function SettingsPanel({ bridgeConnected, theme, onThemeChange }: Setting
           <h3 className="m-0 border-b border-border text-muted-foreground text-[10px] font-bold tracking-[0.1em] leading-none pb-2.5 uppercase">Theme Contributions</h3>
           <div className="flex items-start justify-between gap-4.5 py-2">
             <div className="flex-1">
-              <strong className="text-sm font-bold text-slate-900 dark:text-white">Command Palette Website Themes</strong>
+              <strong className="text-sm font-semibold text-slate-900 dark:text-white">Command Palette Website Themes</strong>
               <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block leading-relaxed">
                 Theme configs live in <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">src/themes/*.ts</code> and include domain matching through <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">matchHosts</code>.
               </span>
@@ -141,7 +141,7 @@ export function SettingsPanel({ bridgeConnected, theme, onThemeChange }: Setting
           <h3 className="m-0 border-b border-border text-muted-foreground text-[10px] font-bold tracking-[0.1em] leading-none pb-2.5 uppercase">Extension API Tokens</h3>
           <div className="flex items-start justify-between gap-4.5 py-2">
             <div className="flex-1">
-              <strong className="text-sm font-bold text-slate-900 dark:text-white">Hosted AI Fallback Token</strong>
+              <strong className="text-sm font-semibold text-slate-900 dark:text-white">Hosted AI Fallback Token</strong>
               <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block leading-relaxed">
                 Generate a bearer token for the extension to call this registry app when Chrome built-in AI is unavailable.
               </span>
@@ -190,7 +190,7 @@ export function SettingsPanel({ bridgeConnected, theme, onThemeChange }: Setting
           <h3 className="m-0 border-b border-border text-muted-foreground text-[10px] font-bold tracking-[0.1em] leading-none pb-2.5 uppercase">Developer & System Actions</h3>
           <div className="flex items-center justify-between gap-4.5 py-2">
             <div className="flex-1">
-              <strong className="text-sm font-bold text-slate-900 dark:text-white">Clear Cache States</strong>
+              <strong className="text-sm font-semibold text-slate-900 dark:text-white">Clear Cache States</strong>
               <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block leading-relaxed">Purge extension installed registry script mapping keys from browser storage.</span>
             </div>
             <Button

@@ -229,7 +229,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
       <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-slate-800/60 pb-4">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Publish a New Command</h2>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Publish a New Command</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Define manifest capabilities, declare host scopes, and write the execution block.</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">

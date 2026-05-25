@@ -98,8 +98,8 @@ export function DiscoverPanel({
         <div className="flex w-full min-w-0 min-h-0 flex-col overflow-hidden border border-border rounded-lg bg-card" aria-label="Registry commands">
           <div className="flex items-center justify-between gap-3.5 border-b border-border p-3 px-3.5">
             <div>
-              <h2 className="m-0 text-foreground text-sm font-semibold leading-normal">Discover commands</h2>
-              <p className="m-0 mt-1 text-muted-foreground text-[11px] leading-relaxed">Find actions that match the current website, then inspect trust signals before installing.</p>
+              <h2 className="m-0 text-foreground text-base font-semibold leading-none">Discover commands</h2>
+              <p className="m-0 mt-1.5 text-muted-foreground text-xs leading-normal">Find actions that match the current website, then inspect trust signals before installing.</p>
             </div>
             <span className="shrink-0 rounded-full bg-muted text-muted-foreground text-[11px] font-semibold leading-none p-1.25 px-2">{filteredCommands.length} results</span>
           </div>
@@ -176,7 +176,7 @@ export function DiscoverPanel({
                     }}
                   >
                     <span className="flex flex-col min-w-0 pr-2">
-                      <strong className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5 leading-tight truncate">
+                      <strong className="text-[13px] font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 leading-tight truncate">
                         {command.title}
                         {installedCommandIds.includes(command.id) && (
                           <Badge variant="secondary" className="h-4.5 px-1.5 py-0 rounded text-[9px] font-extrabold uppercase bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shrink-0">Installed</Badge>
@@ -185,7 +185,7 @@ export function DiscoverPanel({
                           <span className="text-[10px] text-sky-500 shrink-0" title="Pinned">📌</span>
                         )}
                       </strong>
-                      <span className="text-xs text-slate-400 dark:text-slate-500 truncate mt-1">
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
                         by {command.publisher.name} <span className="text-[10px] text-slate-500">{command.publisher.handle.startsWith('@') ? command.publisher.handle : `@${command.publisher.handle}`}</span>
                       </span>
                     </span>
