@@ -61,6 +61,14 @@ export type RegistryCommandPage = {
   hasMore: boolean;
 };
 
+export type RegistryApiToken = {
+  id: string;
+  userHandle: string;
+  name: string;
+  createdAt: string;
+  lastUsedAt?: string;
+};
+
 export const registryCommandsData: BurstCommand[] = [
   {
     id: 'copy-github-branch',
@@ -477,6 +485,41 @@ export async function logout(): Promise<{ ok: boolean }> {
     method: 'POST',
   });
   if (!response.ok) throw new Error('Failed to logout');
+  return response.json();
+}
+
+export async function listRegistryApiTokens(): Promise<RegistryApiToken[]> {
+  if (isCliTest) return [];
+  const response = await fetch(`${API_BASE}/api/me/tokens`);
+  if (!response.ok) throw new Error('Failed to fetch registry API tokens');
+  return response.json();
+}
+
+export async function createRegistryApiToken(name: string): Promise<RegistryApiToken & { token: string }> {
+  if (isCliTest) {
+    return {
+      id: 'test-token',
+      userHandle: '@test',
+      name,
+      createdAt: new Date().toISOString(),
+      token: 'burst_test_token',
+    };
+  }
+  const response = await fetch(`${API_BASE}/api/me/tokens`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) throw new Error('Failed to create registry API token');
+  return response.json();
+}
+
+export async function deleteRegistryApiToken(tokenId: string): Promise<{ ok: boolean }> {
+  if (isCliTest) return { ok: true };
+  const response = await fetch(`${API_BASE}/api/me/tokens/${encodeURIComponent(tokenId)}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete registry API token');
   return response.json();
 }
 

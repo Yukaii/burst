@@ -118,7 +118,7 @@ export function UsersPanel({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full min-w-0">
+    <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full min-w-0 overflow-y-auto pr-1 pb-1">
       {/* Directory sidebar */}
       <div className="lg:col-span-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden flex flex-col h-[650px]">
         <div className="p-4 border-b border-slate-100 dark:border-slate-800/60 flex flex-col gap-3">

@@ -46,6 +46,15 @@ const REGISTRY_SERVER_OPTIONS: Array<{
   { value: 'custom', label: 'Custom Server' },
 ];
 
+const AI_PROVIDER_OPTIONS: Array<{
+  value: NonNullable<ExtensionSettings['aiGenerationProvider']>;
+  label: string;
+}> = [
+  { value: 'registry-fallback', label: 'Browser AI, then registry fallback' },
+  { value: 'browser', label: 'Browser built-in AI only' },
+  { value: 'registry', label: 'Registry hosted AI only' },
+];
+
 function OptionsApp() {
   const [settings, setSettings] = useState<ExtensionSettings | null>(null);
   const [previewTheme, setPreviewTheme] = useState<CommandPaletteTheme | null>(null);
@@ -432,6 +441,43 @@ function OptionsApp() {
                 onChange={(event) => updateSetting('registryServerUrl', event.target.value)}
                 aria-label="Custom registry server URL"
               />
+            </div>
+          </div>
+
+          <div className="setting-card">
+            <div className="setting-info">
+              <h2>AI Script Generation</h2>
+              <p>Choose how the dashboard assistant generates local command scripts. Registry fallback requires a token from the registry Settings page.</p>
+            </div>
+            <div className="setting-control registry-server-control">
+              <Select
+                value={settings.aiGenerationProvider || 'registry-fallback'}
+                onValueChange={(value) => updateSetting('aiGenerationProvider', value as ExtensionSettings['aiGenerationProvider'])}
+              >
+                <SelectTrigger className="w-full sm:w-[260px]" aria-label="AI generation provider">
+                  <SelectValue placeholder="Select AI provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {AI_PROVIDER_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <input
+                className="registry-url-input"
+                type="password"
+                value={settings.registryApiToken || ''}
+                placeholder="burst_..."
+                onChange={(event) => updateSetting('registryApiToken', event.target.value)}
+                aria-label="Registry API token"
+              />
+              <a className="btn-link" href={`${getRegistryServerBaseUrl(settings)}/#/settings`} target="_blank" rel="noreferrer">
+                Generate Registry Token
+              </a>
             </div>
           </div>
 

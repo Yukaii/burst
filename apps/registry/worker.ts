@@ -6,6 +6,9 @@ type Env = {
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
   REGISTRY_ADMIN_GITHUB_LOGINS?: string;
+  AI_API_KEY?: string;
+  AI_BASE_URL?: string;
+  AI_MODEL?: string;
   ASSETS?: {
     fetch(request: Request): Promise<Response>;
   };
@@ -22,6 +25,9 @@ export default {
       githubClientId: env.GITHUB_CLIENT_ID,
       githubClientSecret: env.GITHUB_CLIENT_SECRET,
       adminGithubLogins: env.REGISTRY_ADMIN_GITHUB_LOGINS,
+      aiApiKey: env.AI_API_KEY,
+      aiBaseUrl: env.AI_BASE_URL,
+      aiModel: env.AI_MODEL,
     })(request);
   },
 };

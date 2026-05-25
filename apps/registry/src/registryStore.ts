@@ -33,6 +33,14 @@ export type PublishCommandInput = {
   version?: string;
 };
 
+export type RegistryApiToken = {
+  id: string;
+  userHandle: string;
+  name: string;
+  createdAt: string;
+  lastUsedAt?: string;
+};
+
 type StoredPublisherProfile = PublisherProfile;
 type StoredPublisherRecord = StoredPublisherProfile & {
   githubId?: string;
@@ -65,6 +73,10 @@ export type RegistryStore = {
   getUser(handle: string): Promise<StoredPublisherRecord | undefined>;
   updateUser(handle: string, patch: Partial<StoredPublisherRecord>): Promise<StoredPublisherRecord>;
   upsertGitHubUser(profile: GitHubUserProfile): Promise<StoredPublisherRecord>;
+  listApiTokens(userHandle: string): Promise<RegistryApiToken[]>;
+  createApiToken(userHandle: string, name: string, tokenHash: string): Promise<RegistryApiToken>;
+  deleteApiToken(userHandle: string, tokenId: string): Promise<void>;
+  getUserByApiTokenHash(tokenHash: string): Promise<StoredPublisherRecord | null>;
 };
 
 const seedCommands: StoredRegistryCommand[] = registryCommandsData.map((command) => ({
@@ -212,6 +224,7 @@ class MemoryRegistryStore implements RegistryStore {
   private readonly publishers = new Map<string, StoredPublisherRecord>();
   private readonly commands = new Map<string, StoredRegistryCommand>();
   private readonly sessions = new Map<string, string>();
+  private readonly apiTokens = new Map<string, RegistryApiToken & { tokenHash: string }>();
 
   constructor() {
     for (const profile of seedPublishers) {
@@ -342,6 +355,39 @@ class MemoryRegistryStore implements RegistryStore {
 
     this.publishers.set(handle, merged);
     return this.attachCommandCount(merged);
+  }
+
+  async listApiTokens(userHandle: string): Promise<RegistryApiToken[]> {
+    return [...this.apiTokens.values()]
+      .filter((token) => token.userHandle === userHandle)
+      .map(({ tokenHash: _tokenHash, ...token }) => token)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async createApiToken(userHandle: string, name: string, tokenHash: string): Promise<RegistryApiToken> {
+    const token = {
+      id: crypto.randomUUID(),
+      userHandle,
+      name: name.trim() || 'Registry API token',
+      createdAt: new Date().toISOString(),
+      tokenHash,
+    };
+    this.apiTokens.set(token.id, token);
+    const { tokenHash: _tokenHash, ...publicToken } = token;
+    return publicToken;
+  }
+
+  async deleteApiToken(userHandle: string, tokenId: string): Promise<void> {
+    const token = this.apiTokens.get(tokenId);
+    if (token?.userHandle === userHandle) this.apiTokens.delete(tokenId);
+  }
+
+  async getUserByApiTokenHash(tokenHash: string): Promise<StoredPublisherRecord | null> {
+    const token = [...this.apiTokens.values()].find((item) => item.tokenHash === tokenHash);
+    if (!token) return null;
+    token.lastUsedAt = new Date().toISOString();
+    const publisher = this.publishers.get(token.userHandle);
+    return publisher ? this.attachCommandCount(publisher) : null;
   }
 
   private attachCommandCount(profile: StoredPublisherRecord): StoredPublisherRecord {
@@ -784,6 +830,55 @@ class D1RegistryStore implements RegistryStore {
     return updated;
   }
 
+  async listApiTokens(userHandle: string): Promise<RegistryApiToken[]> {
+    await this.initPromise;
+    const rows = await this.db
+      .prepare('SELECT id, user_handle, name, created_at, last_used_at FROM api_tokens WHERE user_handle = ? ORDER BY created_at DESC')
+      .bind(userHandle)
+      .all<{ id: string; user_handle: string; name: string; created_at: string; last_used_at: string | null }>();
+    return rows.results.map((row) => ({
+      id: row.id,
+      userHandle: row.user_handle,
+      name: row.name,
+      createdAt: row.created_at,
+      lastUsedAt: row.last_used_at || undefined,
+    }));
+  }
+
+  async createApiToken(userHandle: string, name: string, tokenHash: string): Promise<RegistryApiToken> {
+    await this.initPromise;
+    const token = {
+      id: crypto.randomUUID(),
+      userHandle,
+      name: name.trim() || 'Registry API token',
+      createdAt: new Date().toISOString(),
+    };
+    await this.db
+      .prepare('INSERT INTO api_tokens (id, user_handle, name, token_hash, created_at) VALUES (?, ?, ?, ?, ?)')
+      .bind(token.id, token.userHandle, token.name, tokenHash, token.createdAt)
+      .run();
+    return token;
+  }
+
+  async deleteApiToken(userHandle: string, tokenId: string): Promise<void> {
+    await this.initPromise;
+    await this.db.prepare('DELETE FROM api_tokens WHERE id = ? AND user_handle = ?').bind(tokenId, userHandle).run();
+  }
+
+  async getUserByApiTokenHash(tokenHash: string): Promise<StoredPublisherRecord | null> {
+    await this.initPromise;
+    const row = await this.db
+      .prepare('SELECT user_handle FROM api_tokens WHERE token_hash = ?')
+      .bind(tokenHash)
+      .first<{ user_handle: string }>();
+    if (!row) return null;
+    await this.db
+      .prepare('UPDATE api_tokens SET last_used_at = ? WHERE token_hash = ?')
+      .bind(new Date().toISOString(), tokenHash)
+      .run();
+    return this.getUser(row.user_handle);
+  }
+
   private async initialize(): Promise<void> {
     await this.db.prepare(`
       CREATE TABLE IF NOT EXISTS publishers (
@@ -828,6 +923,18 @@ class D1RegistryStore implements RegistryStore {
         id TEXT PRIMARY KEY,
         user_handle TEXT NOT NULL,
         created_at TEXT NOT NULL,
+        FOREIGN KEY(user_handle) REFERENCES publishers(handle)
+      )
+    `).run();
+
+    await this.db.prepare(`
+      CREATE TABLE IF NOT EXISTS api_tokens (
+        id TEXT PRIMARY KEY,
+        user_handle TEXT NOT NULL,
+        name TEXT NOT NULL,
+        token_hash TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL,
+        last_used_at TEXT,
         FOREIGN KEY(user_handle) REFERENCES publishers(handle)
       )
     `).run();

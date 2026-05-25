@@ -124,12 +124,14 @@ export function ProfilePanel({
 
   if (isGuest) {
     return (
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center flex flex-col items-center justify-center shadow-sm">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center flex flex-col items-center justify-center shadow-sm">
         <User className="size-10 text-slate-400 dark:text-slate-500 mb-3" />
         <strong className="text-sm font-bold text-slate-800 dark:text-slate-200">Guest Session</strong>
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm leading-relaxed">
           You are currently browsing the registry as a guest. Please sign in with GitHub to customize your profile, publish commands, or gain access to the publisher dashboard.
         </p>
+        </div>
       </div>
     );
   }
@@ -137,7 +139,7 @@ export function ProfilePanel({
   const publisher = profile ?? (currentUser as PublisherProfile);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full min-w-0">
+    <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full min-w-0 overflow-y-auto pr-1 pb-1">
       {/* Edit Profile Form */}
       <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden flex flex-col">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

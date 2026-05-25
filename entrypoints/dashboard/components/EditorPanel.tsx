@@ -151,12 +151,14 @@ export function EditorPanel({
     setAssistantStatus('Checking Chrome built-in AI availability...');
     try {
       const availability = await getPromptApiAvailability();
-      if (availability === 'unavailable') {
+      if (availability === 'unavailable' && settings.aiGenerationProvider === 'browser') {
         setAssistantStatus('Chrome Prompt API is unavailable. Update Chrome or enable the built-in AI feature for extensions.');
         return;
       }
 
-      setAssistantStatus(availability === 'downloadable' || availability === 'downloading'
+      setAssistantStatus(availability === 'unavailable'
+        ? 'Chrome built-in AI unavailable. Trying registry hosted fallback...'
+        : availability === 'downloadable' || availability === 'downloading'
         ? 'Chrome may need to download the local model before generating.'
         : 'Generating script locally with Chrome built-in AI...');
       const code = await generateBurstScriptWithAi({
@@ -164,6 +166,7 @@ export function EditorPanel({
         currentCode: selectedScript.code,
         matchPatterns: selectedScript.matchPatterns,
         pageTitle: selectedScript.name,
+        settings,
       });
       onUpdateScript({ code });
       setAssistantStatus('Generated script inserted. Review it before saving or enabling.');

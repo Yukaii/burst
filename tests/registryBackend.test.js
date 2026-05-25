@@ -404,6 +404,43 @@ describe('registry backend permissions', () => {
     expect(canonicalBody.status).toBe('fail');
     expect(nestedBody).toEqual(canonicalBody);
   });
+
+  test('creates API tokens and authorizes hosted AI generation', async () => {
+    const store = createMemoryRegistryStore();
+    const handler = createRegistryHandler(store, { aiApiKey: 'provider-key' });
+    const publisher = await createSession(store, 'ai-user');
+
+    const createToken = await handler(jsonRequest('/api/me/tokens', {
+      method: 'POST',
+      headers: { Cookie: `session_id=${publisher.sessionId}` },
+      body: JSON.stringify({ name: 'Extension token' }),
+    }));
+    expect(createToken.status).toBe(200);
+    const tokenBody = await createToken.json();
+    expect(tokenBody.token).toStartWith('burst_');
+
+    const listed = await handler(new Request('http://registry.test/api/me/tokens', {
+      headers: { Cookie: `session_id=${publisher.sessionId}` },
+    }));
+    expect(listed.status).toBe(200);
+    expect((await listed.json()).length).toBe(1);
+
+    globalThis.fetch = async (url, init) => {
+      expect(String(url)).toBe('https://api.openai.com/v1/chat/completions');
+      expect(init.headers.Authorization).toBe('Bearer provider-key');
+      return Response.json({
+        choices: [{ message: { content: '```js\nexport default async function run({ toast }) { toast("ok"); }\n```' } }],
+      });
+    };
+
+    const generate = await handler(jsonRequest('/api/ai/generate-script', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tokenBody.token}` },
+      body: JSON.stringify({ request: 'toast ok' }),
+    }));
+    expect(generate.status).toBe(200);
+    expect((await generate.json()).code).toContain('export default async function run');
+  });
 });
 
 describe('registry backend error boundaries', () => {

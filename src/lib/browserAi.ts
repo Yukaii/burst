@@ -1,4 +1,5 @@
 import { burstApiQuickStart } from './burstApiDocs';
+import { DEFAULT_SETTINGS, getRegistryServerBaseUrl, type ExtensionSettings } from './settings';
 
 type BuiltInAiApi = {
   availability?: (options?: Record<string, unknown>) => Promise<string> | string;
@@ -22,6 +23,32 @@ export async function getPromptApiAvailability(): Promise<string> {
 }
 
 export async function generateBurstScriptWithAi(input: {
+  request: string;
+  currentCode: string;
+  matchPatterns: string[];
+  pageTitle?: string;
+  settings?: ExtensionSettings;
+}): Promise<string> {
+  const provider = input.settings?.aiGenerationProvider ?? 'registry-fallback';
+  const shouldTryBrowser = provider === 'browser' || provider === 'registry-fallback';
+  const shouldTryRegistry = provider === 'registry' || provider === 'registry-fallback';
+
+  if (shouldTryBrowser) {
+    const browserResult = await generateWithBrowserPromptApi(input).catch((error) => {
+      if (provider === 'browser') throw error;
+      return undefined;
+    });
+    if (browserResult) return browserResult;
+  }
+
+  if (shouldTryRegistry) {
+    return generateWithRegistryAi(input);
+  }
+
+  throw new Error('No AI generation provider is configured.');
+}
+
+async function generateWithBrowserPromptApi(input: {
   request: string;
   currentCode: string;
   matchPatterns: string[];
@@ -52,6 +79,42 @@ export async function generateBurstScriptWithAi(input: {
   } finally {
     session.destroy?.();
   }
+}
+
+async function generateWithRegistryAi(input: {
+  request: string;
+  currentCode: string;
+  matchPatterns: string[];
+  pageTitle?: string;
+  settings?: ExtensionSettings;
+}): Promise<string> {
+  const token = input.settings?.registryApiToken?.trim();
+  if (!token) {
+    throw new Error('Registry API token is required for hosted AI fallback.');
+  }
+
+  const response = await fetch(`${getRegistryServerBaseUrl(input.settings ?? DEFAULT_SETTINGS)}/api/ai/generate-script`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      request: input.request,
+      currentCode: input.currentCode,
+      matchPatterns: input.matchPatterns,
+      pageTitle: input.pageTitle,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ error: 'Registry AI request failed.' })) as { error?: string; message?: string };
+    throw new Error(body.error || body.message || 'Registry AI request failed.');
+  }
+
+  const body = await response.json() as { code?: string };
+  if (!body.code) throw new Error('Registry AI returned no code.');
+  return body.code;
 }
 
 function buildScriptGenerationPrompt(input: {

@@ -11,6 +11,8 @@ export type ExtensionSettings = {
   editorTheme?: string;
   editorKeymap?: 'default' | 'vim' | 'emacs';
   editorWordWrap?: boolean;
+  aiGenerationProvider?: 'browser' | 'registry-fallback' | 'registry';
+  registryApiToken?: string;
 };
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
@@ -26,6 +28,8 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   editorTheme: 'default',
   editorKeymap: 'default',
   editorWordWrap: true,
+  aiGenerationProvider: 'registry-fallback',
+  registryApiToken: '',
 };
 
 const SETTINGS_STORAGE_KEY = 'burst.settings.v1';

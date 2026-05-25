@@ -11,7 +11,7 @@ export function AuditsPanel() {
   const report = analyzeScriptCode(testCode, patterns.split(',').map((p) => p.trim()));
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1 pb-1">
       <div className="grid gap-1 border-b border-border pb-2.5">
         <h2 className="m-0 text-foreground text-[15px] font-semibold leading-normal">Static Security Audits</h2>
         <p className="m-0 text-muted-foreground text-xs leading-normal">Inspect the guidelines, security parameters, and analyze custom execution script blocks.</p>

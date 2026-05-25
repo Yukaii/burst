@@ -5,6 +5,9 @@ type RegistryAuthConfig = {
   githubClientId?: string;
   githubClientSecret?: string;
   adminGithubLogins?: string | string[];
+  aiApiKey?: string;
+  aiBaseUrl?: string;
+  aiModel?: string;
 };
 
 type JsonHeaders = Record<string, string>;
@@ -139,6 +142,108 @@ function sanitizeSelfProfilePatch(patch: RegistryUserUpdate): RegistryUserUpdate
   };
 }
 
+async function sha256Hex(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function createPlainApiToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return `burst_${btoa(String.fromCharCode(...bytes)).replace(/[+/=]/g, '').slice(0, 40)}`;
+}
+
+function readBearerToken(request: Request): string | undefined {
+  const auth = request.headers.get('Authorization') || '';
+  const match = auth.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim();
+}
+
+async function getCurrentUserFromCookie(request: Request, store: RegistryStore) {
+  return store.getCurrentUser(parseCookies(request.headers.get('Cookie')).session_id ?? null);
+}
+
+async function getCurrentUserFromBearer(request: Request, store: RegistryStore) {
+  const token = readBearerToken(request);
+  if (!token) return null;
+  return store.getUserByApiTokenHash(await sha256Hex(token));
+}
+
+function buildScriptGenerationPrompt(body: {
+  request?: unknown;
+  currentCode?: unknown;
+  matchPatterns?: unknown;
+  pageTitle?: unknown;
+}): string {
+  return [
+    'Create a Burst local command script for this user request.',
+    'Return only JavaScript code. Do not use markdown fences.',
+    '',
+    'Rules:',
+    '- Output a complete `export default async function run(context) { ... }` module.',
+    '- Prefer destructuring from context: page, selection, clipboard, toast, list, ai, title, url.',
+    '- Use page.querySelector/page.querySelectorAll instead of direct document access.',
+    '- Use clipboard.writeText instead of navigator.clipboard directly.',
+    '- Use toast for user-visible feedback.',
+    '- If using AI, call ai.availability before ai.prompt/ai.summarize/ai.translate/etc.',
+    '- Avoid eval, new Function, remote scripts, cookie reads, chrome.storage, clipboard reads, and external data exfiltration.',
+    '',
+    `Match patterns: ${Array.isArray(body.matchPatterns) ? body.matchPatterns.join(', ') : '<all_urls>'}`,
+    `Page title context: ${typeof body.pageTitle === 'string' ? body.pageTitle : 'Unknown'}`,
+    '',
+    'User request:',
+    typeof body.request === 'string' ? body.request : '',
+    '',
+    'Current code:',
+    typeof body.currentCode === 'string' ? body.currentCode : '',
+  ].join('\n');
+}
+
+function extractJavaScript(response: string): string {
+  const fenced = /```(?:js|javascript|ts|typescript)?\s*([\s\S]*?)```/i.exec(response);
+  return (fenced?.[1] ?? response).trim();
+}
+
+async function generateScriptWithHostedAi(config: Required<Pick<RegistryAuthConfig, 'aiApiKey' | 'aiBaseUrl' | 'aiModel'>>, body: {
+  request?: unknown;
+  currentCode?: unknown;
+  matchPatterns?: unknown;
+  pageTitle?: unknown;
+}): Promise<string> {
+  const response = await fetch(`${config.aiBaseUrl.replace(/\/$/, '')}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${config.aiApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: config.aiModel,
+      messages: [
+        {
+          role: 'system',
+          content: 'You write safe Burst local command scripts. Return only JavaScript code.',
+        },
+        {
+          role: 'user',
+          content: buildScriptGenerationPrompt(body),
+        },
+      ],
+      temperature: 0.2,
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Hosted AI provider failed (${response.status}): ${text || response.statusText}`);
+  }
+
+  const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error('Hosted AI provider returned no content.');
+  return extractJavaScript(content);
+}
+
 async function exchangeGithubCode(request: Request, config: RegistryAuthConfig, code: string): Promise<string> {
   if (!config.githubClientId || !config.githubClientSecret) {
     throw new Error('GitHub login is not configured');
@@ -206,6 +311,11 @@ async function fetchGithubUser(accessToken: string): Promise<GitHubUserProfile> 
 
 export function createRegistryHandler(store: RegistryStore, authConfig: RegistryAuthConfig = {}) {
   const normalizedAuthConfig = normalizeAuthConfig(authConfig);
+  const aiConfig = {
+    aiApiKey: authConfig.aiApiKey?.trim() || '',
+    aiBaseUrl: authConfig.aiBaseUrl?.trim() || 'https://api.openai.com/v1',
+    aiModel: authConfig.aiModel?.trim() || 'gpt-4o-mini',
+  };
 
   return async function handleRequest(req: Request): Promise<Response> {
     const url = new URL(req.url);
@@ -218,7 +328,7 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, PUT, DELETE, PATCH',
-          'Access-Control-Allow-Headers': 'Content-Type, Cookie',
+          'Access-Control-Allow-Headers': 'Content-Type, Cookie, Authorization',
           'Access-Control-Allow-Credentials': 'true',
         },
       });
@@ -306,7 +416,7 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
       }
 
       if (path === '/api/users' && req.method === 'GET') {
-        const currentUser = await store.getCurrentUser(parseCookies(req.headers.get('Cookie')).session_id ?? null);
+        const currentUser = await getCurrentUserFromCookie(req, store);
         if (!isAdmin(currentUser)) {
           return errorResponse('Admin access required', currentUser ? 403 : 401);
         }
@@ -314,6 +424,41 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
         const q = url.searchParams.get('q')?.trim() || '';
         const users = await store.listUsers(q);
         return jsonResponse(users);
+      }
+
+      if (path === '/api/me/tokens' && req.method === 'GET') {
+        const user = await getCurrentUserFromCookie(req, store);
+        if (!user) return errorResponse('Unauthorized', 401);
+        return jsonResponse(await store.listApiTokens(user.handle));
+      }
+
+      if (path === '/api/me/tokens' && req.method === 'POST') {
+        const user = await getCurrentUserFromCookie(req, store);
+        if (!user) return errorResponse('Unauthorized', 401);
+        const body = await req.json().catch(() => ({})) as { name?: string };
+        const token = createPlainApiToken();
+        const record = await store.createApiToken(user.handle, body.name || 'Extension AI token', await sha256Hex(token));
+        return jsonResponse({ ...record, token });
+      }
+
+      const tokenMatch = path.match(/^\/api\/me\/tokens\/([a-zA-Z0-9_-]+)$/);
+      if (tokenMatch && req.method === 'DELETE') {
+        const user = await getCurrentUserFromCookie(req, store);
+        if (!user) return errorResponse('Unauthorized', 401);
+        await store.deleteApiToken(user.handle, tokenMatch[1]);
+        return jsonResponse({ ok: true });
+      }
+
+      if (path === '/api/ai/generate-script' && req.method === 'POST') {
+        const user = await getCurrentUserFromBearer(req, store);
+        if (!user) return errorResponse('Invalid registry API token', 401);
+        if (!aiConfig.aiApiKey) return errorResponse('Hosted AI is not configured on this registry.', 503);
+        const body = await req.json().catch(() => ({}));
+        if (!body || typeof body !== 'object' || typeof (body as { request?: unknown }).request !== 'string') {
+          return errorResponse('request is required', 400);
+        }
+        const code = await generateScriptWithHostedAi(aiConfig, body as Parameters<typeof generateScriptWithHostedAi>[1]);
+        return jsonResponse({ code });
       }
 
       if (path === '/api/commands' && req.method === 'GET') {
@@ -336,7 +481,7 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
 
       if (path === '/api/commands' && req.method === 'POST') {
         const body = (await req.json()) as PublishCommandInput;
-        const user = await store.getCurrentUser(parseCookies(req.headers.get('Cookie')).session_id ?? null);
+        const user = await getCurrentUserFromCookie(req, store);
 
         if (!user || user.handle !== body.publisherHandle || !['admin', 'publisher'].includes(user.role ?? 'member')) {
           return errorResponse('Unauthorized publishing action', 401);
@@ -396,7 +541,7 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
         const handle = decodeURIComponent(userMatch[1]);
 
         if (req.method === 'GET') {
-          const currentUser = await store.getCurrentUser(parseCookies(req.headers.get('Cookie')).session_id ?? null);
+          const currentUser = await getCurrentUserFromCookie(req, store);
           if (!currentUser) {
             return errorResponse('Unauthorized', 401);
           }
@@ -413,7 +558,7 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
         }
 
         if (req.method === 'PATCH') {
-          const currentUser = await store.getCurrentUser(parseCookies(req.headers.get('Cookie')).session_id ?? null);
+          const currentUser = await getCurrentUserFromCookie(req, store);
           if (!currentUser) {
             return errorResponse('Unauthorized', 401);
           }
