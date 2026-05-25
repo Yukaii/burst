@@ -581,6 +581,8 @@ export function RegistryApp() {
         onGitHubLogin={handleGitHubLogin}
         onLogout={handleLogout}
         onGoToDashboard={() => setView('app')}
+        theme={preferredTheme}
+        onThemeChange={setPreferredTheme}
       />
     );
   }
@@ -593,6 +595,8 @@ export function RegistryApp() {
         onGitHubLogin={handleGitHubLogin}
         onLogout={handleLogout}
         onGoToDashboard={() => setView('app')}
+        theme={preferredTheme}
+        onThemeChange={setPreferredTheme}
       />
     );
   }
