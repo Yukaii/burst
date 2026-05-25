@@ -322,7 +322,93 @@ export function createSandboxedUserScriptCode(code: string, eventName: string, r
         };
       };
 
-      // 4. Toast API
+      // 4. Chrome built-in AI APIs
+      const getAiConstructor = (name) => {
+        const value = globalThis[name];
+        return value && typeof value === 'object' ? value : undefined;
+      };
+
+      const createBuiltInAiSession = async (name, options) => {
+        if (!hasCap('ai')) {
+          throw new Error("SecurityError: Script lacks 'ai' capability.");
+        }
+        const api = getAiConstructor(name);
+        if (!api || typeof api.create !== 'function') {
+          throw new Error('AIError: Chrome built-in ' + name + ' API is unavailable in this browser.');
+        }
+        return api.create(options || {});
+      };
+
+      const runSessionMethod = async (session, methodNames, input, options) => {
+        const methodName = methodNames.find((name) => typeof session?.[name] === 'function');
+        if (!methodName) {
+          throw new Error('AIError: Built-in AI session does not expose a supported run method.');
+        }
+        try {
+          return await session[methodName](input, options || {});
+        } finally {
+          if (typeof session?.destroy === 'function') session.destroy();
+        }
+      };
+
+      const ai = {
+        async availability(kind = 'prompt', options = {}) {
+          if (!hasCap('ai')) {
+            throw new Error("SecurityError: Script lacks 'ai' capability.");
+          }
+          const apiName = {
+            prompt: 'LanguageModel',
+            languageModel: 'LanguageModel',
+            summarizer: 'Summarizer',
+            summary: 'Summarizer',
+            translator: 'Translator',
+            translate: 'Translator',
+            languageDetector: 'LanguageDetector',
+            detector: 'LanguageDetector',
+            writer: 'Writer',
+            rewriter: 'Rewriter',
+            proofreader: 'Proofreader'
+          }[kind] || String(kind);
+          const api = getAiConstructor(apiName);
+          if (!api) return 'unavailable';
+          if (typeof api.availability === 'function') return api.availability(options);
+          if (typeof api.available === 'function') return api.available(options);
+          return typeof api.create === 'function' ? 'available' : 'unavailable';
+        },
+        async prompt(input, options = {}) {
+          const session = await createBuiltInAiSession('LanguageModel', options);
+          return runSessionMethod(session, ['prompt'], String(input), options);
+        },
+        async summarize(text, options = {}) {
+          const session = await createBuiltInAiSession('Summarizer', options);
+          return runSessionMethod(session, ['summarize'], String(text), options);
+        },
+        async detectLanguage(text, options = {}) {
+          const session = await createBuiltInAiSession('LanguageDetector', options);
+          const result = await runSessionMethod(session, ['detect'], String(text), options);
+          return Array.isArray(result) ? result[0] : result;
+        },
+        async translate(text, options = {}) {
+          const createOptions = { ...options };
+          if (createOptions.sourceLanguage === 'auto') delete createOptions.sourceLanguage;
+          const session = await createBuiltInAiSession('Translator', createOptions);
+          return runSessionMethod(session, ['translate'], String(text), options);
+        },
+        async write(prompt, options = {}) {
+          const session = await createBuiltInAiSession('Writer', options);
+          return runSessionMethod(session, ['write'], String(prompt), options);
+        },
+        async rewrite(text, options = {}) {
+          const session = await createBuiltInAiSession('Rewriter', options);
+          return runSessionMethod(session, ['rewrite'], String(text), options);
+        },
+        async proofread(text, options = {}) {
+          const session = await createBuiltInAiSession('Proofreader', options);
+          return runSessionMethod(session, ['proofread', 'correct'], String(text), options);
+        }
+      };
+
+      // 5. Toast API
       const toast = (message, options = {}) => {
         if (!hasCap('toast')) {
           throw new Error("SecurityError: Script lacks 'toast' capability.");
@@ -455,7 +541,8 @@ export function createSandboxedUserScriptCode(code: string, eventName: string, r
         url: hasCap('page-dom') ? location.href : '',
         title: hasCap('page-dom') ? document.title : '',
         toast,
-        list
+        list,
+        ai
       };
 
       // Shadow the globals by wrapping the user script in an IIFE parameter binding
@@ -593,8 +680,10 @@ function getWebStorage(): WebStorage | undefined {
   return runtime.localStorage;
 }
 
-export function detectRequiredCapabilities(code: string): Array<'page-dom' | 'selection' | 'clipboard-write' | 'toast' | 'list'> {
-  const capabilities: Array<'page-dom' | 'selection' | 'clipboard-write' | 'toast' | 'list'> = [];
+export type LocalScriptCapability = 'page-dom' | 'selection' | 'clipboard-write' | 'toast' | 'list' | 'ai';
+
+export function detectRequiredCapabilities(code: string): LocalScriptCapability[] {
+  const capabilities: LocalScriptCapability[] = [];
 
   if (/page\b|document\b|querySelector|querySelectorAll|createElement|\btitle\b|\burl\b|\blocation\b/i.test(code)) {
     capabilities.push('page-dom');
@@ -610,6 +699,9 @@ export function detectRequiredCapabilities(code: string): Array<'page-dom' | 'se
   }
   if (/\blist\b|createList|showList/i.test(code)) {
     capabilities.push('list');
+  }
+  if (/\bai\b|LanguageModel|Summarizer|Translator|LanguageDetector|Writer|Rewriter|Proofreader/i.test(code)) {
+    capabilities.push('ai');
   }
 
   return capabilities;

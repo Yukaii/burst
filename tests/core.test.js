@@ -184,6 +184,7 @@ describe('capability detection', () => {
         const sel = context.selection;
         context.toast("Hello");
         context.list({ title: "Branches", items: [] });
+        await context.ai.prompt("Summarize " + title);
         await context.navigator.clipboard.writeText("Copy me");
         const doc = context.page.querySelector("div");
       }
@@ -194,6 +195,7 @@ describe('capability detection', () => {
     expect(capabilities).toContain('clipboard-write');
     expect(capabilities).toContain('toast');
     expect(capabilities).toContain('list');
+    expect(capabilities).toContain('ai');
   });
 
   test('detects title and url context reads as page-dom capability', () => {

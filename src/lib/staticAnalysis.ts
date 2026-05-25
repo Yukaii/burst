@@ -13,6 +13,7 @@ export type StaticAnalysisReport = {
     remoteCode: StaticCheck;
     networkAccess: StaticCheck;
     obfuscation: StaticCheck;
+    aiUsage: StaticCheck;
   };
   summary: string;
 };
@@ -145,6 +146,20 @@ export function analyzeScriptCode(code: string, matchPatterns: string[] = []): S
     obfuscationDetail = `Potential obfuscation or minification detected: ${flagged.join(', ')}. Recommended review of original source.`;
   }
 
+  // 6. Built-in AI check
+  let aiUsageStatus: Severity = 'pass';
+  let aiUsageDetail = 'No Chrome built-in AI usage detected.';
+  const hasBurstAi = /\bai\.(availability|prompt|summarize|detectLanguage|translate|write|rewrite|proofread)\b/i.test(cleanCode);
+  const hasDirectBuiltInAi = /\b(LanguageModel|Summarizer|Translator|LanguageDetector|Writer|Rewriter|Proofreader)\b/i.test(cleanCode);
+
+  if (hasDirectBuiltInAi && !hasBurstAi) {
+    aiUsageStatus = 'warning';
+    aiUsageDetail = 'Direct Chrome built-in AI globals detected. Prefer Burst’s ai helper so availability and capability checks are handled consistently.';
+  } else if (hasBurstAi) {
+    aiUsageStatus = 'warning';
+    aiUsageDetail = 'Uses Chrome built-in AI through Burst. Check ai.availability() before user-facing calls because model support can vary by Chrome version and device.';
+  }
+
   // Overall status resolution: worst status of all checks
   const statuses = [
     hostScopeStatus,
@@ -152,6 +167,7 @@ export function analyzeScriptCode(code: string, matchPatterns: string[] = []): S
     remoteCodeStatus,
     networkAccessStatus,
     obfuscationStatus,
+    aiUsageStatus,
   ];
 
   let overallStatus: Severity = 'pass';
@@ -178,6 +194,7 @@ export function analyzeScriptCode(code: string, matchPatterns: string[] = []): S
       remoteCode: { status: remoteCodeStatus, detail: remoteCodeDetail },
       networkAccess: { status: networkAccessStatus, detail: networkAccessDetail },
       obfuscation: { status: obfuscationStatus, detail: obfuscationDetail },
+      aiUsage: { status: aiUsageStatus, detail: aiUsageDetail },
     },
     summary,
   };

@@ -16,6 +16,7 @@ describe('static analysis engine', () => {
     expect(report.checks.remoteCode.status).toBe('pass');
     expect(report.checks.networkAccess.status).toBe('pass');
     expect(report.checks.obfuscation.status).toBe('pass');
+    expect(report.checks.aiUsage.status).toBe('pass');
   });
 
   test('detects warning for broad match patterns', () => {
@@ -99,5 +100,22 @@ describe('static analysis engine', () => {
     const report = analyzeScriptCode(code, []);
     expect(report.status).toBe('warning');
     expect(report.checks.obfuscation.status).toBe('warning');
+  });
+
+  test('detects Chrome built-in AI usage guidance', () => {
+    const direct = analyzeScriptCode(`await LanguageModel.create();`, []);
+    expect(direct.status).toBe('warning');
+    expect(direct.checks.aiUsage.status).toBe('warning');
+    expect(direct.checks.aiUsage.detail).toContain('Prefer Burst');
+
+    const helper = analyzeScriptCode(`
+      export default async function run({ ai }) {
+        if (await ai.availability('prompt') !== 'unavailable') {
+          await ai.prompt('Hello');
+        }
+      }
+    `, []);
+    expect(helper.checks.aiUsage.status).toBe('warning');
+    expect(helper.checks.aiUsage.detail).toContain('availability');
   });
 });

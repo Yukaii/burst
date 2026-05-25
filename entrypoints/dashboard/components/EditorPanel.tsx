@@ -14,15 +14,20 @@ import {
   ExternalLink,
   RotateCcw,
   Unlink,
+  Sparkles,
+  X,
 } from 'lucide-react';
 import type { LocalScript } from '@/src/lib/localScripts';
 import { prepareLocalScriptForSave, stripDefaultExport } from '@/src/lib/localScripts';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
+import { burstApiQuickStart } from '@/src/lib/burstApiDocs';
+import { generateBurstScriptWithAi, getPromptApiAvailability } from '@/src/lib/browserAi';
 import { IconSelect, Tooltip, AuditIssueDot } from './ui';
 import { getStatusClassName, getStatusDotClassName, parseMatchPatternsInput } from './utils';
 import { createEditorTheme } from './utils';
 import { themesMap } from './constants';
 import type { ExtensionSettings } from '@/src/lib/settings';
+import { createBurstApiAutocomplete, createBurstApiLinter } from './editorExtensions';
 
 export function EditorPanel({
   selectedScript,
@@ -75,6 +80,10 @@ export function EditorPanel({
 }) {
   const [statusMenuOpen, setStatusMenuOpen] = React.useState(false);
   const [navbarMenuOpen, setNavbarMenuOpen] = React.useState(false);
+  const [assistantOpen, setAssistantOpen] = React.useState(false);
+  const [assistantPrompt, setAssistantPrompt] = React.useState('');
+  const [assistantStatus, setAssistantStatus] = React.useState('');
+  const [isGeneratingScript, setIsGeneratingScript] = React.useState(false);
   const nameMeasureRef = React.useRef<HTMLSpanElement>(null);
   const [nameInputWidth, setNameInputWidth] = React.useState(180);
 
@@ -118,7 +127,11 @@ export function EditorPanel({
 
   const editorExtensions = React.useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const list: any[] = [javascript({ jsx: true, typescript: true })];
+    const list: any[] = [
+      javascript({ jsx: true, typescript: true }),
+      createBurstApiAutocomplete(),
+      createBurstApiLinter(),
+    ];
     if (editorTheme === 'default') {
       list.push(editorThemeExtension);
     } else {
@@ -129,6 +142,38 @@ export function EditorPanel({
     if (editorWordWrap) list.push(EditorView.lineWrapping);
     return list;
   }, [editorTheme, editorThemeExtension, baseLayoutTheme, editorKeymap, editorWordWrap]);
+
+  async function handleGenerateWithAi() {
+    const request = assistantPrompt.trim();
+    if (!request || isGeneratingScript) return;
+
+    setIsGeneratingScript(true);
+    setAssistantStatus('Checking Chrome built-in AI availability...');
+    try {
+      const availability = await getPromptApiAvailability();
+      if (availability === 'unavailable') {
+        setAssistantStatus('Chrome Prompt API is unavailable. Update Chrome or enable the built-in AI feature for extensions.');
+        return;
+      }
+
+      setAssistantStatus(availability === 'downloadable' || availability === 'downloading'
+        ? 'Chrome may need to download the local model before generating.'
+        : 'Generating script locally with Chrome built-in AI...');
+      const code = await generateBurstScriptWithAi({
+        request,
+        currentCode: selectedScript.code,
+        matchPatterns: selectedScript.matchPatterns,
+        pageTitle: selectedScript.name,
+      });
+      onUpdateScript({ code });
+      setAssistantStatus('Generated script inserted. Review it before saving or enabling.');
+      setAssistantOpen(false);
+    } catch (error) {
+      setAssistantStatus(error instanceof Error ? error.message : 'AI generation failed.');
+    } finally {
+      setIsGeneratingScript(false);
+    }
+  }
 
   return (
     <section className="flex-1 flex flex-col h-full w-full bg-background text-foreground overflow-hidden" aria-label="Script editor">
@@ -346,7 +391,60 @@ export function EditorPanel({
           <div className="flex-1 flex flex-col min-h-0 p-4">
             <div className="flex items-center justify-between pb-2">
               <span className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">Source Code</span>
+              <button
+                type="button"
+                onClick={() => setAssistantOpen(true)}
+                className="inline-flex items-center gap-1 rounded-md border border-input px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
+                <Sparkles className="w-3 h-3" />
+                Generate with AI
+              </button>
             </div>
+            {assistantOpen && (
+              <div className="mb-3 rounded-lg border border-border bg-card p-3 shadow-sm">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div>
+                    <strong className="block text-xs font-bold text-foreground">AI Script Assistant</strong>
+                    <span className="text-[11px] text-muted-foreground">Uses Chrome built-in AI locally when available.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAssistantOpen(false)}
+                    className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    aria-label="Close AI script assistant"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <textarea
+                  value={assistantPrompt}
+                  onChange={(event) => setAssistantPrompt(event.target.value)}
+                  rows={3}
+                  placeholder="Example: Create a command that summarizes the selected text with Chrome AI and copies the result."
+                  className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-ring"
+                />
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="min-w-0 flex-1 text-[11px] text-muted-foreground">{assistantStatus || 'Generated code is inserted into the editor for review.'}</span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onUpdateScript({ code: burstApiQuickStart })}
+                      className="rounded-md border border-input px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      Insert starter
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleGenerateWithAi()}
+                      disabled={!assistantPrompt.trim() || isGeneratingScript}
+                      className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isGeneratingScript ? 'Generating...' : 'Generate'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="flex-1 min-h-0 border border-border rounded-lg overflow-hidden bg-card/20 shadow-inner code-editor">
               <CodeMirror
                 value={selectedScript.code}
@@ -421,6 +519,7 @@ function RightPanel({
                 { key: 'remoteCode' as const, title: 'Remote Code & Injection' },
                 { key: 'networkAccess' as const, title: 'Network Access' },
                 { key: 'obfuscation' as const, title: 'Code Quality & Obfuscation Heuristics' },
+                { key: 'aiUsage' as const, title: 'Chrome Built-in AI' },
               ] as const
             ).map(({ key, title }) => {
               const check = staticAuditReport.checks[key];

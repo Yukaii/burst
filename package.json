@@ -26,7 +26,9 @@
     "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.2",
     "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lint": "^6.9.6",
     "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.43.0",
     "@radix-ui/react-select": "^2.2.6",
