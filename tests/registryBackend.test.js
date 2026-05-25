@@ -441,6 +441,139 @@ describe('registry backend permissions', () => {
     expect(generate.status).toBe(200);
     expect((await generate.json()).code).toContain('export default async function run');
   });
+
+  test('supports Anthropic hosted AI provider configuration', async () => {
+    const store = createMemoryRegistryStore();
+    const handler = createRegistryHandler(store, {
+      aiProvider: 'anthropic',
+      anthropicApiKey: 'anthropic-key',
+      anthropicModel: 'claude-test',
+    });
+    const publisher = await createSession(store, 'anthropic-user');
+    const createToken = await handler(jsonRequest('/api/me/tokens', {
+      method: 'POST',
+      headers: { Cookie: `session_id=${publisher.sessionId}` },
+      body: JSON.stringify({ name: 'Anthropic token' }),
+    }));
+    const tokenBody = await createToken.json();
+
+    globalThis.fetch = async (url, init) => {
+      expect(String(url)).toBe('https://api.anthropic.com/v1/messages');
+      expect(init.headers['x-api-key']).toBe('anthropic-key');
+      const body = JSON.parse(init.body);
+      expect(body.model).toBe('claude-test');
+      return Response.json({
+        content: [{ type: 'text', text: 'export default async function run() {}' }],
+      });
+    };
+
+    const generate = await handler(jsonRequest('/api/ai/generate-script', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tokenBody.token}` },
+      body: JSON.stringify({ request: 'make script' }),
+    }));
+    expect(generate.status).toBe(200);
+    expect((await generate.json()).code).toContain('export default async function run');
+  });
+
+  test('supports Google hosted AI provider configuration', async () => {
+    const store = createMemoryRegistryStore();
+    const handler = createRegistryHandler(store, {
+      aiProvider: 'google',
+      googleAiApiKey: 'google-key',
+      googleAiModel: 'gemini-test',
+    });
+    const publisher = await createSession(store, 'google-user');
+    const createToken = await handler(jsonRequest('/api/me/tokens', {
+      method: 'POST',
+      headers: { Cookie: `session_id=${publisher.sessionId}` },
+      body: JSON.stringify({ name: 'Google token' }),
+    }));
+    const tokenBody = await createToken.json();
+
+    globalThis.fetch = async (url, init) => {
+      expect(String(url)).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent?key=google-key');
+      const body = JSON.parse(init.body);
+      expect(body.contents[0].parts[0].text).toContain('make script');
+      return Response.json({
+        candidates: [{ content: { parts: [{ text: 'export default async function run() {}' }] } }],
+      });
+    };
+
+    const generate = await handler(jsonRequest('/api/ai/generate-script', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tokenBody.token}` },
+      body: JSON.stringify({ request: 'make script' }),
+    }));
+    expect(generate.status).toBe(200);
+    expect((await generate.json()).code).toContain('export default async function run');
+  });
+
+  test('supports OpenRouter hosted AI provider configuration', async () => {
+    const store = createMemoryRegistryStore();
+    const handler = createRegistryHandler(store, {
+      aiProvider: 'openrouter',
+      openrouterApiKey: 'openrouter-key',
+      openrouterModel: 'openai/test-model',
+    });
+    const publisher = await createSession(store, 'openrouter-user');
+    const createToken = await handler(jsonRequest('/api/me/tokens', {
+      method: 'POST',
+      headers: { Cookie: `session_id=${publisher.sessionId}` },
+      body: JSON.stringify({ name: 'OpenRouter token' }),
+    }));
+    const tokenBody = await createToken.json();
+
+    globalThis.fetch = async (url, init) => {
+      expect(String(url)).toBe('https://openrouter.ai/api/v1/chat/completions');
+      expect(init.headers.Authorization).toBe('Bearer openrouter-key');
+      expect(JSON.parse(init.body).model).toBe('openai/test-model');
+      return Response.json({
+        choices: [{ message: { content: 'export default async function run() {}' } }],
+      });
+    };
+
+    const generate = await handler(jsonRequest('/api/ai/generate-script', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tokenBody.token}` },
+      body: JSON.stringify({ request: 'make script' }),
+    }));
+    expect(generate.status).toBe(200);
+    expect((await generate.json()).code).toContain('export default async function run');
+  });
+
+  test('supports Cloudflare Workers AI provider configuration', async () => {
+    const store = createMemoryRegistryStore();
+    const handler = createRegistryHandler(store, {
+      aiProvider: 'workers-ai',
+      cloudflareAiApiToken: 'cf-token',
+      cloudflareAccountId: 'account-123',
+      cloudflareAiModel: '@cf/test/model',
+    });
+    const publisher = await createSession(store, 'workers-ai-user');
+    const createToken = await handler(jsonRequest('/api/me/tokens', {
+      method: 'POST',
+      headers: { Cookie: `session_id=${publisher.sessionId}` },
+      body: JSON.stringify({ name: 'Workers AI token' }),
+    }));
+    const tokenBody = await createToken.json();
+
+    globalThis.fetch = async (url, init) => {
+      expect(String(url)).toBe('https://api.cloudflare.com/client/v4/accounts/account-123/ai/run/@cf/test/model');
+      expect(init.headers.Authorization).toBe('Bearer cf-token');
+      return Response.json({
+        result: { response: 'export default async function run() {}' },
+      });
+    };
+
+    const generate = await handler(jsonRequest('/api/ai/generate-script', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tokenBody.token}` },
+      body: JSON.stringify({ request: 'make script' }),
+    }));
+    expect(generate.status).toBe(200);
+    expect((await generate.json()).code).toContain('export default async function run');
+  });
 });
 
 describe('registry backend error boundaries', () => {

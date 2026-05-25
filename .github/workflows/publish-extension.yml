@@ -1,0 +1,89 @@
+name: Publish Extension
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Check authentication without uploading to stores"
+        type: boolean
+        default: true
+      publish_chrome:
+        description: "Submit Chrome Web Store package"
+        type: boolean
+        default: true
+      publish_firefox:
+        description: "Submit Mozilla Add-ons package"
+        type: boolean
+        default: true
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run compile
+
+      - name: Test
+        run: bun test
+
+      - name: Zip Chrome extension
+        if: ${{ github.event_name == 'push' || inputs.publish_chrome }}
+        run: bun run zip
+
+      - name: Zip Firefox extension
+        if: ${{ github.event_name == 'push' || inputs.publish_firefox }}
+        run: bun run zip:firefox
+
+      - name: Upload extension artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-store-packages
+          path: |
+            .output/*-chrome.zip
+            .output/*-firefox.zip
+            .output/*-sources.zip
+          if-no-files-found: error
+
+      - name: Submit to stores
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          PUBLISH_CHROME: ${{ github.event_name == 'push' || inputs.publish_chrome }}
+          PUBLISH_FIREFOX: ${{ github.event_name == 'push' || inputs.publish_firefox }}
+        run: |
+          args=()
+
+          if [ "$DRY_RUN" = "true" ]; then
+            args+=(--dry-run)
+          fi
+
+          if [ "$PUBLISH_CHROME" = "true" ]; then
+            args+=(--chrome-zip .output/*-chrome.zip)
+          fi
+
+          if [ "$PUBLISH_FIREFOX" = "true" ]; then
+            args+=(--firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip)
+          fi
+
+          bun run submit:stores -- "${args[@]}"

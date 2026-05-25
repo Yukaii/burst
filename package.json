@@ -18,6 +18,7 @@
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
+    "submit:stores": "wxt submit",
     "compile": "tsc --noEmit && bun --filter @burst/registry compile",
     "test": "bun test",
     "postinstall": "wxt prepare",

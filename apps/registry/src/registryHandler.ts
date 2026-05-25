@@ -5,9 +5,26 @@ type RegistryAuthConfig = {
   githubClientId?: string;
   githubClientSecret?: string;
   adminGithubLogins?: string | string[];
+  aiProvider?: string;
   aiApiKey?: string;
   aiBaseUrl?: string;
   aiModel?: string;
+  openaiApiKey?: string;
+  openaiBaseUrl?: string;
+  openaiModel?: string;
+  anthropicApiKey?: string;
+  anthropicBaseUrl?: string;
+  anthropicModel?: string;
+  googleAiApiKey?: string;
+  googleAiBaseUrl?: string;
+  googleAiModel?: string;
+  openrouterApiKey?: string;
+  openrouterBaseUrl?: string;
+  openrouterModel?: string;
+  cloudflareAiApiToken?: string;
+  cloudflareAccountId?: string;
+  cloudflareAiBaseUrl?: string;
+  cloudflareAiModel?: string;
 };
 
 type JsonHeaders = Record<string, string>;
@@ -130,6 +147,75 @@ function normalizeAuthConfig(config: RegistryAuthConfig) {
   };
 }
 
+type HostedAiProvider = 'openai-compatible' | 'openai' | 'anthropic' | 'google' | 'openrouter' | 'workers-ai';
+
+type HostedAiConfig = {
+  provider: HostedAiProvider;
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  cloudflareAccountId?: string;
+};
+
+function normalizeAiProvider(value: string | undefined): HostedAiProvider {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === 'openai' || normalized === 'anthropic' || normalized === 'google' || normalized === 'openrouter' || normalized === 'workers-ai') {
+    return normalized;
+  }
+  return 'openai-compatible';
+}
+
+function resolveHostedAiConfig(config: RegistryAuthConfig): HostedAiConfig {
+  const provider = normalizeAiProvider(config.aiProvider);
+  const genericApiKey = config.aiApiKey?.trim() || '';
+  const genericBaseUrl = config.aiBaseUrl?.trim() || '';
+  const genericModel = config.aiModel?.trim() || '';
+
+  if (provider === 'anthropic') {
+    return {
+      provider,
+      apiKey: config.anthropicApiKey?.trim() || genericApiKey,
+      baseUrl: config.anthropicBaseUrl?.trim() || genericBaseUrl || 'https://api.anthropic.com',
+      model: config.anthropicModel?.trim() || genericModel || 'claude-3-5-haiku-latest',
+    };
+  }
+
+  if (provider === 'google') {
+    return {
+      provider,
+      apiKey: config.googleAiApiKey?.trim() || genericApiKey,
+      baseUrl: config.googleAiBaseUrl?.trim() || genericBaseUrl || 'https://generativelanguage.googleapis.com/v1beta',
+      model: config.googleAiModel?.trim() || genericModel || 'gemini-1.5-flash',
+    };
+  }
+
+  if (provider === 'openrouter') {
+    return {
+      provider,
+      apiKey: config.openrouterApiKey?.trim() || genericApiKey,
+      baseUrl: config.openrouterBaseUrl?.trim() || genericBaseUrl || 'https://openrouter.ai/api/v1',
+      model: config.openrouterModel?.trim() || genericModel || 'openai/gpt-4o-mini',
+    };
+  }
+
+  if (provider === 'workers-ai') {
+    return {
+      provider,
+      apiKey: config.cloudflareAiApiToken?.trim() || genericApiKey,
+      baseUrl: config.cloudflareAiBaseUrl?.trim() || genericBaseUrl || 'https://api.cloudflare.com/client/v4',
+      model: config.cloudflareAiModel?.trim() || genericModel || '@cf/meta/llama-3.1-8b-instruct',
+      cloudflareAccountId: config.cloudflareAccountId?.trim(),
+    };
+  }
+
+  return {
+    provider,
+    apiKey: config.openaiApiKey?.trim() || genericApiKey,
+    baseUrl: config.openaiBaseUrl?.trim() || genericBaseUrl || 'https://api.openai.com/v1',
+    model: config.openaiModel?.trim() || genericModel || 'gpt-4o-mini',
+  };
+}
+
 function isAdmin(user: { role?: string } | null | undefined): boolean {
   return user?.role === 'admin';
 }
@@ -205,20 +291,41 @@ function extractJavaScript(response: string): string {
   return (fenced?.[1] ?? response).trim();
 }
 
-async function generateScriptWithHostedAi(config: Required<Pick<RegistryAuthConfig, 'aiApiKey' | 'aiBaseUrl' | 'aiModel'>>, body: {
+async function generateScriptWithHostedAi(config: HostedAiConfig, body: {
   request?: unknown;
   currentCode?: unknown;
   matchPatterns?: unknown;
   pageTitle?: unknown;
 }): Promise<string> {
-  const response = await fetch(`${config.aiBaseUrl.replace(/\/$/, '')}/chat/completions`, {
+  if (config.provider === 'anthropic') {
+    return generateScriptWithAnthropic(config, body);
+  }
+
+  if (config.provider === 'google') {
+    return generateScriptWithGoogle(config, body);
+  }
+
+  if (config.provider === 'workers-ai') {
+    return generateScriptWithWorkersAi(config, body);
+  }
+
+  return generateScriptWithOpenAiCompatible(config, body);
+}
+
+async function generateScriptWithOpenAiCompatible(config: HostedAiConfig, body: {
+  request?: unknown;
+  currentCode?: unknown;
+  matchPatterns?: unknown;
+  pageTitle?: unknown;
+}): Promise<string> {
+  const response = await fetch(`${config.baseUrl.replace(/\/$/, '')}/chat/completions`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${config.aiApiKey}`,
+      Authorization: `Bearer ${config.apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: config.aiModel,
+      model: config.model,
       messages: [
         {
           role: 'system',
@@ -240,6 +347,128 @@ async function generateScriptWithHostedAi(config: Required<Pick<RegistryAuthConf
 
   const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
   const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error('Hosted AI provider returned no content.');
+  return extractJavaScript(content);
+}
+
+async function generateScriptWithAnthropic(config: HostedAiConfig, body: {
+  request?: unknown;
+  currentCode?: unknown;
+  matchPatterns?: unknown;
+  pageTitle?: unknown;
+}): Promise<string> {
+  const response = await fetch(`${config.baseUrl.replace(/\/$/, '')}/v1/messages`, {
+    method: 'POST',
+    headers: {
+      'x-api-key': config.apiKey,
+      'anthropic-version': '2023-06-01',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: config.model,
+      max_tokens: 2000,
+      system: 'You write safe Burst local command scripts. Return only JavaScript code.',
+      messages: [
+        {
+          role: 'user',
+          content: buildScriptGenerationPrompt(body),
+        },
+      ],
+      temperature: 0.2,
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Hosted AI provider failed (${response.status}): ${text || response.statusText}`);
+  }
+
+  const data = await response.json() as { content?: Array<{ type?: string; text?: string }> };
+  const content = data.content?.find((part) => part.type === 'text' || typeof part.text === 'string')?.text;
+  if (!content) throw new Error('Hosted AI provider returned no content.');
+  return extractJavaScript(content);
+}
+
+async function generateScriptWithGoogle(config: HostedAiConfig, body: {
+  request?: unknown;
+  currentCode?: unknown;
+  matchPatterns?: unknown;
+  pageTitle?: unknown;
+}): Promise<string> {
+  const response = await fetch(`${config.baseUrl.replace(/\/$/, '')}/models/${encodeURIComponent(config.model)}:generateContent?key=${encodeURIComponent(config.apiKey)}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: [
+                'You write safe Burst local command scripts. Return only JavaScript code.',
+                '',
+                buildScriptGenerationPrompt(body),
+              ].join('\n'),
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.2,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Hosted AI provider failed (${response.status}): ${text || response.statusText}`);
+  }
+
+  const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  const content = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('').trim();
+  if (!content) throw new Error('Hosted AI provider returned no content.');
+  return extractJavaScript(content);
+}
+
+async function generateScriptWithWorkersAi(config: HostedAiConfig, body: {
+  request?: unknown;
+  currentCode?: unknown;
+  matchPatterns?: unknown;
+  pageTitle?: unknown;
+}): Promise<string> {
+  if (!config.cloudflareAccountId) {
+    throw new Error('Cloudflare Workers AI requires CLOUDFLARE_ACCOUNT_ID.');
+  }
+
+  const response = await fetch(`${config.baseUrl.replace(/\/$/, '')}/accounts/${encodeURIComponent(config.cloudflareAccountId)}/ai/run/${config.model}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      messages: [
+        {
+          role: 'system',
+          content: 'You write safe Burst local command scripts. Return only JavaScript code.',
+        },
+        {
+          role: 'user',
+          content: buildScriptGenerationPrompt(body),
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Hosted AI provider failed (${response.status}): ${text || response.statusText}`);
+  }
+
+  const data = await response.json() as { result?: { response?: string; text?: string }; response?: string };
+  const content = data.result?.response || data.result?.text || data.response;
   if (!content) throw new Error('Hosted AI provider returned no content.');
   return extractJavaScript(content);
 }
@@ -311,11 +540,7 @@ async function fetchGithubUser(accessToken: string): Promise<GitHubUserProfile> 
 
 export function createRegistryHandler(store: RegistryStore, authConfig: RegistryAuthConfig = {}) {
   const normalizedAuthConfig = normalizeAuthConfig(authConfig);
-  const aiConfig = {
-    aiApiKey: authConfig.aiApiKey?.trim() || '',
-    aiBaseUrl: authConfig.aiBaseUrl?.trim() || 'https://api.openai.com/v1',
-    aiModel: authConfig.aiModel?.trim() || 'gpt-4o-mini',
-  };
+  const aiConfig = resolveHostedAiConfig(authConfig);
 
   return async function handleRequest(req: Request): Promise<Response> {
     const url = new URL(req.url);
@@ -452,7 +677,7 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
       if (path === '/api/ai/generate-script' && req.method === 'POST') {
         const user = await getCurrentUserFromBearer(req, store);
         if (!user) return errorResponse('Invalid registry API token', 401);
-        if (!aiConfig.aiApiKey) return errorResponse('Hosted AI is not configured on this registry.', 503);
+        if (!aiConfig.apiKey) return errorResponse(`Hosted AI is not configured for provider "${aiConfig.provider}" on this registry.`, 503);
         const body = await req.json().catch(() => ({}));
         if (!body || typeof body !== 'object' || typeof (body as { request?: unknown }).request !== 'string') {
           return errorResponse('request is required', 400);

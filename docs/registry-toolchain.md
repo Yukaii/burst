@@ -96,6 +96,65 @@ The raw address resolves based on the repository's configuration:
 
 The official registry backend uses a shared HTTP handler that can run locally through `apps/registry/server.ts` and deploy through `apps/registry/worker.ts`. The persistent data layer is designed for Cloudflare D1 so the same schema can run in development and in production workers.
 
+### Hosted AI Provider Configuration
+
+The registry exposes `POST /api/ai/generate-script` for extension-hosted script generation fallback. The endpoint requires a registry API bearer token created from the registry settings page.
+
+Set `AI_PROVIDER` to choose the provider. Supported values:
+
+- `openai-compatible` (default)
+- `openai`
+- `anthropic`
+- `google`
+- `openrouter`
+- `workers-ai`
+
+Generic OpenAI-compatible configuration:
+
+```sh
+AI_PROVIDER=openai-compatible
+AI_API_KEY=...
+AI_BASE_URL=https://api.openai.com/v1
+AI_MODEL=gpt-4o-mini
+```
+
+Provider-specific configuration:
+
+```sh
+# OpenAI
+AI_PROVIDER=openai
+OPENAI_API_KEY=...
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4o-mini
+
+# Anthropic
+AI_PROVIDER=anthropic
+ANTHROPIC_API_KEY=...
+ANTHROPIC_BASE_URL=https://api.anthropic.com
+ANTHROPIC_MODEL=claude-3-5-haiku-latest
+
+# Google Gemini
+AI_PROVIDER=google
+GOOGLE_AI_API_KEY=...
+GOOGLE_AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta
+GOOGLE_AI_MODEL=gemini-1.5-flash
+
+# OpenRouter
+AI_PROVIDER=openrouter
+OPENROUTER_API_KEY=...
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_MODEL=openai/gpt-4o-mini
+
+# Cloudflare Workers AI REST API
+AI_PROVIDER=workers-ai
+CLOUDFLARE_AI_API_TOKEN=...
+CLOUDFLARE_ACCOUNT_ID=...
+CLOUDFLARE_AI_BASE_URL=https://api.cloudflare.com/client/v4
+CLOUDFLARE_AI_MODEL=@cf/meta/llama-3.1-8b-instruct
+```
+
+The generic `AI_API_KEY`, `AI_BASE_URL`, and `AI_MODEL` values remain as fallbacks for every provider, but provider-specific variables take precedence.
+
 ### Database Schema
 
 ```sql
