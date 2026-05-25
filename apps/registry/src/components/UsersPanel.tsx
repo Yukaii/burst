@@ -128,7 +128,7 @@ export function UsersPanel({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search publisher directory..."
-              className="pl-9 h-9 text-xs bg-slate-50/50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 focus-visible:ring-sky-500"
+              className="pl-9 h-9 text-[11px] font-medium bg-slate-50/50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 focus-visible:ring-sky-500"
             />
           </div>
           <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -252,7 +252,7 @@ export function UsersPanel({
                     value={draft.name}
                     onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
                     disabled={!canEditSelected}
-                    className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl"
+                    className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl font-medium text-[11px] h-8.5 px-3"
                   />
                 </div>
 
@@ -262,7 +262,7 @@ export function UsersPanel({
                     value={draft.role}
                     onChange={(event) => setDraft((prev) => ({ ...prev, role: event.target.value as typeof draft.role }))}
                     disabled={!canEditAll}
-                    className="h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 disabled:opacity-50"
+                    className="h-8.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-1.5 text-[11px] font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/20 disabled:opacity-50"
                   >
                     <option value="publisher">Publisher</option>
                     <option value="member">Member</option>
@@ -277,7 +277,7 @@ export function UsersPanel({
                     value={draft.bio}
                     onChange={(event) => setDraft((prev) => ({ ...prev, bio: event.target.value }))}
                     disabled={!canEditSelected}
-                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl text-sm"
+                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl font-medium text-[11px] px-3 py-2"
                   />
                 </div>
 
@@ -288,7 +288,7 @@ export function UsersPanel({
                     value={draft.verifiedSources}
                     onChange={(event) => setDraft((prev) => ({ ...prev, verifiedSources: event.target.value }))}
                     disabled={!canEditAll && selectedUser.handle !== currentUser.handle}
-                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl font-mono text-xs"
+                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl font-mono font-medium text-[11px] px-3 py-2"
                   />
                 </div>
 

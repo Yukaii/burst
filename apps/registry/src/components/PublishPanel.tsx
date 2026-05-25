@@ -261,7 +261,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
                   value={title}
                   onChange={(e) => handleTitleChange(e.target.value)}
                   placeholder="e.g. Copy GitHub branch name"
-                  className="font-semibold text-xs h-9"
+                  className="font-medium text-[11px] h-8.5 px-3"
                 />
                 {errors.title && <span className="text-[10px] font-bold text-rose-500">{errors.title}</span>}
               </div>
@@ -272,7 +272,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
                   value={id}
                   onChange={(e) => setId(e.target.value)}
                   placeholder="e.g. copy-github-branch"
-                  className="font-semibold text-xs h-9"
+                  className="font-medium text-[11px] h-8.5 px-3"
                 />
                 {errors.id && <span className="text-[10px] font-bold text-rose-500">{errors.id}</span>}
               </div>
@@ -285,7 +285,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Provide a clear description of the command and its features..."
                 rows={3}
-                className="font-medium text-xs min-h-[80px]"
+                className="font-medium text-[11px] px-3 py-2 min-h-[80px]"
               />
               {errors.description && <span className="text-[10px] font-bold text-rose-500">{errors.description}</span>}
             </div>
@@ -297,7 +297,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
                   value={website}
                   onChange={(e) => setWebsite(e.target.value)}
                   placeholder="e.g. github.com or all sites"
-                  className="font-semibold text-xs h-9"
+                  className="font-medium text-[11px] h-8.5 px-3"
                 />
                 {errors.website && <span className="text-[10px] font-bold text-rose-500">{errors.website}</span>}
               </div>
@@ -308,7 +308,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
                   value={matchPattern}
                   onChange={(e) => setMatchPattern(e.target.value)}
                   placeholder="e.g. github.com/*, *://*.github.com/*"
-                  className="font-semibold text-xs h-9"
+                  className="font-medium text-[11px] h-8.5 px-3"
                 />
                 {errors.matchPattern && <span className="text-[10px] font-bold text-rose-500">{errors.matchPattern}</span>}
               </div>
@@ -320,7 +320,7 @@ export function PublishPanel({ currentUser, onPublishSuccess, setNavTab }: Publi
                 value={sourceUrl}
                 onChange={(e) => setSourceUrl(e.target.value)}
                 placeholder="https://github.com/username/repo"
-                className="font-semibold text-xs h-9"
+                className="font-medium text-[11px] h-8.5 px-3"
               />
               <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Used for publisher verification checks. Must match verified sources.</span>
               {errors.sourceUrl && <span className="text-[10px] font-bold text-rose-500">{errors.sourceUrl}</span>}

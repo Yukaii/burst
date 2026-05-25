@@ -79,7 +79,7 @@ export function DiscoverPanel({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search website, publisher, permission, or use case"
-            className="pl-11 pr-4 h-9 w-full bg-background border-border rounded-lg text-xs font-medium focus-visible:ring-ring"
+            className="pl-11 pr-4 h-9 w-full bg-background border-border rounded-lg text-[11px] font-medium focus-visible:ring-ring"
           />
         </div>
         <Button

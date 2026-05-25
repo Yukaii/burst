@@ -29,7 +29,7 @@ export function AuditsPanel() {
             <Input
               value={patterns}
               onChange={(e) => setPatterns(e.target.value)}
-              className="font-semibold text-xs h-9"
+              className="font-medium text-[11px] h-8.5 px-3"
             />
           </div>
 
@@ -39,7 +39,7 @@ export function AuditsPanel() {
               value={testCode}
               onChange={(e) => setTestCode(e.target.value)}
               rows={10}
-              className="font-mono text-xs p-4 bg-slate-950 text-slate-100 dark:bg-slate-950/80 rounded-xl border-slate-800"
+              className="font-mono font-medium text-[11px] p-4 bg-slate-950 text-slate-100 dark:bg-slate-950/80 rounded-xl border-slate-800"
             />
           </div>
 

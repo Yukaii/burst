@@ -182,7 +182,7 @@ export function ProfilePanel({
               value={draft.name}
               onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
               placeholder="Your full name or display name"
-              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl"
+              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl font-medium text-[11px] h-8.5 px-3"
             />
           </div>
 
@@ -193,7 +193,7 @@ export function ProfilePanel({
               value={draft.bio}
               onChange={(event) => setDraft((prev) => ({ ...prev, bio: event.target.value }))}
               placeholder="Tell others about yourself, what you build, and your development experience."
-              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl text-sm"
+              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl font-medium text-[11px] px-3 py-2"
             />
           </div>
 
@@ -204,7 +204,7 @@ export function ProfilePanel({
               value={draft.verifiedSources}
               onChange={(event) => setDraft((prev) => ({ ...prev, verifiedSources: event.target.value }))}
               placeholder="e.g. github.com/username&#10;yourdomain.com"
-              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl font-mono text-xs"
+              className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl font-mono font-medium text-[11px] px-3 py-2"
             />
           </div>
         </div>
