@@ -62,7 +62,7 @@ const javascriptKeywords = new Set([
   'while',
 ]);
 
-function highlightJavaScript(source: string) {
+export function highlightJavaScript(source: string) {
   const tokenPattern = /(\/\/.*|\/\*[\s\S]*?\*\/|`(?:\\[\s\S]|[^`])*`|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|\b\d+(?:\.\d+)?\b|\b[A-Za-z_$][\w$]*\b|[{}()[\].,;:+\-*/%=<>!?|&]+)/g;
   const nodes: ReactNode[] = [];
   let cursor = 0;

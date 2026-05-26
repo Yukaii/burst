@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { CommandInspector } from './CommandInspector';
+import { PackInspector } from './PackInspector';
 
 const trustCopy: Record<BurstCommand['trustLevel'], string> = {
   verified: 'Verified',
@@ -27,6 +28,10 @@ interface DiscoverPanelProps {
   packs: BurstCommandPack[];
   activeCommandId: string | null;
   setActiveCommandId: (id: string | null) => void;
+  activePackId: string | null;
+  activePack: BurstCommandPack | null;
+  packInspectorLoading: boolean;
+  onOpenPack: (id: string) => void;
   installedCommandIds: string[];
   pinnedCommandIds: string[];
   activeCommand: BurstCommand | null;
@@ -56,6 +61,10 @@ export function DiscoverPanel({
   packs,
   activeCommandId,
   setActiveCommandId,
+  activePackId,
+  activePack,
+  packInspectorLoading,
+  onOpenPack,
   installedCommandIds,
   pinnedCommandIds,
   activeCommand,
@@ -76,6 +85,7 @@ export function DiscoverPanel({
   isInspectorOpen,
   setIsInspectorOpen
 }: DiscoverPanelProps) {
+  const selectedPack = activePack ?? packs.find((pack) => pack.id === activePackId) ?? null;
   const filterPillClass = (active: boolean) =>
     `rounded-md cursor-pointer text-2xs font-medium leading-none px-2.5 py-1 text-center transition-all duration-150 border ${
       active
@@ -132,7 +142,21 @@ export function DiscoverPanel({
                   const isInstalled = installedCount === pack.commands.length;
 
                   return (
-                    <div key={pack.id} className="flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-card p-3">
+                    <div
+                      key={pack.id}
+                      role="button"
+                      tabIndex={0}
+                      className={`flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:bg-accent/45 ${
+                        activePackId === pack.id ? 'border-primary/40 bg-primary/10' : ''
+                      }`}
+                      onClick={() => onOpenPack(pack.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          onOpenPack(pack.id);
+                        }
+                      }}
+                    >
                       <div className="flex min-w-0 items-start justify-between gap-3">
                         <div className="min-w-0">
                           <strong className="block truncate text-sm font-semibold text-foreground">{pack.title}</strong>
@@ -151,7 +175,8 @@ export function DiscoverPanel({
                             key={command.id}
                             type="button"
                             className="max-w-full truncate rounded-md border border-border bg-background px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
-                            onClick={() => {
+                            onClick={(event) => {
+                              event.stopPropagation();
                               setActiveCommandId(command.id);
                               setIsInspectorOpen(true);
                             }}
@@ -165,7 +190,10 @@ export function DiscoverPanel({
                         variant={isInstalled ? 'outline' : 'default'}
                         size="sm"
                         className="h-8 justify-center font-semibold"
-                        onClick={() => (isInstalled ? handleUninstallPack(pack.id) : handleInstallPack(pack))}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          isInstalled ? handleUninstallPack(pack.id) : handleInstallPack(pack);
+                        }}
                       >
                         <PackagePlus className="size-3.5" />
                         {isInstalled ? 'Uninstall pack' : `Install pack${installedCount > 0 ? ` (${installedCount}/${pack.commands.length})` : ''}`}
@@ -283,7 +311,31 @@ export function DiscoverPanel({
           )}
         </div>
 
-        {isInspectorOpen && (activeCommand || inspectorLoading) && activeCommand ? (
+        {isInspectorOpen && selectedPack ? (
+          <div
+            className="fixed z-50 inset-0"
+            onClick={() => setIsInspectorOpen(false)}
+          >
+            <button
+              type="button"
+              className="absolute inset-0 border-0 bg-[#080d1a]/28 backdrop-blur-sm cursor-default"
+              onClick={() => setIsInspectorOpen(false)}
+              aria-label="Close pack details"
+            />
+            <PackInspector
+              pack={selectedPack}
+              loading={packInspectorLoading}
+              installedCommandIds={installedCommandIds}
+              onInstallCommand={handleInstall}
+              onUninstallCommand={handleUninstall}
+              onInstallPack={handleInstallPack}
+              onUninstallPack={handleUninstallPack}
+              onClose={() => setIsInspectorOpen(false)}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
+            />
+          </div>
+        ) : isInspectorOpen && (activeCommand || inspectorLoading) && activeCommand ? (
           <div
             className="fixed z-50 inset-0"
             onClick={() => setIsInspectorOpen(false)}

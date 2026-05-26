@@ -9,6 +9,7 @@ import {
   getCurrentUser,
   getRegistryCommands,
   getRegistryCommandPacks,
+  getRegistryCommandPack,
   getRegistryCommand,
   getAuditReport,
   getPublisherProfile,
@@ -51,30 +52,36 @@ function parseRoute(pathname: string) {
   const routeName = parts[0] || 'home';
 
   if (routeName === 'home') {
-    return { tab: 'Discover' as NavTab, cmdId: null as string | null, open: false, view: 'landing' as const };
+    return { tab: 'Discover' as NavTab, cmdId: null as string | null, packId: null as string | null, open: false, view: 'landing' as const };
+  }
+
+  if (routeName === 'packs') {
+    return { tab: 'Discover' as NavTab, cmdId: null as string | null, packId: parts[1] || null, open: Boolean(parts[1]), view: 'app' as const };
   }
 
   const matchedTab = navItems.find((item) => item.toLowerCase() === routeName.toLowerCase());
   if (!matchedTab) {
-    return { tab: 'Discover' as NavTab, cmdId: null as string | null, open: false, view: 'landing' as const };
+    return { tab: 'Discover' as NavTab, cmdId: null as string | null, packId: null as string | null, open: false, view: 'landing' as const };
   }
 
   const cmdId = matchedTab === 'Discover' ? parts[1] || null : null;
   return {
     tab: matchedTab,
     cmdId,
+    packId: null as string | null,
     open: matchedTab === 'Discover' && Boolean(cmdId),
     view: 'app' as const,
   };
 }
 
-function pathForTab(tab: NavTab, commandId?: string | null) {
+function pathForTab(tab: NavTab, commandId?: string | null, packId?: string | null) {
+  if (tab === 'Discover' && packId) return `/packs/${encodeURIComponent(packId)}`;
   const base = `/${tab.toLowerCase()}`;
   return tab === 'Discover' && commandId ? `${base}/${commandId}` : base;
 }
 
 const initialRoute = typeof window === 'undefined'
-  ? { tab: 'Discover' as NavTab, cmdId: null as string | null, open: false, view: 'landing' as const }
+  ? { tab: 'Discover' as NavTab, cmdId: null as string | null, packId: null as string | null, open: false, view: 'landing' as const }
   : parseRoute(window.location.pathname);
 const defaultView = initialRoute.view;
 type RegistryTheme = 'light' | 'dark';
@@ -123,11 +130,14 @@ export function RegistryApp() {
   const [packs, setPacks] = useState<BurstCommandPack[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCommandId, setActiveCommandId] = useState<string | null>(null);
+  const [activePackId, setActivePackId] = useState<string | null>(initialRoute.packId);
 
   const [activeCommand, setActiveCommand] = useState<BurstCommand | null>(null);
+  const [activePack, setActivePack] = useState<BurstCommandPack | null>(null);
   const [activeAuditReport, setActiveAuditReport] = useState<AuditReport | null>(null);
   const [activePublisherProfile, setActivePublisherProfile] = useState<PublisherProfile | null>(null);
   const [inspectorLoading, setInspectorLoading] = useState(false);
+  const [packInspectorLoading, setPackInspectorLoading] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<'details' | 'audit' | 'publisher'>('details');
 
   const [currentUser, setCurrentUser] = useState<RegistrySessionUser>(guestSessionUser);
@@ -185,15 +195,18 @@ export function RegistryApp() {
 
     if (route.view === 'landing') {
       setActiveCommandId(null);
+      setActivePackId(null);
       setIsInspectorOpen(false);
       return;
     }
 
     if (route.tab === 'Discover') {
       setActiveCommandId(route.cmdId);
+      setActivePackId(route.packId);
       setIsInspectorOpen(route.open);
     } else {
       setIsInspectorOpen(false);
+      setActivePackId(null);
     }
   }, [location.pathname]);
 
@@ -207,11 +220,11 @@ export function RegistryApp() {
       return;
     }
 
-    const expectedPath = pathForTab(navTab, isInspectorOpen ? activeCommandId : null);
+    const expectedPath = pathForTab(navTab, isInspectorOpen ? activeCommandId : null, isInspectorOpen ? activePackId : null);
     if (location.pathname !== expectedPath) {
       navigate(expectedPath, { replace: true });
     }
-  }, [view, navTab, isInspectorOpen, activeCommandId, authLoading, location.pathname, navigate]);
+  }, [view, navTab, isInspectorOpen, activeCommandId, activePackId, authLoading, location.pathname, navigate]);
 
   const isGuest = currentUser.handle === 'guest';
   const canManageRegistry = currentUser.role === 'admin';
@@ -340,6 +353,37 @@ export function RegistryApp() {
     };
   }, [activeCommandId]);
 
+  useEffect(() => {
+    if (!activePackId) {
+      setActivePack(null);
+      return;
+    }
+
+    const packId = activePackId;
+    let active = true;
+    setPackInspectorLoading(true);
+
+    async function fetchPackDetails() {
+      try {
+        const pack = await getRegistryCommandPack(packId);
+        if (!active) return;
+        setActivePack(pack ?? null);
+      } catch (err) {
+        if (!active) return;
+        console.error('Failed to fetch pack details:', err);
+        setActivePack(null);
+      } finally {
+        if (active) setPackInspectorLoading(false);
+      }
+    }
+
+    void fetchPackDetails();
+
+    return () => {
+      active = false;
+    };
+  }, [activePackId]);
+
   // Hook Handshake Event Logging
   const sendBridgeMessage = (message: { type: string; [key: string]: any }) => {
     const outboundMessage = {
@@ -462,6 +506,18 @@ export function RegistryApp() {
     sendBridgeMessage({ type: 'burst:unpin-command', commandId });
   };
 
+  const handleOpenPack = (packId: string) => {
+    setActivePackId(packId);
+    setActiveCommandId(null);
+    setIsInspectorOpen(true);
+  };
+
+  const handleOpenCommand = (commandId: string) => {
+    setActiveCommandId(commandId);
+    setActivePackId(null);
+    setIsInspectorOpen(true);
+  };
+
   const handleRefreshLocalScripts = () => {
     sendBridgeMessage({ type: 'burst:get-local-scripts' });
   };
@@ -487,6 +543,7 @@ export function RegistryApp() {
 
   // Keep selection synchronized when filter category changes
   useEffect(() => {
+    if (activePackId) return;
     if (filteredCommands.length > 0) {
       if (!activeCommandId || !filteredCommands.some((c) => c.id === activeCommandId)) {
         setActiveCommandId(filteredCommands[0].id);
@@ -494,7 +551,7 @@ export function RegistryApp() {
     } else {
       setActiveCommandId(null);
     }
-  }, [filterCategory, commands]);
+  }, [filterCategory, commands, activePackId]);
 
   // Keyboard Shortcuts & List Navigation
   useEffect(() => {
@@ -653,7 +710,11 @@ export function RegistryApp() {
             filteredCommands={filteredCommands}
             packs={packs}
             activeCommandId={activeCommandId}
-            setActiveCommandId={setActiveCommandId}
+            setActiveCommandId={handleOpenCommand}
+            activePackId={activePackId}
+            activePack={activePack}
+            packInspectorLoading={packInspectorLoading}
+            onOpenPack={handleOpenPack}
             installedCommandIds={installedCommandIds}
             pinnedCommandIds={pinnedCommandIds}
             activeCommand={activeCommand}

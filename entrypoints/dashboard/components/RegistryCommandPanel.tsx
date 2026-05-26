@@ -103,7 +103,7 @@ export function RegistryCommandPanel({
       </header>
 
       <div className="flex-1 grid grid-cols-[minmax(0,_1fr)_320px] min-h-0 overflow-hidden">
-        <div className="flex flex-col min-w-0 min-h-0">
+        <div className="flex flex-col min-w-0 min-h-0 overflow-y-auto">
           <div className="grid grid-cols-2 gap-3 p-4 border-b border-border bg-card/20 text-xs">
             <Meta label="Website" value={command.website} />
             <Meta label="Matches" value={formatMatchPatterns(command.matchPatterns)} />
@@ -112,12 +112,12 @@ export function RegistryCommandPanel({
             {command.packTitle && <Meta label="Pack" value={command.packTitle} />}
             <Meta label="Source" value={command.sourceUrl} href={command.sourceUrl} wide />
           </div>
-          <div className="flex-1 min-h-0 p-4">
+          <div className="flex min-h-[420px] flex-1 flex-col p-4">
             <div className="flex items-center justify-between pb-2">
               <span className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">Installed Source Code</span>
               <span className="text-[10px] text-muted-foreground">Read-only. Fork to customize.</span>
             </div>
-            <div className="flex-1 min-h-0 h-[calc(100%-24px)] border border-border rounded-lg overflow-hidden bg-card/20 shadow-inner code-editor">
+            <div className="min-h-[360px] flex-1 border border-border rounded-lg overflow-hidden bg-card/20 shadow-inner code-editor">
               <CodeMirror
                 value={command.code || ''}
                 editable={false}
@@ -130,7 +130,7 @@ export function RegistryCommandPanel({
           </div>
         </div>
 
-        <aside className="border-l border-border bg-card/5 overflow-y-auto">
+        <aside className="min-h-0 border-l border-border bg-card/5 overflow-y-auto">
           {isPackCommand && (
             <section className="p-4 flex flex-col gap-3 border-b border-border">
               <div className="flex items-center justify-between gap-3">

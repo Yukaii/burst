@@ -484,17 +484,40 @@ export async function getRegistryCommandPacks(query = '', baseOverride?: string)
   }
   const response = await fetch(url.toString());
   if (!response.ok) throw new Error('Failed to fetch registry command packs');
-  return response.json();
+  const packs = await response.json() as BurstCommandPack[];
+  return Promise.all(packs.map((pack) => hydratePackCommandSources(pack, baseOverride)));
 }
 
 export async function getRegistryCommandPack(id: string, baseOverride?: string): Promise<BurstCommandPack | undefined> {
   if (isCliTest) {
-    return registryCommandPacksData.find((pack) => pack.id === id);
+    const pack = registryCommandPacksData.find((item) => item.id === id);
+    return pack ? hydratePackCommandSources(pack, baseOverride) : undefined;
   }
   const response = await fetch(getRegistryApiUrl(`/api/packs/${encodeURIComponent(id)}`, baseOverride));
   if (response.status === 404) return undefined;
   if (!response.ok) throw new Error('Failed to fetch registry command pack');
-  return response.json();
+  return hydratePackCommandSources(await response.json() as BurstCommandPack, baseOverride);
+}
+
+async function hydratePackCommandSources(pack: BurstCommandPack, baseOverride?: string): Promise<BurstCommandPack> {
+  const commands = await Promise.all(pack.commands.map(async (command) => {
+    if (command.code) return command;
+
+    const registryCommand = await getRegistryCommand(command.id, baseOverride).catch(() => undefined);
+    return {
+      ...command,
+      ...registryCommand,
+      packId: pack.id,
+      packTitle: pack.title,
+      sourceUrl: command.sourceUrl || registryCommand?.sourceUrl || pack.sourceUrl,
+      code: registryCommand?.code || getMockScriptCode(command.id),
+    };
+  }));
+
+  return {
+    ...pack,
+    commands,
+  };
 }
 
 export async function getRegistryCommandsPage(
