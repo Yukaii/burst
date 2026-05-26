@@ -44,6 +44,7 @@ import {
   uninstallRegistryCommandPack,
 } from '../src/lib/registryStorage.ts';
 import { loadCommandPaletteTheme, resolveCommandPaletteTheme, resolveCommandPaletteThemeMeta } from '../src/lib/paletteThemes.ts';
+import { formatLocalScriptCode, validateLocalScriptCode } from '../entrypoints/dashboard/components/utils.ts';
 
 const baseCommand = {
   id: 'base-command',
@@ -132,6 +133,15 @@ describe('local script registration', () => {
     expect(source).not.toContain('export default');
     expect(source).not.toContain('new Function');
     expect(source).not.toContain('eval(');
+  });
+
+  test('validates and formats local editor scripts', () => {
+    expect(validateLocalScriptCode('export default async function run({ toast }) { toast("ok"); }').ok).toBe(true);
+    const invalid = validateLocalScriptCode('export default async function run() { const items = [1, 2; }');
+    expect(invalid.ok).toBe(false);
+    expect(invalid.message).toContain('SyntaxError');
+    expect(formatLocalScriptCode('export default async function run({ toast }) { \n toast("ok");\n}\n')).toContain('  toast("ok");');
+    expect(formatLocalScriptCode('export default function run() {\nconst value = `  keep spacing`;\n}\n')).toContain('`  keep spacing`');
   });
 });
 

@@ -39,6 +39,7 @@ export function EditorPanel({
   saveState,
   hasUnsavedChanges,
   onSave,
+  onFormat,
   onDelete,
   onUpdateScript,
   onResetFork,
@@ -63,6 +64,7 @@ export function EditorPanel({
   saveState: string;
   hasUnsavedChanges: boolean;
   onSave: () => void;
+  onFormat: () => void;
   onDelete: () => void;
   onUpdateScript: (patch: Partial<LocalScript>) => void;
   onResetFork: () => void;
@@ -252,6 +254,13 @@ export function EditorPanel({
             className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-3 py-1.5 bg-secondary text-secondary-foreground border border-input shadow-sm hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors"
           >
             Test
+          </button>
+          <button
+            type="button"
+            onClick={onFormat}
+            className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-3 py-1.5 bg-secondary text-secondary-foreground border border-input shadow-sm hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors"
+          >
+            Format
           </button>
           {hasUnsavedChanges && (
             <button

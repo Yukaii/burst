@@ -253,7 +253,10 @@ export function createSandboxedUserScriptCode(code: string, eventName: string, r
   };
 
   document.addEventListener(${JSON.stringify(eventName)}, async (event) => {
-    const emit = (detail) => document.dispatchEvent(new CustomEvent(${JSON.stringify(resultEventName)}, { detail: JSON.stringify(detail) }));
+    const emit = (detail) => {
+      const CustomEventConstructor = typeof document !== 'undefined' && document.defaultView?.CustomEvent ? document.defaultView.CustomEvent : CustomEvent;
+      document.dispatchEvent(new CustomEventConstructor(${JSON.stringify(resultEventName)}, { detail: JSON.stringify(detail) }));
+    };
     
     try {
       const eventDetail = parseEventDetail(event && event.detail);

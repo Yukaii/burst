@@ -129,6 +129,7 @@ export default function DashboardApp() {
             }}
             saveState={d.saveState} hasUnsavedChanges={d.hasUnsavedChanges}
             onSave={() => void d.saveSelectedScript('Saved')}
+            onFormat={d.formatSelectedScript}
             onDelete={d.deleteSelectedScript}
             onUpdateScript={d.updateSelectedScript}
             onResetFork={() => void d.resetForkedScriptToUpstream(d.selectedScript!.id)}

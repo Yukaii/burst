@@ -19,7 +19,7 @@ import {
 import { getRegistryCommand } from '@/src/lib/registryApi';
 import type { BurstCommand } from '@/src/lib/commands';
 import { ExtensionSettings, DEFAULT_SETTINGS, getRegistryServerBaseUrl, loadSettings, saveSettings } from '@/src/lib/settings';
-import { parseGitUrl, loadGitRegistries, saveGitRegistries } from './utils';
+import { formatLocalScriptCode, parseGitUrl, loadGitRegistries, saveGitRegistries, validateLocalScriptCode } from './utils';
 import type { GitRegistry, ScriptUpdate } from './types';
 
 type DashboardRoute =
@@ -334,9 +334,26 @@ export function useDashboard() {
 
   async function saveSelectedScript(successMessage = 'Saved') {
     if (!selectedScript) return;
+    const syntax = validateLocalScriptCode(selectedScript.code);
+    if (!syntax.ok) {
+      setSaveState(`Syntax error: ${syntax.message}`);
+      return;
+    }
     const nextScripts = scripts.map(s => s.id === selectedScript.id ? prepareLocalScriptForSave(s) : s);
     setScripts(nextScripts); setSaveState('Saving...');
     await persistScripts(nextScripts, successMessage); setHasUnsavedChanges(false);
+  }
+
+  function formatSelectedScript() {
+    if (!selectedScript) return;
+    try {
+      const code = formatLocalScriptCode(selectedScript.code);
+      setScripts(current => current.map(s => s.id === selectedScript.id ? { ...s, code } : s));
+      setHasUnsavedChanges(true);
+      setSaveState('Formatted');
+    } catch (error) {
+      setSaveState(`Format failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   async function createDraft() {
@@ -370,6 +387,13 @@ export function useDashboard() {
   }
 
   async function setScriptStatusDirectly(script: LocalScript, status: LocalScript['status']) {
+    if (status === 'enabled') {
+      const syntax = validateLocalScriptCode(script.code);
+      if (!syntax.ok) {
+        setSaveState(`Cannot enable "${script.name}": ${syntax.message}`);
+        return;
+      }
+    }
     const nextScripts = scripts.map(s => s.id === script.id ? prepareLocalScriptForSave({ ...s, status }) : s);
     setScripts(nextScripts); await persistScripts(nextScripts, 'Saved');
   }
@@ -738,6 +762,7 @@ export function useDashboard() {
     navigateToGitView,
     updateSelectedScript,
     saveSelectedScript,
+    formatSelectedScript,
     createDraft,
     deleteSelectedScript,
     exportScripts,

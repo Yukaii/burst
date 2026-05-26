@@ -1,6 +1,7 @@
 import { autocompletion, type CompletionContext } from '@codemirror/autocomplete';
 import { linter, type Diagnostic } from '@codemirror/lint';
 import { burstAiApiNames, burstApiCompletions } from '@/src/lib/burstApiDocs';
+import { validateLocalScriptCode } from './utils';
 
 const completionSource = (context: CompletionContext) => {
   const word = context.matchBefore(/[\w.]+/);
@@ -30,6 +31,16 @@ export function createBurstApiLinter() {
   return linter((view) => {
     const code = view.state.doc.toString();
     const diagnostics: Diagnostic[] = [];
+    const syntax = validateLocalScriptCode(code);
+
+    if (!syntax.ok) {
+      diagnostics.push({
+        from: 0,
+        to: Math.min(code.length, Math.max(1, code.indexOf('\n'))),
+        severity: 'error',
+        message: syntax.message,
+      });
+    }
 
     for (const apiName of burstAiApiNames) {
       const match = new RegExp(`\\b${apiName}\\b`).exec(code);

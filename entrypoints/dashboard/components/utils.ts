@@ -1,5 +1,6 @@
 import { EditorView } from '@codemirror/view';
 import type { LocalScript } from '@/src/lib/localScripts';
+import { stripDefaultExport } from '@/src/lib/localScripts';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
 import { getFaviconUrl, type CommandIcon } from '@/src/lib/commands';
 import { GIT_REGISTRIES_STORAGE_KEY } from './types';
@@ -108,6 +109,87 @@ export function compileLocalScript(code: string) {
   if (!/^\s*export\s+default\s+(async\s+)?function\b/.test(code)) {
     throw new Error('Local scripts must use: export default function run(context) { ... }');
   }
+  const functionSource = stripDefaultExport(code);
+  try {
+    new Function(`return (${functionSource});`);
+  } catch (error) {
+    throw new Error(formatSyntaxError(error));
+  }
+}
+
+export function validateLocalScriptCode(code: string): { ok: true } | { ok: false; message: string } {
+  try {
+    compileLocalScript(code);
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+export function formatLocalScriptCode(code: string): string {
+  compileLocalScript(code);
+
+  const lines = code.replace(/\r\n?/g, '\n').split('\n');
+  const formatted: string[] = [];
+  let indent = 0;
+  let inTemplateLiteral = false;
+
+  for (const rawLine of lines) {
+    if (inTemplateLiteral) {
+      formatted.push(rawLine);
+      inTemplateLiteral = isInTemplateLiteral(rawLine, inTemplateLiteral);
+      continue;
+    }
+
+    const line = rawLine.trimEnd().trimStart();
+    if (!line) {
+      if (formatted[formatted.length - 1] !== '') formatted.push('');
+      continue;
+    }
+
+    if (/^[}\])]/.test(line)) indent = Math.max(0, indent - 1);
+    formatted.push(`${'  '.repeat(indent)}${line}`);
+
+    const opens = countUnquoted(line, /[{\[(]/g);
+    const closes = countUnquoted(line, /[}\])]/g);
+    indent = Math.max(0, indent + opens - closes);
+    inTemplateLiteral = isInTemplateLiteral(line, inTemplateLiteral);
+  }
+
+  return `${formatted.join('\n').trim()}\n`;
+}
+
+function formatSyntaxError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const message = error.message || 'Invalid JavaScript syntax.';
+  return message.startsWith('SyntaxError:') ? message : `SyntaxError: ${message}`;
+}
+
+function countUnquoted(line: string, pattern: RegExp): number {
+  const stripped = line
+    .replace(/(['"`])(?:\\.|(?!\1).)*\1/g, '')
+    .replace(/\/\/.*$/, '');
+  return stripped.match(pattern)?.length ?? 0;
+}
+
+function isInTemplateLiteral(line: string, initialState: boolean): boolean {
+  let inTemplate = initialState;
+  let escaped = false;
+  for (const char of line) {
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (char === '`') inTemplate = !inTemplate;
+  }
+  return inTemplate;
 }
 
 export function parseMatchPatternsInput(value: string): string[] {

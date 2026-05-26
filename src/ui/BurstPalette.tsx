@@ -881,7 +881,8 @@ async function runLocalScript(
     document.addEventListener(resultEventName, handleResult);
   });
 
-  document.dispatchEvent(new CustomEvent(getLocalScriptEventName(scriptId), { detail: JSON.stringify({ selection }) }));
+  const CustomEventConstructor = document.defaultView?.CustomEvent ?? CustomEvent;
+  document.dispatchEvent(new CustomEventConstructor(getLocalScriptEventName(scriptId), { detail: JSON.stringify({ selection }) }));
   return result;
 }
 
@@ -928,7 +929,8 @@ async function runRegistryScript(
     document.addEventListener(resultEventName, handleResult);
   });
 
-  document.dispatchEvent(new CustomEvent(getRegistryScriptEventName(commandId), { detail: JSON.stringify({ selection }) }));
+  const CustomEventConstructor = document.defaultView?.CustomEvent ?? CustomEvent;
+  document.dispatchEvent(new CustomEventConstructor(getRegistryScriptEventName(commandId), { detail: JSON.stringify({ selection }) }));
   return result;
 }
 
@@ -980,7 +982,8 @@ async function runListItemAction(
     document.addEventListener(resultEventName, handleResult);
   });
 
-  document.dispatchEvent(new CustomEvent(eventName, {
+  const CustomEventConstructor = document.defaultView?.CustomEvent ?? CustomEvent;
+  document.dispatchEvent(new CustomEventConstructor(eventName, {
     detail: JSON.stringify({
       kind: 'list-action',
       listId: list.id,
@@ -993,16 +996,17 @@ async function runListItemAction(
 }
 
 function parseBurstEventDetail(event: Event): unknown {
-  if (!(event instanceof CustomEvent)) return {};
-  if (typeof event.detail === 'string') {
+  if (typeof event !== 'object' || event === null || !('detail' in event)) return {};
+  const detail = (event as any).detail;
+  if (typeof detail === 'string') {
     try {
-      const parsed = JSON.parse(event.detail);
+      const parsed = JSON.parse(detail);
       return parsed && typeof parsed === 'object' ? parsed : {};
     } catch {
       return {};
     }
   }
-  return event.detail && typeof event.detail === 'object' ? event.detail : {};
+  return detail && typeof detail === 'object' ? detail : {};
 }
 
 function normalizeToastPayload(payload: unknown): BurstToast {
