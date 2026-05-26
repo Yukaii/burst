@@ -223,6 +223,7 @@ describe('capability detection', () => {
         const sel = context.selection;
         context.toast("Hello");
         context.list({ title: "Branches", items: [] });
+        context.navigate.to('/dashboard');
         await context.ai.prompt("Summarize " + title);
         await context.navigator.clipboard.writeText("Copy me");
         const doc = context.page.querySelector("div");
@@ -234,6 +235,7 @@ describe('capability detection', () => {
     expect(capabilities).toContain('clipboard-write');
     expect(capabilities).toContain('toast');
     expect(capabilities).toContain('list');
+    expect(capabilities).toContain('navigate');
     expect(capabilities).toContain('ai');
   });
 
@@ -533,6 +535,22 @@ describe('sandbox IIFE wrapping and lexical shadowing', () => {
     expect(wrapped).toContain('const hasCap = (c) => capabilities.includes(c);');
     expect(wrapped).toContain('if (!hasCap(\'clipboard-write\'))');
     expect(wrapped).toContain('if (!hasCap(\'toast\'))');
+  });
+
+  test('exposes same-origin navigation through explicit helper', () => {
+    const code = `
+      export default async function run({ navigate }) {
+        navigate.to('/?nav=overview');
+      }
+    `;
+    const wrapped = createSandboxedUserScriptCode(code, 'run-evt', 'res-evt');
+
+    expect(wrapped).toContain('capabilities = ["navigate"]');
+    expect(wrapped).toContain('const navigate = {');
+    expect(wrapped).toContain("if (!hasCap('navigate'))");
+    expect(wrapped).toContain('target.origin !== location.origin');
+    expect(wrapped).toContain('location.href = target.href;');
+    expect(wrapped).toContain('navigate,');
   });
 
   test('markdown link registry command receives page title and url context', () => {

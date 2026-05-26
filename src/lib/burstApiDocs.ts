@@ -94,6 +94,13 @@ export const burstApiCompletions: BurstApiCompletion[] = [
     detail: 'clipboard.writeText(text)',
     info: 'Writes text to the clipboard through Burst’s capability-gated helper.',
   },
+  {
+    label: 'navigate.to',
+    type: 'function',
+    detail: 'navigate.to(url)',
+    info: 'Navigates the current page to a same-origin URL resolved against the active page.',
+    apply: "navigate.to('/?nav=overview')",
+  },
 ];
 
 export const burstApiQuickStart = `export default async function run({ ai, selection, toast }) {

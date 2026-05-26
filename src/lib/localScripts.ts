@@ -500,6 +500,20 @@ export function createSandboxedUserScriptCode(code: string, eventName: string, r
         });
       };
 
+      // 6. Safe navigation
+      const navigate = {
+        to(input) {
+          if (!hasCap('navigate')) {
+            throw new Error("SecurityError: Script lacks 'navigate' capability.");
+          }
+          const target = new URL(String(input), location.href);
+          if (target.origin !== location.origin) {
+            throw new Error('NavigationError: navigate.to() only allows same-origin URLs.');
+          }
+          location.href = target.href;
+        }
+      };
+
       // Wrapped location & navigator
       const wrappedLocation = {
         get href() {
@@ -556,6 +570,7 @@ export function createSandboxedUserScriptCode(code: string, eventName: string, r
         title: hasCap('page-dom') ? document.title : '',
         toast,
         list,
+        navigate,
         ai
       };
 
@@ -694,7 +709,7 @@ function getWebStorage(): WebStorage | undefined {
   return runtime.localStorage;
 }
 
-export type LocalScriptCapability = 'page-dom' | 'selection' | 'clipboard-write' | 'toast' | 'list' | 'ai';
+export type LocalScriptCapability = 'page-dom' | 'selection' | 'clipboard-write' | 'toast' | 'list' | 'navigate' | 'ai';
 
 export function detectRequiredCapabilities(code: string): LocalScriptCapability[] {
   const capabilities: LocalScriptCapability[] = [];
@@ -713,6 +728,9 @@ export function detectRequiredCapabilities(code: string): LocalScriptCapability[
   }
   if (/\blist\b|createList|showList/i.test(code)) {
     capabilities.push('list');
+  }
+  if (/\bnavigate\b|navigate\.to/i.test(code)) {
+    capabilities.push('navigate');
   }
   if (/\bai\b|LanguageModel|Summarizer|Translator|LanguageDetector|Writer|Rewriter|Proofreader/i.test(code)) {
     capabilities.push('ai');

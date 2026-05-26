@@ -352,7 +352,7 @@ function validateRuntime(value: unknown, errors: string[], field = 'runtime') {
   expectStringArray(value.capabilities, `${field}.capabilities`, errors);
   if (Array.isArray(value.capabilities)) {
     value.capabilities.forEach((capability, index) => {
-      expectOneOf(capability, ['page-dom', 'selection', 'clipboard-write', 'toast', 'list', 'ai'], `${field}.capabilities[${index}]`, errors);
+      expectOneOf(capability, ['page-dom', 'selection', 'clipboard-write', 'toast', 'list', 'navigate', 'ai'], `${field}.capabilities[${index}]`, errors);
     });
   }
 }
