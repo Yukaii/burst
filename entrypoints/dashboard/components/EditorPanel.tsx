@@ -18,9 +18,9 @@ import {
   X,
 } from 'lucide-react';
 import type { LocalScript } from '@/src/lib/localScripts';
-import { prepareLocalScriptForSave, stripDefaultExport } from '@/src/lib/localScripts';
+import { detectRequiredCapabilities, prepareLocalScriptForSave, stripDefaultExport } from '@/src/lib/localScripts';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
-import { burstApiQuickStart } from '@/src/lib/burstApiDocs';
+import { burstApiCompletions, burstApiQuickStart, burstApiReferenceSections } from '@/src/lib/burstApiDocs';
 import { generateBurstScriptWithAi, getPromptApiAvailability } from '@/src/lib/browserAi';
 import { IconSelect, Tooltip, AuditIssueDot } from './ui';
 import { getStatusClassName, getStatusDotClassName, parseMatchPatternsInput } from './utils';
@@ -505,9 +505,26 @@ function RightPanel({
   const staticAuditReport = React.useMemo(() => {
     return analyzeScriptCode(selectedScript.code, selectedScript.matchPatterns);
   }, [selectedScript.code, selectedScript.matchPatterns]);
+  const detectedCapabilities = React.useMemo(() => detectRequiredCapabilities(selectedScript.code), [selectedScript.code]);
 
   return (
     <div style={{ width: `${rightWidth}px` }} className="shrink-0 flex flex-col h-full overflow-y-auto divide-y divide-border bg-card/5">
+      <section className="p-4 flex flex-col gap-3" aria-label="Detected local API capabilities">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">Detected APIs</h3>
+          <span className="text-[10px] font-semibold text-muted-foreground">{detectedCapabilities.length}</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {detectedCapabilities.length > 0 ? detectedCapabilities.map((capability) => (
+            <span key={capability} className="rounded border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              {capability}
+            </span>
+          )) : (
+            <span className="text-xs text-muted-foreground">No gated APIs detected yet.</span>
+          )}
+        </div>
+      </section>
+
       {staticAuditReport && (
         <section className="p-4 flex flex-col gap-3" aria-label="Static security audit report">
           <div className="flex items-center justify-between">
@@ -565,6 +582,36 @@ function RightPanel({
         <p className="text-xs text-muted-foreground font-medium">
           Simulate browser environment variables, inspect DOM operations, and view custom script logs in a safe context.
         </p>
+      </section>
+
+      <section className="p-4 flex flex-col gap-3" aria-label="Burst local API reference">
+        <div>
+          <h3 className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">Local API Reference</h3>
+          <p className="mt-1 text-xs text-muted-foreground font-medium">All helpers are capability-gated and available from the run context.</p>
+        </div>
+        <div className="flex flex-col gap-3">
+          {burstApiReferenceSections.map((section) => {
+            const items = burstApiCompletions.filter((item) => item.category === section);
+            if (items.length === 0) return null;
+
+            return (
+              <div key={section} className="flex flex-col gap-1.5">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{section}</h4>
+                {items.map((item) => (
+                  <div key={item.label} className="rounded-md border border-border bg-muted/20 p-2 text-xs">
+                    <div className="flex items-start justify-between gap-2">
+                      <code className="font-semibold text-foreground">{item.label}</code>
+                      <span className="text-[10px] text-muted-foreground">{item.type}</span>
+                    </div>
+                    <div className="mt-1 text-[11px] text-muted-foreground">{item.detail}</div>
+                    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{item.info}</p>
+                    {item.apply ? <code className="mt-1 block truncate text-[11px] text-foreground/80">{item.apply}</code> : null}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
       </section>
     </div>
   );

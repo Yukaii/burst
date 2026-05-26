@@ -140,6 +140,7 @@ describe('local script registration', () => {
     const invalid = validateLocalScriptCode('export default async function run() { const items = [1, 2; }');
     expect(invalid.ok).toBe(false);
     expect(invalid.message).toContain('SyntaxError');
+    expect(invalid.from).toBeGreaterThan(0);
     expect(formatLocalScriptCode('export default async function run({ toast }) { \n toast("ok");\n}\n')).toContain('  toast("ok");');
     expect(formatLocalScriptCode('export default function run() {\nconst value = `  keep spacing`;\n}\n')).toContain('`  keep spacing`');
   });

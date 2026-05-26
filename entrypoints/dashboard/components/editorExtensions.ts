@@ -35,10 +35,30 @@ export function createBurstApiLinter() {
 
     if (!syntax.ok) {
       diagnostics.push({
-        from: 0,
-        to: Math.min(code.length, Math.max(1, code.indexOf('\n'))),
+        from: syntax.from,
+        to: syntax.to,
         severity: 'error',
         message: syntax.message,
+      });
+    }
+
+    const locationMutation = /\b(?:window\.)?location\.href\s=|(?:window\.)?location\s=/g;
+    for (const match of code.matchAll(locationMutation)) {
+      diagnostics.push({
+        from: match.index ?? 0,
+        to: (match.index ?? 0) + match[0].length,
+        severity: 'warning',
+        message: 'Use navigate.to(url) or navigate.open(url) instead of mutating location directly.',
+      });
+    }
+
+    const windowOpen = /\bwindow\.open\s*\(/g;
+    for (const match of code.matchAll(windowOpen)) {
+      diagnostics.push({
+        from: match.index ?? 0,
+        to: (match.index ?? 0) + match[0].length,
+        severity: 'warning',
+        message: 'Use navigate.open(url); direct window.open is not available in the sandbox.',
       });
     }
 

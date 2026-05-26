@@ -110,17 +110,20 @@ export function compileLocalScript(code: string) {
     throw new Error('Local scripts must use: export default function run(context) { ... }');
   }
   const error = getFirstSyntaxError(code);
-  if (error) throw new Error(error);
+  if (error) throw error;
 }
 
-export function validateLocalScriptCode(code: string): { ok: true } | { ok: false; message: string } {
+export function validateLocalScriptCode(code: string): { ok: true } | { ok: false; message: string; from: number; to: number } {
   try {
     compileLocalScript(code);
     return { ok: true };
   } catch (error) {
+    const lineEnd = code.indexOf('\n');
     return {
       ok: false,
       message: error instanceof Error ? error.message : String(error),
+      from: error instanceof LocalScriptSyntaxError ? error.from : 0,
+      to: error instanceof LocalScriptSyntaxError ? error.to : Math.min(code.length, Math.max(1, lineEnd)),
     };
   }
 }
@@ -158,7 +161,14 @@ export function formatLocalScriptCode(code: string): string {
   return `${formatted.join('\n').trim()}\n`;
 }
 
-function getFirstSyntaxError(code: string): string | undefined {
+class LocalScriptSyntaxError extends Error {
+  constructor(message: string, readonly from: number, readonly to: number) {
+    super(message);
+    this.name = 'LocalScriptSyntaxError';
+  }
+}
+
+function getFirstSyntaxError(code: string): LocalScriptSyntaxError | undefined {
   let errorPosition: number | undefined;
   javascriptLanguage.parser.parse(code).iterate({
     enter(node) {
@@ -172,7 +182,9 @@ function getFirstSyntaxError(code: string): string | undefined {
 
   if (errorPosition === undefined) return undefined;
   const { line, column } = getLineColumn(code, errorPosition);
-  return `SyntaxError: invalid JavaScript near line ${line}, column ${column}`;
+  const lineEnd = code.indexOf('\n', errorPosition);
+  const to = lineEnd === -1 ? Math.max(errorPosition + 1, code.length) : lineEnd;
+  return new LocalScriptSyntaxError(`SyntaxError: invalid JavaScript near line ${line}, column ${column}`, errorPosition, to);
 }
 
 function getLineColumn(code: string, position: number): { line: number; column: number } {

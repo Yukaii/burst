@@ -109,7 +109,34 @@ export function TestHarnessModal({
         getSelection: () => ({ toString: () => mockSelection }),
       };
 
-      const mockToast = (message: string) => log(`toast("${message}")`);
+      const mockToast = (message: unknown) => {
+        const label = typeof message === 'string' ? message : JSON.stringify(message);
+        log(`toast(${label})`);
+      };
+
+      const mockList = (input: { title?: string; items?: Array<{ title?: string; actions?: Array<{ title?: string }> }> }) => {
+        log(`list("${input?.title ?? 'List'}") with ${input?.items?.length ?? 0} item(s)`);
+        input?.items?.forEach((item, index) => {
+          log(`  [${index + 1}] ${item.title ?? 'Untitled item'} (${item.actions?.length ?? 0} action(s))`);
+        });
+      };
+
+      const mockNavigate = {
+        to: (url: string) => log(`navigate.to("${new URL(url, mockUrl).href}")`),
+        open: (url: string) => log(`navigate.open("${new URL(url, mockUrl).href}")`),
+      };
+
+      const mockFetch = async (url: string) => {
+        const resolved = new URL(url, mockUrl);
+        log(`fetch("${resolved.href}")`);
+        return {
+          ok: true,
+          status: 200,
+          url: resolved.href,
+          text: async () => '',
+          json: async () => ({}),
+        };
+      };
 
       const context = {
         page: mockPage,
@@ -119,13 +146,17 @@ export function TestHarnessModal({
         selection: mockSelection,
         url: mockUrl,
         title: mockTitle,
+        clipboard: mockNavigator.clipboard,
         toast: mockToast,
+        list: mockList,
+        navigate: mockNavigate,
+        fetch: mockFetch,
       };
 
       const functionSource = stripDefaultExport(script.code);
       const runnerSource = `
         return async function(context) {
-          const { page, window, location, navigator, selection, url, title, toast } = context;
+          const { page, window, location, navigator, selection, url, title, clipboard, toast, list, navigate, fetch } = context;
           const document = page;
           const console = window.console;
           const run = ${functionSource};
