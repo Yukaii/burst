@@ -2,7 +2,7 @@
   "name": "burst",
   "description": "A command palette and audited extension registry for every webpage.",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
   "workspaces": [
     "apps/*"

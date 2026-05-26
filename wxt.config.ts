@@ -6,6 +6,15 @@ export default defineConfig({
 
   manifest: ({ browser, manifestVersion }) => ({
     minimum_chrome_version: browser === 'firefox' ? undefined : '120',
+    browser_specific_settings:
+      browser === 'firefox'
+        ? {
+            gecko: {
+              id: 'burst@yukai.dev',
+              strict_min_version: '136.0',
+            },
+          }
+        : undefined,
     permissions: browser === 'firefox' ? ['storage'] : ['storage', 'userScripts'],
     optional_permissions: browser === 'firefox' ? ['userScripts'] : undefined,
     user_scripts: browser === 'firefox' && manifestVersion === 2 ? { api_script: 'firefox-user-script-api.js' } : undefined,
