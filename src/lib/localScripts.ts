@@ -500,17 +500,47 @@ export function createSandboxedUserScriptCode(code: string, eventName: string, r
         });
       };
 
-      // 6. Safe navigation
+      // 6. Same-origin network fetch
+      const safeFetch = async (input, init) => {
+        if (!hasCap('fetch')) {
+          throw new Error("SecurityError: Script lacks 'fetch' capability.");
+        }
+        const rawUrl = typeof input === 'string' || input instanceof URL
+          ? String(input)
+          : input && typeof input.url === 'string'
+          ? input.url
+          : '';
+        if (!rawUrl) {
+          throw new Error('FetchError: fetch() requires a URL string, URL, or Request-like object.');
+        }
+        const target = new URL(rawUrl, location.href);
+        if (target.origin !== location.origin) {
+          throw new Error('FetchError: fetch() only allows same-origin URLs.');
+        }
+        return fetch(target.href, init);
+      };
+
+      // 7. Safe navigation
+      const getSameOriginNavigationTarget = (input) => {
+        const target = new URL(String(input), location.href);
+        if (target.origin !== location.origin) {
+          throw new Error('NavigationError: navigate only allows same-origin URLs.');
+        }
+        return target.href;
+      };
+
       const navigate = {
         to(input) {
           if (!hasCap('navigate')) {
             throw new Error("SecurityError: Script lacks 'navigate' capability.");
           }
-          const target = new URL(String(input), location.href);
-          if (target.origin !== location.origin) {
-            throw new Error('NavigationError: navigate.to() only allows same-origin URLs.');
+          location.href = getSameOriginNavigationTarget(input);
+        },
+        open(input) {
+          if (!hasCap('navigate')) {
+            throw new Error("SecurityError: Script lacks 'navigate' capability.");
           }
-          location.href = target.href;
+          emit({ status: 'navigate-open', url: getSameOriginNavigationTarget(input) });
         }
       };
 
@@ -570,14 +600,15 @@ export function createSandboxedUserScriptCode(code: string, eventName: string, r
         title: hasCap('page-dom') ? document.title : '',
         toast,
         list,
+        fetch: safeFetch,
         navigate,
         ai
       };
 
       // Shadow the globals by wrapping the user script in an IIFE parameter binding
-      const userRun = (function(document, window, navigator, location) {
+      const userRun = (function(document, window, navigator, location, fetch) {
         return ${functionSource};
-      })(page, wrappedWindow, wrappedNavigator, wrappedLocation);
+      })(page, wrappedWindow, wrappedNavigator, wrappedLocation, safeFetch);
 
       await userRun(context);
       emit({ status: 'complete' });
@@ -709,7 +740,7 @@ function getWebStorage(): WebStorage | undefined {
   return runtime.localStorage;
 }
 
-export type LocalScriptCapability = 'page-dom' | 'selection' | 'clipboard-write' | 'toast' | 'list' | 'navigate' | 'ai';
+export type LocalScriptCapability = 'page-dom' | 'selection' | 'clipboard-write' | 'toast' | 'list' | 'fetch' | 'navigate' | 'ai';
 
 export function detectRequiredCapabilities(code: string): LocalScriptCapability[] {
   const capabilities: LocalScriptCapability[] = [];
@@ -728,6 +759,9 @@ export function detectRequiredCapabilities(code: string): LocalScriptCapability[
   }
   if (/\blist\b|createList|showList/i.test(code)) {
     capabilities.push('list');
+  }
+  if (/\bfetch\b/i.test(code)) {
+    capabilities.push('fetch');
   }
   if (/\bnavigate\b|navigate\.to/i.test(code)) {
     capabilities.push('navigate');

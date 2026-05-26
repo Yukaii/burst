@@ -855,11 +855,16 @@ async function runLocalScript(
     }, 700);
 
     function handleResult(event: Event) {
-      const detail = parseBurstEventDetail(event) as { status?: string; message?: unknown; toast?: unknown; list?: unknown };
+      const detail = parseBurstEventDetail(event) as { status?: string; message?: unknown; toast?: unknown; list?: unknown; url?: unknown };
       if (detail.status === 'started') return;
 
       if (detail.status === 'toast') {
         onToast(normalizeToastPayload(detail.toast ?? detail.message));
+        return;
+      }
+
+      if (detail.status === 'navigate-open') {
+        void openNavigationTab(detail.url, onToast);
         return;
       }
 
@@ -903,11 +908,16 @@ async function runRegistryScript(
     }, 700);
 
     function handleResult(event: Event) {
-      const detail = parseBurstEventDetail(event) as { status?: string; message?: unknown; toast?: unknown; list?: unknown };
+      const detail = parseBurstEventDetail(event) as { status?: string; message?: unknown; toast?: unknown; list?: unknown; url?: unknown };
       if (detail.status === 'started') return;
 
       if (detail.status === 'toast') {
         onToast(normalizeToastPayload(detail.toast ?? detail.message));
+        return;
+      }
+
+      if (detail.status === 'navigate-open') {
+        void openNavigationTab(detail.url, onToast);
         return;
       }
 
@@ -964,10 +974,15 @@ async function runListItemAction(
     }, 1200);
 
     function handleResult(event: Event) {
-      const detail = parseBurstEventDetail(event) as { status?: string; message?: unknown; toast?: unknown };
+      const detail = parseBurstEventDetail(event) as { status?: string; message?: unknown; toast?: unknown; url?: unknown };
 
       if (detail.status === 'toast') {
         onToast(normalizeToastPayload(detail.toast ?? detail.message));
+        return;
+      }
+
+      if (detail.status === 'navigate-open') {
+        void openNavigationTab(detail.url, onToast);
         return;
       }
 
@@ -1007,6 +1022,24 @@ function parseBurstEventDetail(event: Event): unknown {
     }
   }
   return detail && typeof detail === 'object' ? detail : {};
+}
+
+async function openNavigationTab(url: unknown, onToast: (toast: BurstToast) => void) {
+  if (typeof url !== 'string' || !url) {
+    onToast(normalizeToastPayload({ variant: 'error', message: 'Navigation URL is unavailable.' }));
+    return;
+  }
+
+  const result = await browser.runtime
+    .sendMessage({ type: 'burst:navigate-open', url })
+    .catch((error) => ({ ok: false, message: error instanceof Error ? error.message : 'Failed to open tab.' }));
+
+  if (!isRecord(result) || result.ok !== true) {
+    onToast(normalizeToastPayload({
+      variant: 'error',
+      message: typeof result?.message === 'string' ? result.message : 'Failed to open tab.',
+    }));
+  }
 }
 
 function normalizeToastPayload(payload: unknown): BurstToast {

@@ -223,6 +223,7 @@ describe('capability detection', () => {
         const sel = context.selection;
         context.toast("Hello");
         context.list({ title: "Branches", items: [] });
+        await context.fetch('/api/me');
         context.navigate.to('/dashboard');
         await context.ai.prompt("Summarize " + title);
         await context.navigator.clipboard.writeText("Copy me");
@@ -235,6 +236,7 @@ describe('capability detection', () => {
     expect(capabilities).toContain('clipboard-write');
     expect(capabilities).toContain('toast');
     expect(capabilities).toContain('list');
+    expect(capabilities).toContain('fetch');
     expect(capabilities).toContain('navigate');
     expect(capabilities).toContain('ai');
   });
@@ -518,8 +520,8 @@ describe('sandbox IIFE wrapping and lexical shadowing', () => {
     const wrapped = createSandboxedUserScriptCode(code, 'run-evt', 'res-evt');
     
     // Check shadowing IIFE structure
-    expect(wrapped).toContain('const userRun = (function(document, window, navigator, location)');
-    expect(wrapped).toContain('})(page, wrappedWindow, wrappedNavigator, wrappedLocation);');
+    expect(wrapped).toContain('const userRun = (function(document, window, navigator, location, fetch)');
+    expect(wrapped).toContain('})(page, wrappedWindow, wrappedNavigator, wrappedLocation, safeFetch);');
   });
 
   test('extracts and exposes capability restrictions in the runtime scope', () => {
@@ -549,8 +551,25 @@ describe('sandbox IIFE wrapping and lexical shadowing', () => {
     expect(wrapped).toContain('const navigate = {');
     expect(wrapped).toContain("if (!hasCap('navigate'))");
     expect(wrapped).toContain('target.origin !== location.origin');
-    expect(wrapped).toContain('location.href = target.href;');
+    expect(wrapped).toContain('location.href = getSameOriginNavigationTarget(input);');
+    expect(wrapped).toContain("status: 'navigate-open'");
     expect(wrapped).toContain('navigate,');
+  });
+
+  test('exposes same-origin fetch through explicit helper and global shadow', () => {
+    const code = `
+      export default async function run() {
+        await fetch('/api/me');
+      }
+    `;
+    const wrapped = createSandboxedUserScriptCode(code, 'run-evt', 'res-evt');
+
+    expect(wrapped).toContain('capabilities = ["fetch"]');
+    expect(wrapped).toContain('const safeFetch = async');
+    expect(wrapped).toContain("if (!hasCap('fetch'))");
+    expect(wrapped).toContain('target.origin !== location.origin');
+    expect(wrapped).toContain('return fetch(target.href, init);');
+    expect(wrapped).toContain('fetch: safeFetch');
   });
 
   test('markdown link registry command receives page title and url context', () => {

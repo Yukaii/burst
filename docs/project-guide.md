@@ -121,7 +121,8 @@ Webpage globals like `document`, `window`, `navigator`, and `location` are shado
 - **`selection` Proxy**: Pre-captures the window selection *before* the palette focuses, preventing focus-resets from clearing the user's highlighted text.
 - **`toast` Proxy**: Sends command feedback back through the palette without exposing page-level notification primitives directly.
 - **`list` Proxy**: Lets commands render searchable custom lists and register first-class list actions while keeping action callbacks inside the sandboxed command listener.
-- **`navigate` Proxy**: Allows explicit same-origin page navigation through `navigate.to(url)` when the `navigate` capability is granted.
+- **`fetch` Proxy**: Allows same-origin network requests through `fetch(url, init)` when the `fetch` capability is granted.
+- **`navigate` Proxy**: Allows explicit same-origin page navigation through `navigate.to(url)` and same-origin new tabs through `navigate.open(url)` when the `navigate` capability is granted.
 
 ---
 

@@ -32,6 +32,12 @@ export default defineBackground(() => {
       return promise;
     }
 
+    if (type === 'burst:navigate-open') {
+      const { url } = message as { url?: string };
+      const promise = openNavigationTab(url, sender.tab?.index);
+      return promise;
+    }
+
     if (type === 'burst:get-installed-commands') {
       const promise = (async () => {
         const installed = await loadInstalledRegistryCommands();
@@ -287,6 +293,22 @@ type BurstUserScriptsApi = {
 };
 
 let legacyUserScriptRegistrations: Array<{ unregister: () => Promise<void> }> = [];
+
+async function openNavigationTab(url: string | undefined, openerIndex: number | undefined) {
+  if (!url) return { ok: false, message: 'Navigation URL is unavailable.' };
+  try {
+    await browser.tabs.create({
+      url,
+      index: typeof openerIndex === 'number' ? openerIndex + 1 : undefined,
+      active: true,
+    });
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to open tab.';
+    console.warn('[Burst] Failed to open navigation tab', error);
+    return { ok: false, message };
+  }
+}
 
 async function registerEnabledLocalScripts() {
   const userScripts = getUserScriptsApi();

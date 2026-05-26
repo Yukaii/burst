@@ -95,11 +95,25 @@ export const burstApiCompletions: BurstApiCompletion[] = [
     info: 'Writes text to the clipboard through Burst’s capability-gated helper.',
   },
   {
+    label: 'fetch',
+    type: 'function',
+    detail: 'fetch(url, init?)',
+    info: 'Fetches same-origin resources through Burst’s capability-gated helper.',
+    apply: "fetch('/api/me')",
+  },
+  {
     label: 'navigate.to',
     type: 'function',
     detail: 'navigate.to(url)',
     info: 'Navigates the current page to a same-origin URL resolved against the active page.',
     apply: "navigate.to('/?nav=overview')",
+  },
+  {
+    label: 'navigate.open',
+    type: 'function',
+    detail: 'navigate.open(url)',
+    info: 'Opens a same-origin URL in a new browser tab next to the current tab.',
+    apply: "navigate.open('/?nav=overview')",
   },
 ];
 
