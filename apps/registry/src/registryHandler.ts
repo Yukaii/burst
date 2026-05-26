@@ -1,4 +1,5 @@
 import type { AuditReport, PublisherProfile, RegistryUserUpdate } from '@/src/lib/registryApi';
+import { registryCommandPacksData } from '@/src/lib/registryApi';
 import { buildAuditReport, type GitHubUserProfile, type PublishCommandInput, type RegistryStore } from './registryStore';
 
 type RegistryAuthConfig = {
@@ -218,6 +219,58 @@ function resolveHostedAiConfig(config: RegistryAuthConfig): HostedAiConfig {
 
 function isAdmin(user: { role?: string } | null | undefined): boolean {
   return user?.role === 'admin';
+}
+
+function commandPackMatchesSearch(pack: (typeof registryCommandPacksData)[number], query: string): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+
+  return [
+    pack.title,
+    pack.description,
+    pack.website,
+    pack.publisher.name,
+    pack.publisher.handle,
+    pack.trustLevel,
+    pack.risk,
+    ...pack.permissions,
+    ...pack.commands.flatMap((command) => [command.title, command.description, ...command.permissions]),
+  ]
+    .join(' ')
+    .toLowerCase()
+    .includes(normalized);
+}
+
+function commandPackMatchesHost(pack: (typeof registryCommandPacksData)[number], host: string | undefined): boolean {
+  const normalizedHost = (host || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+  if (!normalizedHost) return true;
+  if (pack.matchPatterns.includes('<all_urls>')) return true;
+
+  return pack.matchPatterns.some((pattern) => {
+    const normalizedPattern = pattern.trim().toLowerCase().replace(/^(\*:\/\/)?(https?:\/\/)?(www\.)?/, '');
+    const [patternHost] = normalizedPattern.split('/');
+    return normalizedHost === patternHost || normalizedHost.endsWith(`.${patternHost}`);
+  });
+}
+
+async function hydrateCommandPack(store: RegistryStore, pack: (typeof registryCommandPacksData)[number]) {
+  const commands = await Promise.all(
+    pack.commands.map(async (command) => {
+      const stored = await store.getCommand(command.id);
+      return {
+        ...command,
+        ...stored,
+        packId: pack.id,
+        packTitle: pack.title,
+        sourceUrl: pack.sourceUrl,
+      };
+    })
+  );
+
+  return {
+    ...pack,
+    commands,
+  };
 }
 
 function sanitizeSelfProfilePatch(patch: RegistryUserUpdate): RegistryUserUpdate {
@@ -702,6 +755,106 @@ export function createRegistryHandler(store: RegistryStore, authConfig: Registry
           });
         }
         return jsonResponse(commands);
+      }
+
+      if (path === '/api/packs' && req.method === 'GET') {
+        const q = url.searchParams.get('q')?.trim() || '';
+        const host = url.searchParams.get('host')?.trim() || undefined;
+        const limit = Math.min(Math.max(Number(url.searchParams.get('limit') || 50), 1), 100);
+        const offset = Math.max(Number(url.searchParams.get('offset') || 0), 0);
+        const packs = await Promise.all(
+          registryCommandPacksData
+            .filter((pack) => commandPackMatchesSearch(pack, q) && commandPackMatchesHost(pack, host))
+            .map((pack) => hydrateCommandPack(store, pack))
+        );
+        if (url.searchParams.has('limit') || url.searchParams.has('offset')) {
+          return jsonResponse({
+            packs: packs.slice(offset, offset + limit),
+            total: packs.length,
+            offset,
+            limit,
+            hasMore: offset + limit < packs.length,
+          });
+        }
+        return jsonResponse(packs);
+      }
+
+      const packMatch = path.match(/^\/api\/packs\/([a-zA-Z0-9_-]+)$/);
+      if (packMatch && req.method === 'GET') {
+        const foundPack = registryCommandPacksData.find((item) => item.id === packMatch[1]);
+        const pack = foundPack ? await hydrateCommandPack(store, foundPack) : undefined;
+        if (!pack) {
+          return errorResponse('Command pack not found', 404);
+        }
+
+        return jsonResponse(pack);
+      }
+
+      if (path === '/api/packs' && req.method === 'POST') {
+        const body = (await req.json()) as {
+          id?: string;
+          title?: string;
+          description?: string;
+          website?: string;
+          matchPatterns?: string[];
+          publisherHandle?: string;
+          sourceUrl?: string;
+          icon?: unknown;
+          commandIds?: string[];
+          version?: string;
+        };
+        const user = await getCurrentUserFromCookie(req, store);
+
+        if (!user || user.handle !== body.publisherHandle || !['admin', 'publisher'].includes(user.role ?? 'member')) {
+          return errorResponse('Unauthorized publishing action', 401);
+        }
+        if (!body.id || !body.title || !body.description || !body.website || !body.sourceUrl) {
+          return errorResponse('Pack id, title, description, website, and source URL are required', 400);
+        }
+        if (!Array.isArray(body.commandIds) || body.commandIds.length === 0) {
+          return errorResponse('Select at least one command for the pack', 400);
+        }
+        if (registryCommandPacksData.some((pack) => pack.id === body.id)) {
+          return errorResponse('Pack ID is already taken.', 409);
+        }
+
+        const commands = (await Promise.all(body.commandIds.map((id) => store.getCommand(id)))).filter(Boolean);
+        if (commands.length !== body.commandIds.length) {
+          return errorResponse('One or more selected commands were not found', 404);
+        }
+        if (commands.some((command) => command!.publisher.handle !== user.handle)) {
+          return errorResponse('Packs can only include commands published by the current user', 403);
+        }
+
+        const pack = {
+          id: body.id,
+          title: body.title,
+          description: body.description,
+          website: body.website,
+          matchPatterns: Array.isArray(body.matchPatterns) && body.matchPatterns.length > 0 ? body.matchPatterns : ['<all_urls>'],
+          publisher: {
+            name: user.name,
+            handle: user.handle,
+            avatarInitials: user.avatarInitials,
+          },
+          trustLevel: commands.every((command) => command!.trustLevel === 'verified') ? 'verified' as const : 'community' as const,
+          risk: commands.some((command) => command!.risk === 'high') ? 'high' as const : commands.some((command) => command!.risk === 'medium') ? 'medium' as const : 'low' as const,
+          permissions: [...new Set(commands.flatMap((command) => command!.permissions))],
+          sourceUrl: body.sourceUrl,
+          installs: 0,
+          rating: 5.0,
+          icon: body.icon && typeof body.icon === 'object' ? body.icon as any : { type: 'initials' as const, value: body.title.substring(0, 2).toUpperCase() },
+          version: body.version || '1.0.0',
+          commands: commands.map((command) => ({
+            ...command!,
+            packId: body.id,
+            packTitle: body.title,
+            sourceUrl: body.sourceUrl!,
+          })),
+        };
+
+        registryCommandPacksData.unshift(pack);
+        return jsonResponse(pack, { status: 201 });
       }
 
       if (path === '/api/commands' && req.method === 'POST') {

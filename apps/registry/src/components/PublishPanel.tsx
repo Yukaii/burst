@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { EditorView } from '@codemirror/view';
-import type { BurstCommand } from '@/src/lib/commands';
+import type { BurstCommand, BurstCommandPack } from '@/src/lib/commands';
 import type { LocalScript } from '@/src/lib/localScripts';
 import type { RegistrySessionUser } from '@/src/lib/registryApi';
-import { publishCommand } from '@/src/lib/registryApi';
+import { publishCommand, publishCommandPack } from '@/src/lib/registryApi';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
 import { ChecklistItem } from './CommandInspector';
 import { Input } from './ui/input';
@@ -23,18 +23,22 @@ import { Eraser, FileCode2, Lock, PlugZap, RefreshCw, RotateCcw, Save } from 'lu
 interface PublishPanelProps {
   currentUser: RegistrySessionUser;
   onPublishSuccess: (newCommand: BurstCommand) => void;
+  onPackPublishSuccess: (newPack: BurstCommandPack) => void;
   setNavTab: (tab: 'Discover' | 'Publish' | 'Users' | 'Audits' | 'Settings') => void;
   bridgeConnected: boolean;
   localScripts: LocalScript[];
+  availableCommands: BurstCommand[];
   onRefreshLocalScripts: () => void;
 }
 
 export function PublishPanel({
   currentUser,
   onPublishSuccess,
+  onPackPublishSuccess,
   setNavTab,
   bridgeConnected,
   localScripts,
+  availableCommands,
   onRefreshLocalScripts,
 }: PublishPanelProps) {
   const isGuest = currentUser.handle === 'guest';
@@ -51,6 +55,14 @@ export function PublishPanel({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [draftStatus, setDraftStatus] = useState<'idle' | 'saved' | 'restored'>('idle');
   const [selectedLocalScriptId, setSelectedLocalScriptId] = useState('');
+  const [publishMode, setPublishMode] = useState<'command' | 'pack'>('command');
+  const [packTitle, setPackTitle] = useState('');
+  const [packId, setPackId] = useState('');
+  const [packDescription, setPackDescription] = useState('');
+  const [packWebsite, setPackWebsite] = useState('');
+  const [packMatchPattern, setPackMatchPattern] = useState('');
+  const [packSourceUrl, setPackSourceUrl] = useState('');
+  const [selectedPackCommandIds, setSelectedPackCommandIds] = useState<string[]>([]);
 
   const editorExtensions = useMemo(() => [
     javascript({ jsx: true, typescript: true }),
@@ -135,6 +147,13 @@ export function PublishPanel({
     setErrors({});
     setDraftStatus('idle');
     setSelectedLocalScriptId('');
+    setPackTitle('');
+    setPackId('');
+    setPackDescription('');
+    setPackWebsite('');
+    setPackMatchPattern('');
+    setPackSourceUrl('');
+    setSelectedPackCommandIds([]);
   };
 
   if (isGuest) {
@@ -197,6 +216,8 @@ export function PublishPanel({
   };
 
   const selectedLocalScript = localScripts.find((script) => script.id === selectedLocalScriptId);
+  const publishableCommands = availableCommands.filter((command) => command.publisher.handle === currentUser.handle);
+  const selectedPackCommands = publishableCommands.filter((command) => selectedPackCommandIds.includes(command.id));
 
   const parsedMatchPatterns = matchPattern
     .split(',')
@@ -204,6 +225,49 @@ export function PublishPanel({
     .filter(Boolean);
 
   const auditResult = analyzeScriptCode(code, parsedMatchPatterns);
+
+  const handlePackSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const newErrors: Record<string, string> = {};
+    const packPatterns = packMatchPattern.split(',').map((pattern) => pattern.trim()).filter(Boolean);
+
+    if (!packTitle.trim()) newErrors.packTitle = 'Pack title is required';
+    if (!packId.trim()) newErrors.packId = 'Pack ID is required';
+    if (!packDescription.trim()) newErrors.packDescription = 'Pack description is required';
+    if (!packWebsite.trim()) newErrors.packWebsite = 'Website scope is required';
+    if (packPatterns.length === 0) newErrors.packMatchPattern = 'Match pattern is required';
+    if (!packSourceUrl.trim()) {
+      newErrors.packSourceUrl = 'Source URL is required';
+    } else if (!packSourceUrl.startsWith('https://')) {
+      newErrors.packSourceUrl = 'Source URL must begin with https://';
+    }
+    if (selectedPackCommandIds.length === 0) newErrors.packCommands = 'Select at least one command';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    try {
+      const newPack = await publishCommandPack({
+        id: packId,
+        title: packTitle,
+        description: packDescription,
+        website: packWebsite,
+        matchPatterns: packPatterns,
+        publisherHandle: currentUser.handle,
+        sourceUrl: packSourceUrl,
+        icon: { type: 'initials' as const, value: packTitle.substring(0, 2).toUpperCase() },
+        commandIds: selectedPackCommandIds,
+        version: '1.0.0',
+      });
+      onPackPublishSuccess(newPack);
+      setErrors({});
+    } catch (err) {
+      setErrors({ form: err instanceof Error ? err.message : 'Failed to publish command pack' });
+    }
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -290,10 +354,30 @@ export function PublishPanel({
       <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-slate-800/60 pb-4">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">Publish a New Command</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Define manifest capabilities, declare host scopes, and write the execution block.</p>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">{publishMode === 'command' ? 'Publish a New Command' : 'Create a Command Pack'}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              {publishMode === 'command'
+                ? 'Define manifest capabilities, declare host scopes, and write the execution block.'
+                : 'Group already-published commands into one installable website pack.'}
+            </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <div className="flex rounded-lg border border-border bg-background p-1">
+              <button
+                type="button"
+                className={`h-7 rounded-md px-3 text-xs font-bold ${publishMode === 'command' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => setPublishMode('command')}
+              >
+                Command
+              </button>
+              <button
+                type="button"
+                className={`h-7 rounded-md px-3 text-xs font-bold ${publishMode === 'pack' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => setPublishMode('pack')}
+              >
+                Pack
+              </button>
+            </div>
             <span className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 px-3 text-2xs font-bold text-slate-500 dark:text-slate-400">
               <Save className="size-3" />
               {draftStatus === 'restored' ? 'Draft restored' : draftStatus === 'saved' ? 'Draft saved' : 'Draft ready'}
@@ -306,7 +390,135 @@ export function PublishPanel({
         </div>
       </div>
 
-      <div className={`flex flex-col gap-3 rounded-lg border p-3.5 ${
+      {publishMode === 'pack' ? (
+        <form onSubmit={(event) => void handlePackSubmit(event)} className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+          {errors.form && (
+            <div className="lg:col-span-2 text-xs font-bold px-3 py-2.5 rounded-lg border bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20">
+              {errors.form}
+            </div>
+          )}
+          <section className="flex flex-col gap-5 rounded-2xl border border-border bg-card p-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">Pack title</label>
+                <Input
+                  value={packTitle}
+                  onChange={(event) => {
+                    setPackTitle(event.target.value);
+                    setPackId(event.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+                  }}
+                  placeholder="e.g. GitHub Workflow Pack"
+                />
+                {errors.packTitle && <span className="text-[10px] font-bold text-rose-500">{errors.packTitle}</span>}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">Pack ID</label>
+                <Input value={packId} onChange={(event) => setPackId(event.target.value)} placeholder="github-workflow-pack" className="font-mono" />
+                {errors.packId && <span className="text-[10px] font-bold text-rose-500">{errors.packId}</span>}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">Description</label>
+              <Textarea
+                value={packDescription}
+                onChange={(event) => setPackDescription(event.target.value)}
+                placeholder="Describe the set of workflows this pack installs together..."
+                rows={3}
+              />
+              {errors.packDescription && <span className="text-[10px] font-bold text-rose-500">{errors.packDescription}</span>}
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">Website</label>
+                <Input value={packWebsite} onChange={(event) => setPackWebsite(event.target.value)} placeholder="github.com or all sites" />
+                {errors.packWebsite && <span className="text-[10px] font-bold text-rose-500">{errors.packWebsite}</span>}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">Match patterns</label>
+                <Input value={packMatchPattern} onChange={(event) => setPackMatchPattern(event.target.value)} placeholder="github.com/*, <all_urls>" />
+                {errors.packMatchPattern && <span className="text-[10px] font-bold text-rose-500">{errors.packMatchPattern}</span>}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">Secure Source URL</label>
+              <Input value={packSourceUrl} onChange={(event) => setPackSourceUrl(event.target.value)} placeholder="https://github.com/username/repo" />
+              {errors.packSourceUrl && <span className="text-[10px] font-bold text-rose-500">{errors.packSourceUrl}</span>}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">Commands</label>
+                <span className="text-[10px] font-semibold text-muted-foreground">{selectedPackCommands.length} selected</span>
+              </div>
+              {errors.packCommands && <span className="text-[10px] font-bold text-rose-500">{errors.packCommands}</span>}
+              <div className="grid max-h-[360px] grid-cols-1 gap-2 overflow-y-auto pr-1 xl:grid-cols-2">
+                {publishableCommands.length > 0 ? publishableCommands.map((command) => {
+                  const checked = selectedPackCommandIds.includes(command.id);
+                  return (
+                    <label key={command.id} className="flex min-w-0 cursor-pointer items-start gap-2 rounded-lg border border-border bg-background p-3">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => setSelectedPackCommandIds((prev) => (
+                          prev.includes(command.id)
+                            ? prev.filter((id) => id !== command.id)
+                            : [...prev, command.id]
+                        ))}
+                        className="mt-0.5 size-4 shrink-0 rounded border-border"
+                      />
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-bold text-foreground">{command.title}</span>
+                        <span className="mt-1 block truncate text-[10px] font-medium text-muted-foreground">{command.website} · {command.version || '1.0.0'}</span>
+                        <span className="mt-1 block line-clamp-2 text-[11px] text-muted-foreground">{command.description}</span>
+                      </span>
+                    </label>
+                  );
+                }) : (
+                  <div className="rounded-lg border border-dashed border-border p-6 text-center text-xs font-semibold text-muted-foreground">
+                    Publish at least one command before creating a pack.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button type="submit" className="h-8 px-4 font-semibold" disabled={publishableCommands.length === 0}>
+                Publish Pack
+              </Button>
+              <Button type="button" variant="outline" className="h-8 px-4 font-semibold" onClick={clearForm}>
+                <Eraser className="size-3.5" />
+                Clear form
+              </Button>
+              <Button type="button" variant="outline" className="h-8 px-4 font-semibold" onClick={() => setNavTab('Discover')}>
+                Cancel
+              </Button>
+            </div>
+          </section>
+
+          <aside className="rounded-2xl border border-border bg-card p-5">
+            <h3 className="text-sm font-bold text-foreground">Pack Preview</h3>
+            <p className="mt-1 text-xs font-medium leading-relaxed text-muted-foreground">
+              Packs reference commands you already published. Command code and audits stay command-owned.
+            </p>
+            <div className="mt-4 flex flex-col gap-2">
+              {selectedPackCommands.map((command) => (
+                <div key={command.id} className="rounded-lg border border-border bg-background p-3">
+                  <div className="truncate text-xs font-bold text-foreground">{command.title}</div>
+                  <div className="mt-1 text-[10px] font-semibold uppercase text-muted-foreground">{command.risk} risk · {command.trustLevel}</div>
+                </div>
+              ))}
+              {selectedPackCommands.length === 0 && (
+                <div className="rounded-lg border border-dashed border-border p-4 text-xs font-semibold text-muted-foreground">No commands selected.</div>
+              )}
+            </div>
+          </aside>
+        </form>
+      ) : null}
+
+      {publishMode === 'command' && <div className={`flex flex-col gap-3 rounded-lg border p-3.5 ${
         bridgeConnected
           ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
           : 'border-border bg-card text-muted-foreground'
@@ -345,69 +557,71 @@ export function PublishPanel({
         </div>
 
         {bridgeConnected && (
-          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
-            <label className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground sm:w-40">
-              <FileCode2 className="size-3.5" />
-              Local script
-            </label>
-            <Select
-              value={selectedLocalScriptId}
-              disabled={localScripts.length === 0}
-              onValueChange={(value) => {
-                setSelectedLocalScriptId(value);
-                fillFromLocalScript(value);
-              }}
-            >
-              <SelectTrigger className="h-11 min-w-0 flex-1 bg-background px-3 text-[13px] font-medium">
-                {selectedLocalScript ? (
-                  <span className="flex min-w-0 flex-col items-start gap-0.5 overflow-hidden">
-                    <span className="max-w-full truncate text-xs font-semibold text-foreground">
-                      {selectedLocalScript.name}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
+              <label className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground sm:w-40">
+                <FileCode2 className="size-3.5" />
+                Local script
+              </label>
+              <Select
+                value={selectedLocalScriptId}
+                disabled={localScripts.length === 0}
+                onValueChange={(value) => {
+                  setSelectedLocalScriptId(value);
+                  fillFromLocalScript(value);
+                }}
+              >
+                <SelectTrigger className="h-11 min-w-0 flex-1 bg-background px-3 text-[13px] font-medium">
+                  {selectedLocalScript ? (
+                    <span className="flex min-w-0 flex-col items-start gap-0.5 overflow-hidden">
+                      <span className="max-w-full truncate text-xs font-semibold text-foreground">
+                        {selectedLocalScript.name}
+                      </span>
+                      <span className="max-w-full truncate font-mono text-[10px] leading-none text-muted-foreground">
+                        {describeLocalScriptScope(selectedLocalScript)}
+                      </span>
                     </span>
-                    <span className="max-w-full truncate font-mono text-[10px] leading-none text-muted-foreground">
-                      {describeLocalScriptScope(selectedLocalScript)}
-                    </span>
-                  </span>
-                ) : (
-                  <SelectValue placeholder={localScripts.length > 0 ? 'Select a script to fill this form...' : 'No local scripts found'} />
-                )}
-              </SelectTrigger>
-              <SelectContent position="popper" align="start" className="w-(--radix-select-trigger-width) max-h-[320px] p-1.5">
-                {localScripts.map((script) => (
-                  <SelectItem
-                    key={script.id}
-                    value={script.id}
-                    className="min-h-[72px] items-start gap-2 py-2.5 pr-8 pl-2.5"
-                  >
-                    <span className="flex min-w-0 flex-col gap-1">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span className="truncate text-xs font-semibold text-foreground">{script.name}</span>
-                        <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none ${
-                          script.status === 'enabled'
-                            ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                            : script.status === 'draft'
-                              ? 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                              : 'border-slate-500/20 bg-slate-500/10 text-slate-500 dark:text-slate-400'
-                        }`}>
-                          {script.status}
+                  ) : (
+                    <SelectValue placeholder={localScripts.length > 0 ? 'Select a script to fill this form...' : 'No local scripts found'} />
+                  )}
+                </SelectTrigger>
+                <SelectContent position="popper" align="start" className="w-(--radix-select-trigger-width) max-h-[320px] p-1.5">
+                  {localScripts.map((script) => (
+                    <SelectItem
+                      key={script.id}
+                      value={script.id}
+                      className="min-h-[72px] items-start gap-2 py-2.5 pr-8 pl-2.5"
+                    >
+                      <span className="flex min-w-0 flex-col gap-1">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="truncate text-xs font-semibold text-foreground">{script.name}</span>
+                          <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none ${
+                            script.status === 'enabled'
+                              ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                              : script.status === 'draft'
+                                ? 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                : 'border-slate-500/20 bg-slate-500/10 text-slate-500 dark:text-slate-400'
+                          }`}>
+                            {script.status}
+                          </span>
+                        </span>
+                        <span className="truncate font-mono text-[10px] text-muted-foreground">
+                          {describeLocalScriptScope(script)}
+                        </span>
+                        <span className="text-[10px] font-medium text-muted-foreground">
+                          Updated {script.updatedAt}{script.version ? ` - v${script.version}` : ''}
                         </span>
                       </span>
-                      <span className="truncate font-mono text-[10px] text-muted-foreground">
-                        {describeLocalScriptScope(script)}
-                      </span>
-                      <span className="text-[10px] font-medium text-muted-foreground">
-                        Updated {script.updatedAt}{script.version ? ` - v${script.version}` : ''}
-                      </span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         )}
-      </div>
+      </div>}
 
-      <form onSubmit={(e) => void handleSubmit(e)} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {publishMode === 'command' && <form onSubmit={(e) => void handleSubmit(e)} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {errors.form && (
           <div className="lg:col-span-3 text-xs font-bold px-3 py-2.5 rounded-lg border bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20">
             {errors.form}
@@ -588,7 +802,7 @@ export function PublishPanel({
             </div>
           </div>
         </div>
-      </form>
+      </form>}
     </div>
   );
 }

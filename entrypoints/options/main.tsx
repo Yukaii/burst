@@ -55,6 +55,12 @@ const AI_PROVIDER_OPTIONS: Array<{
   { value: 'registry', label: 'Registry hosted AI only' },
 ];
 
+function isChromeLikeBrowser() {
+  if (typeof navigator === 'undefined') return false;
+  const userAgent = navigator.userAgent;
+  return /\b(Chrome|Chromium|Edg|OPR|Brave)\b/i.test(userAgent) && !/Firefox/i.test(userAgent);
+}
+
 function OptionsApp() {
   const [settings, setSettings] = useState<ExtensionSettings | null>(null);
   const [previewTheme, setPreviewTheme] = useState<CommandPaletteTheme | null>(null);
@@ -194,7 +200,7 @@ function OptionsApp() {
     window.sessionStorage.setItem('burst-user-scripts-settings-opened', 'true');
 
     const permissionApi = typeof browser !== 'undefined' ? browser.permissions : undefined;
-    if (permissionApi?.request) {
+    if (!isChromeLikeBrowser() && permissionApi?.request) {
       try {
         const granted = await permissionApi.request({ permissions: ['userScripts'] });
         if (granted) {
@@ -210,7 +216,11 @@ function OptionsApp() {
 
     if (typeof browser !== 'undefined' && browser.tabs?.create) {
       void browser.tabs.create({ url: 'chrome://extensions/?id=' + browser.runtime.id });
+      showFeedback('Chrome extension page opened. Turn on "Allow user scripts" manually, then return here.', 'info');
+      return;
     }
+
+    showFeedback('Open the browser extension page and turn on "Allow user scripts" manually.', 'info');
   }
 
   return (
@@ -238,7 +248,7 @@ function OptionsApp() {
               <div>
                 <h2>Action Required: Enable User Scripts Permission</h2>
                 <p>
-                  Burst requires the browser User Scripts permission. Firefox asks for this as an optional permission; Chrome requires the extension details toggle.
+                  Burst requires the browser User Scripts permission before local and registry commands can run on pages.
                 </p>
               </div>
             </div>
@@ -249,7 +259,7 @@ function OptionsApp() {
               </div>
               <div className="instruction-step">
                 <h3>Chrome / Chromium</h3>
-                <p>Open extension settings, then switch "Allow user scripts" to ON. Older versions may require Developer mode.</p>
+                <p>Click the button to open Burst in <code>chrome://extensions</code>, then manually switch <strong>Allow user scripts</strong> to ON. Chrome does not let extensions enable this toggle for you.</p>
               </div>
             </div>
             <div className="warning-actions">
@@ -258,9 +268,9 @@ function OptionsApp() {
                 onClick={handleOpenExtensionSettings}
                 className="btn-warning-action"
               >
-                Enable User Scripts
+                {isChromeLikeBrowser() ? 'Open Extension Page' : 'Enable User Scripts'}
               </button>
-              <span className="auto-detect-hint">Will auto-detect on return</span>
+              <span className="auto-detect-hint">After enabling it, return to Burst and this page will re-check automatically.</span>
             </div>
           </div>
         )}

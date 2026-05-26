@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   commandMatchesHost,
+  commandPackToCommands,
   managementCommands,
   orderPaletteCommands,
   searchCommands,
@@ -17,6 +18,8 @@ import {
 import { sampleCommandManifests, validateCommandManifest } from '../src/lib/manifest.ts';
 import {
   getRegistryCommands,
+  getRegistryCommandPacks,
+  getRegistryCommandPack,
   getRegistryCommandsPage,
   getRegistryCommand,
   getAuditReport,
@@ -32,11 +35,13 @@ import {
   getRegistryScriptMatchPatterns,
   createRegistryUserScriptCode,
   installRegistryCommand,
+  installRegistryCommandPack,
   isRegistryCommandEnabled,
   loadInstalledRegistryCommands,
   loadConsentGrants,
   saveConsentGrant,
   setRegistryCommandStatus,
+  uninstallRegistryCommandPack,
 } from '../src/lib/registryStorage.ts';
 import { loadCommandPaletteTheme, resolveCommandPaletteTheme, resolveCommandPaletteThemeMeta } from '../src/lib/paletteThemes.ts';
 
@@ -150,21 +155,26 @@ describe('palette ordering and search', () => {
 });
 
 describe('command manifest validation', () => {
-  test('accepts sample command manifests', () => {
+  test('accepts sample command pack manifests', () => {
     expect(sampleCommandManifests.map((manifest) => validateCommandManifest(manifest).ok)).toEqual([true]);
   });
 
-  test('requires safe package source and entrypoint metadata', () => {
+  test('requires safe pack source and per-command entrypoint metadata', () => {
     const manifest = {
       ...sampleCommandManifests[0],
       source: {
         type: 'archive',
         url: 'http://example.com/command.zip',
       },
-      runtime: {
-        ...sampleCommandManifests[0].runtime,
-        entrypoint: '../src/index.css',
-      },
+      commands: [
+        {
+          ...sampleCommandManifests[0].commands[0],
+          runtime: {
+            ...sampleCommandManifests[0].commands[0].runtime,
+            entrypoint: '../src/index.css',
+          },
+        },
+      ],
     };
 
     const result = validateCommandManifest(manifest);
@@ -172,8 +182,26 @@ describe('command manifest validation', () => {
     expect(result.ok).toBe(false);
     expect(result.errors).toContain('source.url must use https.');
     expect(result.errors).toContain('source.integrity is required for archive packages.');
-    expect(result.errors).toContain('runtime.entrypoint must be a relative package path without parent traversal.');
-    expect(result.errors).toContain('runtime.entrypoint must point to a JavaScript or TypeScript module.');
+    expect(result.errors).toContain('commands[0].runtime.entrypoint must be a relative package path without parent traversal.');
+    expect(result.errors).toContain('commands[0].runtime.entrypoint must point to a JavaScript or TypeScript module.');
+  });
+
+  test('rejects duplicate command ids within a pack', () => {
+    const manifest = {
+      ...sampleCommandManifests[0],
+      commands: [
+        sampleCommandManifests[0].commands[0],
+        {
+          ...sampleCommandManifests[0].commands[1],
+          id: sampleCommandManifests[0].commands[0].id,
+        },
+      ],
+    };
+
+    const result = validateCommandManifest(manifest);
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain('commands[1].id must be unique within the pack.');
   });
 });
 
@@ -219,6 +247,18 @@ describe('capability detection', () => {
 });
 
 describe('registry API layer', () => {
+  test('exposes command packs and flattens their commands for palette surfaces', async () => {
+    const packs = await getRegistryCommandPacks();
+    expect(packs.some(pack => pack.id === 'github-workflow-pack')).toBe(true);
+
+    const pack = await getRegistryCommandPack('github-workflow-pack');
+    expect(pack?.commands.length).toBe(2);
+    expect(commandPackToCommands(pack).map(command => command.packId)).toEqual([
+      'github-workflow-pack',
+      'github-workflow-pack',
+    ]);
+  });
+
   test('getRegistryCommands queries lists correctly', async () => {
     const commands = await getRegistryCommands();
     expect(commands.length).toBeGreaterThan(0);
@@ -250,6 +290,7 @@ describe('registry API layer', () => {
     expect(command).toBeDefined();
     expect(command?.id).toBe('copy-github-branch');
     expect(command?.title).toBe('Copy GitHub branch name');
+    expect(command?.packId).toBe('github-workflow-pack');
 
     const missing = await getRegistryCommand('does-not-exist');
     expect(missing).toBeUndefined();
@@ -395,6 +436,21 @@ describe('registry storage and consent', () => {
     command = installed.find((item) => item.id === 'toggle-test');
     expect(command?.status).toBe('disabled');
     expect(isRegistryCommandEnabled(command)).toBe(false);
+  });
+
+  test('installs and uninstalls every command in a registry command pack', async () => {
+    const pack = await getRegistryCommandPack('github-workflow-pack');
+    await installRegistryCommandPack(pack);
+
+    let installed = await loadInstalledRegistryCommands();
+    expect(installed.filter((command) => command.packId === 'github-workflow-pack').map((command) => command.id).sort()).toEqual([
+      'copy-github-branch',
+      'summarize-github-pr',
+    ]);
+
+    await uninstallRegistryCommandPack('github-workflow-pack');
+    installed = await loadInstalledRegistryCommands();
+    expect(installed.some((command) => command.packId === 'github-workflow-pack')).toBe(false);
   });
 });
 

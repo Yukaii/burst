@@ -9,15 +9,17 @@ import {
   loadInstalledRegistryCommands,
   loadPinnedRegistryCommandIds,
   installRegistryCommand,
+  installRegistryCommandPack,
   isRegistryCommandEnabled,
   uninstallRegistryCommand,
+  uninstallRegistryCommandPack,
   pinRegistryCommand,
   unpinRegistryCommand,
   getRegistryScriptRegistrationId,
   getRegistryScriptMatchPatterns,
   createRegistryUserScriptCode,
 } from '@/src/lib/registryStorage';
-import { getMockScriptCode, getRegistryCommand, getRegistryCommandsPage } from '@/src/lib/registryApi';
+import { getMockScriptCode, getRegistryCommand, getRegistryCommandPack, getRegistryCommandsPage } from '@/src/lib/registryApi';
 import { getRegistryServerBaseUrl, loadSettings, type ExtensionSettings } from '@/src/lib/settings';
 
 export default defineBackground(() => {
@@ -90,6 +92,41 @@ export default defineBackground(() => {
       return promise;
     }
 
+    if (type === 'burst:install-command-pack') {
+      const { pack } = message as { pack: any };
+      const promise = (async () => {
+        const registryBaseUrl = await getConfiguredRegistryBaseUrl();
+        const registryPack = typeof pack?.id === 'string'
+          ? await getRegistryCommandPack(pack.id, registryBaseUrl).catch(() => undefined)
+          : undefined;
+        const resolvedPack = registryPack ?? pack;
+        const hydratedPack = {
+          ...resolvedPack,
+          commands: await Promise.all((resolvedPack.commands ?? []).map(async (command: any) => {
+            const registryCommand = typeof command?.id === 'string'
+              ? await getRegistryCommand(command.id, registryBaseUrl).catch(() => undefined)
+              : undefined;
+            return {
+              ...command,
+              ...registryCommand,
+              packId: resolvedPack.id,
+              packTitle: resolvedPack.title,
+              sourceUrl: resolvedPack.sourceUrl ?? registryCommand?.sourceUrl ?? command.sourceUrl,
+            };
+          })),
+        };
+        await installRegistryCommandPack(hydratedPack);
+        await registerEnabledLocalScripts();
+        const installed = await loadInstalledRegistryCommands();
+        const pinned = await loadPinnedRegistryCommandIds();
+        return {
+          installedIds: installed.map((c) => c.id),
+          pinnedIds: pinned,
+        };
+      })();
+      return promise;
+    }
+
     if (type === 'burst:install-registry-command') {
       const { commandId } = message as { commandId: string };
       const promise = (async () => {
@@ -124,6 +161,21 @@ export default defineBackground(() => {
       const { commandId } = message as { commandId: string };
       const promise = (async () => {
         await uninstallRegistryCommand(commandId);
+        await registerEnabledLocalScripts();
+        const installed = await loadInstalledRegistryCommands();
+        const pinned = await loadPinnedRegistryCommandIds();
+        return {
+          installedIds: installed.map((c) => c.id),
+          pinnedIds: pinned,
+        };
+      })();
+      return promise;
+    }
+
+    if (type === 'burst:uninstall-command-pack') {
+      const { packId } = message as { packId: string };
+      const promise = (async () => {
+        await uninstallRegistryCommandPack(packId);
         await registerEnabledLocalScripts();
         const installed = await loadInstalledRegistryCommands();
         const pinned = await loadPinnedRegistryCommandIds();

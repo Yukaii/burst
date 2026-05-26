@@ -1,4 +1,5 @@
-import type { BurstCommand } from './commands';
+import type { BurstCommand, BurstCommandPack } from './commands';
+import { commandPackToCommands } from './commands';
 import { createSandboxedUserScriptCode } from './localScripts';
 
 const INSTALLED_COMMANDS_KEY = 'burst.installedRegistryCommands.v1';
@@ -177,6 +178,35 @@ export async function installRegistryCommand(command: BurstCommand): Promise<voi
     installed.push(command);
   }
   await saveInstalledRegistryCommands(installed);
+}
+
+export async function installRegistryCommandPack(pack: BurstCommandPack): Promise<void> {
+  const commands = commandPackToCommands({ ...pack, status: 'enabled' });
+  const installed = await loadInstalledRegistryCommands();
+  const next = [...installed];
+
+  for (const command of commands) {
+    const existingIndex = next.findIndex((item) => item.id === command.id);
+    if (existingIndex >= 0) {
+      next[existingIndex] = {
+        ...next[existingIndex],
+        ...command,
+      };
+    } else {
+      next.push(command);
+    }
+  }
+
+  await saveInstalledRegistryCommands(next);
+}
+
+export async function uninstallRegistryCommandPack(packId: string): Promise<void> {
+  const installed = await loadInstalledRegistryCommands();
+  const removedIds = installed.filter((command) => command.packId === packId).map((command) => command.id);
+  await saveInstalledRegistryCommands(installed.filter((command) => command.packId !== packId));
+
+  const pinned = await loadPinnedRegistryCommandIds();
+  await savePinnedRegistryCommandIds(pinned.filter((id) => !removedIds.includes(id)));
 }
 
 export async function uninstallRegistryCommand(commandId: string): Promise<void> {

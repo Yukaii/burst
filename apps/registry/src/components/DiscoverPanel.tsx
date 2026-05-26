@@ -1,5 +1,5 @@
-import { Search, Plus, RefreshCw } from 'lucide-react';
-import type { BurstCommand } from '@/src/lib/commands';
+import { Box, PackagePlus, Plus, RefreshCw, Search } from 'lucide-react';
+import type { BurstCommand, BurstCommandPack } from '@/src/lib/commands';
 import type { AuditReport, PublisherProfile } from '@/src/lib/registryApi';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -24,6 +24,7 @@ interface DiscoverPanelProps {
   setQuery: (q: string) => void;
   loading: boolean;
   filteredCommands: BurstCommand[];
+  packs: BurstCommandPack[];
   activeCommandId: string | null;
   setActiveCommandId: (id: string | null) => void;
   installedCommandIds: string[];
@@ -35,7 +36,9 @@ interface DiscoverPanelProps {
   inspectorTab: 'details' | 'audit' | 'publisher';
   setInspectorTab: (tab: 'details' | 'audit' | 'publisher') => void;
   handleInstall: (cmd: BurstCommand) => void;
+  handleInstallPack: (pack: BurstCommandPack) => void;
   handleUninstall: (id: string) => void;
+  handleUninstallPack: (packId: string) => void;
   handlePin: (id: string) => void;
   handleUnpin: (id: string) => void;
   filterCategory: 'all' | 'verified' | 'high_risk' | 'installed';
@@ -50,6 +53,7 @@ export function DiscoverPanel({
   setQuery,
   loading,
   filteredCommands,
+  packs,
   activeCommandId,
   setActiveCommandId,
   installedCommandIds,
@@ -61,7 +65,9 @@ export function DiscoverPanel({
   inspectorTab,
   setInspectorTab,
   handleInstall,
+  handleInstallPack,
   handleUninstall,
+  handleUninstallPack,
   handlePin,
   handleUnpin,
   filterCategory,
@@ -102,14 +108,74 @@ export function DiscoverPanel({
       </header>
 
       <section className="relative flex min-h-0 flex-1">
-        <div className="flex w-full min-w-0 min-h-0 flex-col overflow-hidden border border-border rounded-lg bg-card" aria-label="Registry commands">
+        <div className="flex w-full min-w-0 min-h-0 flex-col overflow-y-auto border border-border rounded-lg bg-card" aria-label="Registry commands">
           <div className="flex items-center justify-between gap-3.5 border-b border-border p-3 px-3.5">
             <div>
-              <h2 className="m-0 text-foreground text-base font-semibold leading-none">Discover commands</h2>
-              <p className="m-0 mt-1.5 text-muted-foreground text-xs leading-normal">Find actions that match the current website, then inspect trust signals before installing.</p>
+              <h2 className="m-0 text-foreground text-base font-semibold leading-none">Discover packs and commands</h2>
+              <p className="m-0 mt-1.5 text-muted-foreground text-xs leading-normal">Install a website pack at once, or inspect individual commands before installing.</p>
             </div>
             <span className="shrink-0 rounded-full bg-muted text-muted-foreground text-[10px] font-semibold leading-none px-2.5 py-1.5">{filteredCommands.length} results</span>
           </div>
+
+          {packs.length > 0 && (
+            <div className="border-b border-border bg-background/70 p-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">
+                  <Box className="size-3.5" />
+                  Command packs
+                </span>
+                <span className="text-[10px] font-semibold text-muted-foreground">{packs.length} available</span>
+              </div>
+              <div className="grid grid-cols-1 gap-2 xl:grid-cols-3">
+                {packs.slice(0, 3).map((pack) => {
+                  const installedCount = pack.commands.filter((command) => installedCommandIds.includes(command.id)).length;
+                  const isInstalled = installedCount === pack.commands.length;
+
+                  return (
+                    <div key={pack.id} className="flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-card p-3">
+                      <div className="flex min-w-0 items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <strong className="block truncate text-sm font-semibold text-foreground">{pack.title}</strong>
+                          <span className="mt-1 block truncate text-[11px] font-medium text-muted-foreground">
+                            {pack.website} · {pack.commands.length} commands
+                          </span>
+                        </div>
+                        <Badge variant={pack.trustLevel === 'verified' ? 'secondary' : 'outline'} className="shrink-0 text-[9px] uppercase">
+                          {trustCopy[pack.trustLevel]}
+                        </Badge>
+                      </div>
+                      <p className="m-0 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{pack.description}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {pack.commands.slice(0, 3).map((command) => (
+                          <button
+                            key={command.id}
+                            type="button"
+                            className="max-w-full truncate rounded-md border border-border bg-background px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+                            onClick={() => {
+                              setActiveCommandId(command.id);
+                              setIsInspectorOpen(true);
+                            }}
+                          >
+                            {command.title}
+                          </button>
+                        ))}
+                      </div>
+                      <Button
+                        type="button"
+                        variant={isInstalled ? 'outline' : 'default'}
+                        size="sm"
+                        className="h-8 justify-center font-semibold"
+                        onClick={() => (isInstalled ? handleUninstallPack(pack.id) : handleInstallPack(pack))}
+                      >
+                        <PackagePlus className="size-3.5" />
+                        {isInstalled ? 'Uninstall pack' : `Install pack${installedCount > 0 ? ` (${installedCount}/${pack.commands.length})` : ''}`}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-1 border-b border-border bg-background p-1.5">
             {(
@@ -148,7 +214,7 @@ export function DiscoverPanel({
               <span className="text-sm font-semibold">Searching registry...</span>
             </div>
           ) : filteredCommands.length > 0 ? (
-            <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="shrink-0">
               {filteredCommands.map((command) => {
                 const isSelected = activeCommandId === command.id;
                 

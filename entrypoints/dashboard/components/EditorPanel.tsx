@@ -90,7 +90,7 @@ export function EditorPanel({
   const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
   const isRegistryFork = selectedScript.originRegistryKind === 'official' && Boolean(selectedScript.originCommandId);
   const storeHref = selectedScript.originCommandId
-    ? `${selectedScript.originRegistryUrl || 'http://localhost:5174'}/#/discover/${encodeURIComponent(selectedScript.originCommandId)}`
+    ? `${(selectedScript.originRegistryUrl || 'http://localhost:5174').replace(/\/$/, '')}/discover/${encodeURIComponent(selectedScript.originCommandId)}`
     : undefined;
 
   React.useEffect(() => {

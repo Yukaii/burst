@@ -192,8 +192,25 @@ describe('registry backend permissions', () => {
 
     expect((await handler(new Request('http://registry.test/api/commands'))).status).toBe(200);
     expect((await handler(new Request('http://registry.test/api/commands/copy-github-branch'))).status).toBe(200);
+    expect((await handler(new Request('http://registry.test/api/packs'))).status).toBe(200);
+    expect((await handler(new Request('http://registry.test/api/packs/github-workflow-pack'))).status).toBe(200);
     expect((await handler(new Request('http://registry.test/api/publishers/%40schen'))).status).toBe(200);
     expect((await handler(new Request('http://registry.test/api/audit-reports/copy-github-branch'))).status).toBe(200);
+  });
+
+  test('filters the public command pack catalog by host before pagination', async () => {
+    const handler = createRegistryHandler(createMemoryRegistryStore());
+    const response = await handler(new Request('http://registry.test/api/packs?host=github.com&limit=20&offset=0'));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.packs.some((pack) => pack.id === 'github-workflow-pack')).toBe(true);
+    expect(body.packs.every((pack) =>
+      pack.matchPatterns.includes('<all_urls>') ||
+      pack.matchPatterns.some((pattern) => pattern.includes('github.com')),
+    )).toBe(true);
+    const githubPack = body.packs.find((pack) => pack.id === 'github-workflow-pack');
+    expect(githubPack.commands.every((command) => typeof command.code === 'string' && command.code.length > 0)).toBe(true);
   });
 
   test('paginates the public command catalog when requested', async () => {

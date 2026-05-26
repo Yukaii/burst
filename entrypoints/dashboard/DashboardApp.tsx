@@ -44,7 +44,9 @@ export default function DashboardApp() {
         onImport={() => {}}
         onToggleScriptStatus={(script) => void d.setScriptStatusDirectly(script, script.status === 'enabled' ? 'disabled' : 'enabled')}
         onToggleRegistryCommandStatus={(command) => void d.setRegistryCommandStatusDirectly(command, command.status === 'disabled' ? 'enabled' : 'disabled')}
+        onToggleRegistryCommandPackStatus={(packId, status) => void d.setRegistryCommandPackStatusDirectly(packId, status)}
         onUninstallRegistryCommand={(commandId) => void d.uninstallOfficialRegistryCommand(commandId)}
+        onUninstallRegistryCommandPack={(packId) => void d.uninstallOfficialRegistryCommandPack(packId)}
         onForkRegistryCommand={(command) => void d.forkOfficialRegistryCommand(command)}
         onExportScript={d.exportSingleScript}
         onDeleteScript={(script) => {
@@ -88,6 +90,7 @@ export default function DashboardApp() {
         {d.activeTab === 'editor' && d.selectedRegistryCommand ? (
           <RegistryCommandPanel
             command={d.selectedRegistryCommand}
+            packCommands={d.installedRegistryCommands.filter((command) => command.packId && command.packId === d.selectedRegistryCommand?.packId)}
             leftSidebarOpen={d.leftSidebarOpen}
             onToggleLeft={() => {
               d.setLeftSidebarOpen((o: boolean) => {
@@ -97,9 +100,13 @@ export default function DashboardApp() {
               });
             }}
             saveState={d.saveState}
+            editorFontFamily={d.editorFontFamily}
+            editorFontSize={d.editorFontSize}
             onFork={() => void d.forkOfficialRegistryCommand(d.selectedRegistryCommand!)}
             onToggleStatus={() => void d.setRegistryCommandStatusDirectly(d.selectedRegistryCommand!, d.selectedRegistryCommand!.status === 'disabled' ? 'enabled' : 'disabled')}
+            onTogglePackStatus={(status) => void d.setRegistryCommandPackStatusDirectly(d.selectedRegistryCommand!.packId!, status)}
             onUninstall={() => void d.uninstallOfficialRegistryCommand(d.selectedRegistryCommand!.id)}
+            onUninstallPack={() => void d.uninstallOfficialRegistryCommandPack(d.selectedRegistryCommand!.packId!)}
           />
         ) : d.activeTab === 'editor' && d.selectedScript ? (
           <EditorPanel

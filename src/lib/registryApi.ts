@@ -1,4 +1,5 @@
-import type { BurstCommand } from './commands';
+import type { BurstCommand, BurstCommandPack } from './commands';
+import { commandPackToCommands } from './commands';
 import { analyzeScriptCode } from './staticAnalysis';
 
 export type AuditReport = {
@@ -61,6 +62,14 @@ export type RegistryCommandPage = {
   hasMore: boolean;
 };
 
+export type RegistryCommandPackPage = {
+  packs: BurstCommandPack[];
+  total: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
+};
+
 export type RegistryApiToken = {
   id: string;
   userHandle: string;
@@ -69,12 +78,11 @@ export type RegistryApiToken = {
   lastUsedAt?: string;
 };
 
-export const registryCommandsData: BurstCommand[] = [
+export const registryCommandPacksData: BurstCommandPack[] = [
   {
-    id: 'copy-github-branch',
-    title: 'Copy GitHub branch name',
-    description: 'Copies the active GitHub branch name to the clipboard.',
-    subtitle: 'GitHub branch',
+    id: 'github-workflow-pack',
+    title: 'GitHub Workflow Pack',
+    description: 'A focused set of GitHub commands for branch, pull request, and issue workflows.',
     website: 'github.com',
     matchPatterns: ['github.com/*'],
     publisher: {
@@ -85,16 +93,64 @@ export const registryCommandsData: BurstCommand[] = [
     trustLevel: 'verified',
     risk: 'medium',
     permissions: ['Read page DOM', 'Write clipboard'],
-    sourceUrl: 'https://github.com/burst/examples/tree/main/copy-github-branch',
+    sourceUrl: 'https://github.com/burst/examples/tree/main/github-workflow-pack',
     installs: 1450,
     rating: 4.8,
     icon: { type: 'favicon', host: 'github.com' },
+    version: '0.1.0',
+    commands: [
+      {
+        id: 'copy-github-branch',
+        packId: 'github-workflow-pack',
+        packTitle: 'GitHub Workflow Pack',
+        title: 'Copy GitHub branch name',
+        description: 'Copies the active GitHub branch name to the clipboard.',
+        subtitle: 'GitHub branch',
+        website: 'github.com',
+        matchPatterns: ['github.com/*'],
+        publisher: {
+          name: 'Burst Examples',
+          handle: '@burst-examples',
+          avatarInitials: 'BE',
+        },
+        trustLevel: 'verified',
+        risk: 'medium',
+        permissions: ['Read page DOM', 'Write clipboard'],
+        sourceUrl: 'https://github.com/burst/examples/tree/main/github-workflow-pack',
+        installs: 1450,
+        rating: 4.8,
+        icon: { type: 'favicon', host: 'github.com' },
+        version: '0.1.0',
+      },
+      {
+        id: 'summarize-github-pr',
+        packId: 'github-workflow-pack',
+        packTitle: 'GitHub Workflow Pack',
+        title: 'Summarize GitHub pull request',
+        description: 'Summarizes the active GitHub pull request page.',
+        subtitle: 'PR summary',
+        website: 'github.com',
+        matchPatterns: ['github.com/*'],
+        publisher: {
+          name: 'Burst Examples',
+          handle: '@burst-examples',
+          avatarInitials: 'BE',
+        },
+        trustLevel: 'verified',
+        risk: 'medium',
+        permissions: ['Read page DOM', 'Use AI'],
+        sourceUrl: 'https://github.com/burst/examples/tree/main/github-workflow-pack',
+        installs: 1450,
+        rating: 4.8,
+        icon: { type: 'favicon', host: 'github.com' },
+        version: '0.1.0',
+      },
+    ],
   },
   {
-    id: 'markdown-link-builder',
-    title: 'Copy as Markdown link',
-    description: 'Copies the current page title and URL as a formatted Markdown link.',
-    subtitle: 'Markdown link',
+    id: 'writing-utilities-pack',
+    title: 'Writing Utilities Pack',
+    description: 'Global copy, formatting, and selected text utilities for writing across websites.',
     website: 'all sites',
     matchPatterns: ['<all_urls>'],
     publisher: {
@@ -104,18 +160,65 @@ export const registryCommandsData: BurstCommand[] = [
     },
     trustLevel: 'verified',
     risk: 'low',
-    permissions: ['Read page DOM', 'Write clipboard'],
-    sourceUrl: 'https://github.com/schen/burst-plugins/tree/main/markdown-link',
+    permissions: ['Read page DOM', 'Read selection', 'Write clipboard', 'Toast alerts'],
+    sourceUrl: 'https://github.com/schen/burst-plugins/tree/main/writing-utilities',
     installs: 4230,
     rating: 4.9,
     icon: { type: 'emoji', value: '🔗' },
     version: '1.0.1',
+    commands: [
+      {
+        id: 'markdown-link-builder',
+        packId: 'writing-utilities-pack',
+        packTitle: 'Writing Utilities Pack',
+        title: 'Copy as Markdown link',
+        description: 'Copies the current page title and URL as a formatted Markdown link.',
+        subtitle: 'Markdown link',
+        website: 'all sites',
+        matchPatterns: ['<all_urls>'],
+        publisher: {
+          name: 'Sarah Chen',
+          handle: '@schen',
+          avatarInitials: 'SC',
+        },
+        trustLevel: 'verified',
+        risk: 'low',
+        permissions: ['Read page DOM', 'Write clipboard'],
+        sourceUrl: 'https://github.com/schen/burst-plugins/tree/main/writing-utilities',
+        installs: 4230,
+        rating: 4.9,
+        icon: { type: 'emoji', value: '🔗' },
+        version: '1.0.1',
+      },
+      {
+        id: 'json-formatter-toast',
+        packId: 'writing-utilities-pack',
+        packTitle: 'Writing Utilities Pack',
+        title: 'Format Selected JSON',
+        description: 'Parses the selected text as JSON, formats it, and displays a formatted snippet in a toast.',
+        subtitle: 'Format JSON',
+        website: 'all sites',
+        matchPatterns: ['<all_urls>'],
+        publisher: {
+          name: 'Sarah Chen',
+          handle: '@schen',
+          avatarInitials: 'SC',
+        },
+        trustLevel: 'verified',
+        risk: 'low',
+        permissions: ['Read selection', 'Toast alerts'],
+        sourceUrl: 'https://github.com/schen/burst-plugins/tree/main/writing-utilities',
+        installs: 1540,
+        rating: 4.7,
+        icon: { type: 'emoji', value: '📄' },
+        version: '1.0.1',
+      },
+    ],
   },
   {
-    id: 'tailwind-css-exporter',
-    title: 'Tailwind CSS Exporter',
-    description: 'Extracts the Tailwind HTML snippet under the cursor and copies it to clipboard.',
-    subtitle: 'Tailwind snippet',
+    id: 'tailwind-play-pack',
+    title: 'Tailwind Play Pack',
+    description: 'Commands for extracting useful snippets from Tailwind Play sessions.',
     website: 'tailwindplay.com',
     matchPatterns: ['play.tailwindcss.com/*'],
     publisher: {
@@ -126,32 +229,40 @@ export const registryCommandsData: BurstCommand[] = [
     trustLevel: 'community',
     risk: 'medium',
     permissions: ['Read page DOM', 'Write clipboard'],
-    sourceUrl: 'https://github.com/burst/examples/tree/main/tailwind-exporter',
+    sourceUrl: 'https://github.com/burst/examples/tree/main/tailwind-play-pack',
     installs: 320,
     rating: 4.2,
     icon: { type: 'initials', value: 'TW' },
-  },
-  {
-    id: 'json-formatter-toast',
-    title: 'Format Selected JSON',
-    description: 'Parses the selected text as JSON, formats it, and displays a formatted snippet in a toast.',
-    subtitle: 'Format JSON',
-    website: 'all sites',
-    matchPatterns: ['<all_urls>'],
-    publisher: {
-      name: 'Sarah Chen',
-      handle: '@schen',
-      avatarInitials: 'SC',
-    },
-    trustLevel: 'verified',
-    risk: 'low',
-    permissions: ['Read selection', 'Toast alerts'],
-    sourceUrl: 'https://github.com/schen/burst-plugins/tree/main/json-formatter',
-    installs: 1540,
-    rating: 4.7,
-    icon: { type: 'emoji', value: '📄' },
+    version: '0.2.0',
+    commands: [
+      {
+        id: 'tailwind-css-exporter',
+        packId: 'tailwind-play-pack',
+        packTitle: 'Tailwind Play Pack',
+        title: 'Tailwind CSS Exporter',
+        description: 'Extracts the Tailwind HTML snippet under the cursor and copies it to clipboard.',
+        subtitle: 'Tailwind snippet',
+        website: 'tailwindplay.com',
+        matchPatterns: ['play.tailwindcss.com/*'],
+        publisher: {
+          name: 'Burst Examples',
+          handle: '@burst-examples',
+          avatarInitials: 'BE',
+        },
+        trustLevel: 'community',
+        risk: 'medium',
+        permissions: ['Read page DOM', 'Write clipboard'],
+        sourceUrl: 'https://github.com/burst/examples/tree/main/tailwind-play-pack',
+        installs: 320,
+        rating: 4.2,
+        icon: { type: 'initials', value: 'TW' },
+        version: '0.2.0',
+      },
+    ],
   },
 ];
+
+export const registryCommandsData: BurstCommand[] = registryCommandPacksData.flatMap(commandPackToCommands);
 
 const mockAuditReports: Record<string, AuditReport> = {
   'copy-github-branch': {
@@ -343,6 +454,46 @@ export async function getRegistryCommands(query = '', baseOverride?: string): Pr
   }
   const response = await fetch(url.toString());
   if (!response.ok) throw new Error('Failed to fetch registry commands');
+  return response.json();
+}
+
+export async function getRegistryCommandPacks(query = '', baseOverride?: string): Promise<BurstCommandPack[]> {
+  if (isCliTest) {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return registryCommandPacksData;
+    return registryCommandPacksData.filter((pack) => {
+      const searchable = [
+        pack.title,
+        pack.description,
+        pack.website,
+        pack.publisher.name,
+        pack.publisher.handle,
+        pack.trustLevel,
+        pack.risk,
+        ...pack.permissions,
+        ...pack.commands.flatMap((command) => [command.title, command.description, ...command.permissions]),
+      ]
+        .join(' ')
+        .toLowerCase();
+      return searchable.includes(normalized);
+    });
+  }
+  const url = new URL(getRegistryApiUrl('/api/packs', baseOverride));
+  if (query) {
+    url.searchParams.set('q', query);
+  }
+  const response = await fetch(url.toString());
+  if (!response.ok) throw new Error('Failed to fetch registry command packs');
+  return response.json();
+}
+
+export async function getRegistryCommandPack(id: string, baseOverride?: string): Promise<BurstCommandPack | undefined> {
+  if (isCliTest) {
+    return registryCommandPacksData.find((pack) => pack.id === id);
+  }
+  const response = await fetch(getRegistryApiUrl(`/api/packs/${encodeURIComponent(id)}`, baseOverride));
+  if (response.status === 404) return undefined;
+  if (!response.ok) throw new Error('Failed to fetch registry command pack');
   return response.json();
 }
 
@@ -591,6 +742,28 @@ export async function publishCommand(payload: any): Promise<BurstCommand> {
   if (!response.ok) {
     const err = await response.json().catch(() => ({ error: 'Failed to publish command' }));
     throw new Error(err.error || 'Failed to publish command');
+  }
+  return response.json();
+}
+
+export async function publishCommandPack(payload: any): Promise<BurstCommandPack> {
+  if (isCliTest) {
+    return {
+      ...payload,
+      installs: 0,
+      rating: 5.0,
+      icon: payload.icon || { type: 'initials', value: payload.title.substring(0, 2).toUpperCase() },
+      version: payload.version || '1.0.0',
+    };
+  }
+  const response = await fetch(`${API_BASE}/api/packs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'Failed to publish command pack' }));
+    throw new Error(err.error || 'Failed to publish command pack');
   }
   return response.json();
 }

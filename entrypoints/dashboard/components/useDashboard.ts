@@ -14,6 +14,7 @@ import {
   saveInstalledRegistryCommands,
   setRegistryCommandStatus,
   uninstallRegistryCommand,
+  uninstallRegistryCommandPack,
 } from '@/src/lib/registryStorage';
 import { getRegistryCommand } from '@/src/lib/registryApi';
 import type { BurstCommand } from '@/src/lib/commands';
@@ -385,6 +386,21 @@ export function useDashboard() {
     setSaveState(isRegistryCommandEnabled({ status }) ? 'Enabled registry command' : 'Disabled registry command');
   }
 
+  async function setRegistryCommandPackStatusDirectly(packId: string, status: 'enabled' | 'disabled') {
+    const packCommands = installedRegistryCommands.filter((command) => command.packId === packId);
+    for (const command of packCommands) {
+      await setRegistryCommandStatus(command.id, status);
+    }
+    const next = (await loadInstalledRegistryCommands()).map((item) => (
+      item.packId === packId ? { ...item, status } : item
+    ));
+    setInstalledRegistryCommands(next);
+    if (typeof browser !== 'undefined' && browser.runtime?.sendMessage) {
+      await browser.runtime.sendMessage({ type: 'burst:sync-local-scripts' }).catch(() => {});
+    }
+    setSaveState(isRegistryCommandEnabled({ status }) ? 'Enabled registry pack' : 'Disabled registry pack');
+  }
+
   async function uninstallOfficialRegistryCommand(commandId: string) {
     await uninstallRegistryCommand(commandId);
     const next = await loadInstalledRegistryCommands();
@@ -397,6 +413,21 @@ export function useDashboard() {
       await browser.runtime.sendMessage({ type: 'burst:sync-local-scripts' }).catch(() => {});
     }
     setSaveState('Uninstalled registry command');
+  }
+
+  async function uninstallOfficialRegistryCommandPack(packId: string) {
+    const removedIds = installedRegistryCommands.filter((command) => command.packId === packId).map((command) => command.id);
+    await uninstallRegistryCommandPack(packId);
+    const next = await loadInstalledRegistryCommands();
+    setInstalledRegistryCommands(next);
+    if (selectedRegistryCommandId && removedIds.includes(selectedRegistryCommandId)) {
+      setSelectedRegistryCommandId(undefined);
+      navigateToScript(scripts[0]?.id);
+    }
+    if (typeof browser !== 'undefined' && browser.runtime?.sendMessage) {
+      await browser.runtime.sendMessage({ type: 'burst:sync-local-scripts' }).catch(() => {});
+    }
+    setSaveState('Uninstalled registry pack');
   }
 
   async function forkOfficialRegistryCommand(command: BurstCommand) {
@@ -712,7 +743,9 @@ export function useDashboard() {
     exportScripts,
     setScriptStatusDirectly,
     setRegistryCommandStatusDirectly,
+    setRegistryCommandPackStatusDirectly,
     uninstallOfficialRegistryCommand,
+    uninstallOfficialRegistryCommandPack,
     forkOfficialRegistryCommand,
     unlinkForkedScript,
     resetForkedScriptToUpstream,

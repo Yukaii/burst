@@ -9,6 +9,7 @@ import {
   Trash2,
   PanelLeftClose,
   CheckCircle2,
+  Boxes,
 } from 'lucide-react';
 import logoUrl from '@/assets/logo.svg';
 import type { BurstCommand } from '@/src/lib/commands';
@@ -31,7 +32,9 @@ export function LeftSidebar({
   onImport,
   onToggleScriptStatus,
   onToggleRegistryCommandStatus,
+  onToggleRegistryCommandPackStatus,
   onUninstallRegistryCommand,
+  onUninstallRegistryCommandPack,
   onForkRegistryCommand,
   onExportScript,
   onDeleteScript,
@@ -62,7 +65,9 @@ export function LeftSidebar({
   onImport: () => void;
   onToggleScriptStatus: (script: LocalScript) => void;
   onToggleRegistryCommandStatus: (command: BurstCommand) => void;
+  onToggleRegistryCommandPackStatus: (packId: string, status: 'enabled' | 'disabled') => void;
   onUninstallRegistryCommand: (commandId: string) => void;
+  onUninstallRegistryCommandPack: (packId: string) => void;
   onForkRegistryCommand: (command: BurstCommand) => void;
   onExportScript: (script: LocalScript) => void;
   onDeleteScript: (script: LocalScript) => void;
@@ -86,6 +91,38 @@ export function LeftSidebar({
   const [openMenuId, setOpenMenuId] = useState<string | undefined>();
   const importInputRef = useRef<HTMLInputElement>(null);
   const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
+  const registryGroups = React.useMemo(() => {
+    const groups = new Map<string, { id: string; title: string; commands: BurstCommand[] }>();
+    const looseCommands: BurstCommand[] = [];
+
+    for (const command of installedRegistryCommands) {
+      if (!command.packId) {
+        looseCommands.push(command);
+        continue;
+      }
+      const existing = groups.get(command.packId);
+      if (existing) {
+        existing.commands.push(command);
+      } else {
+        groups.set(command.packId, {
+          id: command.packId,
+          title: command.packTitle || command.packId,
+          commands: [command],
+        });
+      }
+    }
+
+    const packs = [...groups.values()].filter((group) => group.commands.length > 1);
+    const groupedIds = new Set(packs.flatMap((group) => group.commands.map((command) => command.id)));
+
+    return {
+      packs,
+      looseCommands: [
+        ...looseCommands,
+        ...[...groups.values()].flatMap((group) => group.commands).filter((command) => !groupedIds.has(command.id)),
+      ],
+    };
+  }, [installedRegistryCommands]);
 
   if (!leftSidebarOpen) return null;
 
@@ -256,7 +293,82 @@ export function LeftSidebar({
                     <div className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase pt-3 pb-1 shrink-0">
                       Registry Installs
                     </div>
-                    {installedRegistryCommands.map((command) => {
+                    {registryGroups.packs.map((pack) => {
+                      const enabledCount = pack.commands.filter(isRegistryCommandEnabled).length;
+                      const allEnabled = enabledCount === pack.commands.length;
+                      const selectedInPack = pack.commands.some((command) => command.id === selectedRegistryCommandId);
+                      return (
+                        <div key={pack.id} className={`rounded-lg border ${selectedInPack ? 'border-border bg-accent/50' : 'border-border/60 bg-card/40'} p-1.5`}>
+                          <div className="group flex items-center justify-between gap-2 rounded-md p-1.5">
+                            <div className="flex min-w-0 flex-1 items-center gap-2">
+                              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${
+                                allEnabled
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                  : 'bg-red-500/10 text-red-400 border-red-500/20'
+                              }`}>
+                                <Boxes className="h-3.5 w-3.5" />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <strong className="block truncate text-xs font-semibold text-foreground">{pack.title}</strong>
+                                <em className="block truncate text-[10px] not-italic font-medium text-muted-foreground">
+                                  {pack.commands.length} commands · {enabledCount} enabled
+                                </em>
+                              </span>
+                            </div>
+                            <div className="relative shrink-0">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setOpenMenuId((c) => c === pack.id ? undefined : pack.id); }}
+                                className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent/80 cursor-pointer transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                type="button"
+                                title="Pack actions"
+                              >
+                                <MoreVertical className="w-3.5 h-3.5" />
+                              </button>
+                              {openMenuId === pack.id && (
+                                <>
+                                  <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenMenuId(undefined); }} />
+                                  <div className="absolute right-0 top-full mt-1.5 z-20 w-40 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                      type="button"
+                                      onClick={() => { onToggleRegistryCommandPackStatus(pack.id, allEnabled ? 'disabled' : 'enabled'); setOpenMenuId(undefined); }}
+                                      className="w-full flex items-center gap-2 p-2 rounded text-xs hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors text-left"
+                                    >
+                                      <Power className="w-3.5 h-3.5 text-muted-foreground" />
+                                      {allEnabled ? 'Disable pack' : 'Enable pack'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => { onUninstallRegistryCommandPack(pack.id); setOpenMenuId(undefined); }}
+                                      className="w-full flex items-center gap-2 p-2 rounded text-xs text-destructive hover:bg-destructive/10 cursor-pointer transition-colors text-left"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                                      Uninstall pack
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            {pack.commands.map((command) => (
+                              <RegistryCommandRow
+                                key={command.id}
+                                command={command}
+                                selected={command.id === selectedRegistryCommandId}
+                                openMenuId={openMenuId}
+                                setOpenMenuId={setOpenMenuId}
+                                onSelectRegistryCommand={onSelectRegistryCommand}
+                                onToggleRegistryCommandStatus={onToggleRegistryCommandStatus}
+                                onForkRegistryCommand={onForkRegistryCommand}
+                                onUninstallRegistryCommand={onUninstallRegistryCommand}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {registryGroups.looseCommands.map((command) => {
                       const enabled = isRegistryCommandEnabled(command);
                       return (
                         <div
@@ -404,5 +516,97 @@ export function LeftSidebar({
       </aside>
       <div className={`resize-handle ${isDraggingLeft ? 'active' : ''}`} onMouseDown={onStartLeftDrag} />
     </>
+  );
+}
+
+function RegistryCommandRow({
+  command,
+  selected,
+  openMenuId,
+  setOpenMenuId,
+  onSelectRegistryCommand,
+  onToggleRegistryCommandStatus,
+  onForkRegistryCommand,
+  onUninstallRegistryCommand,
+}: {
+  command: BurstCommand;
+  selected: boolean;
+  openMenuId: string | undefined;
+  setOpenMenuId: React.Dispatch<React.SetStateAction<string | undefined>>;
+  onSelectRegistryCommand: (id: string) => void;
+  onToggleRegistryCommandStatus: (command: BurstCommand) => void;
+  onForkRegistryCommand: (command: BurstCommand) => void;
+  onUninstallRegistryCommand: (commandId: string) => void;
+}) {
+  const enabled = isRegistryCommandEnabled(command);
+
+  return (
+    <div
+      className={`group w-full flex items-center justify-between p-2 rounded-lg transition-colors border border-transparent hover:bg-accent/40 cursor-pointer ${
+        selected ? 'bg-accent border-border' : ''
+      }`}
+      onClick={() => onSelectRegistryCommand(command.id)}
+    >
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <span className={`w-8 h-8 flex items-center justify-center rounded-md border text-xs font-bold shrink-0 ${
+          enabled
+            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+            : 'bg-red-500/10 text-red-400 border-red-500/20'
+        }`}>
+          <CheckCircle2 className="w-4 h-4" />
+        </span>
+        <span className="min-w-0 flex-1 flex flex-col gap-0.5">
+          <strong className="text-xs font-semibold text-foreground truncate block">{command.title}</strong>
+          <em className="text-[10px] text-muted-foreground truncate block not-italic font-medium">
+            {formatMatchPatterns(command.matchPatterns)} ·{' '}
+            <span className={enabled ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>
+              {enabled ? 'enabled' : 'disabled'}
+            </span>
+          </em>
+        </span>
+      </div>
+
+      <div className="relative shrink-0 ml-1">
+        <button
+          onClick={(e) => { e.stopPropagation(); setOpenMenuId((c) => c === command.id ? undefined : command.id); }}
+          className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent/80 cursor-pointer transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+          type="button"
+          title="Actions"
+        >
+          <MoreVertical className="w-3.5 h-3.5" />
+        </button>
+        {openMenuId === command.id && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenMenuId(undefined); }} />
+            <div className="absolute right-0 top-full mt-1.5 z-20 w-36 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md animate-fade-in" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => { onToggleRegistryCommandStatus(command); setOpenMenuId(undefined); }}
+                className="w-full flex items-center gap-2 p-2 rounded text-xs hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors text-left"
+              >
+                <Power className="w-3.5 h-3.5 text-muted-foreground" />
+                {enabled ? 'Disable' : 'Enable'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { onForkRegistryCommand(command); setOpenMenuId(undefined); }}
+                className="w-full flex items-center gap-2 p-2 rounded text-xs hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors text-left"
+              >
+                <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                Fork
+              </button>
+              <button
+                type="button"
+                onClick={() => { onUninstallRegistryCommand(command.id); setOpenMenuId(undefined); }}
+                className="w-full flex items-center gap-2 p-2 rounded text-xs text-destructive hover:bg-destructive/10 cursor-pointer transition-colors text-left"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                Uninstall
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

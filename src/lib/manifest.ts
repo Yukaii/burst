@@ -1,7 +1,7 @@
 import type { CommandIcon, CommandRisk } from './commands';
 
-export type BurstCommandManifest = {
-  schemaVersion: 1;
+export type BurstCommandPackManifest = {
+  schemaVersion: 2;
   id: string;
   title: string;
   description: string;
@@ -19,24 +19,37 @@ export type BurstCommandManifest = {
     url: string;
     integrity?: string;
   };
-  runtime: {
-    entrypoint: string;
-    capabilities: Array<'page-dom' | 'selection' | 'clipboard-write' | 'toast' | 'list'>;
-  };
   version: string;
   risk: CommandRisk;
+  commands: BurstCommandManifestEntry[];
 };
+
+export type BurstCommandManifestEntry = {
+  id: string;
+  title: string;
+  description: string;
+  matchPatterns?: string[];
+  permissions?: string[];
+  icon?: CommandIcon;
+  risk?: CommandRisk;
+  runtime: {
+    entrypoint: string;
+    capabilities: Array<'page-dom' | 'selection' | 'clipboard-write' | 'toast' | 'list' | 'ai'>;
+  };
+};
+
+export type BurstCommandManifest = BurstCommandPackManifest;
 
 export type ManifestValidationResult = {
   ok: boolean;
-  manifest?: BurstCommandManifest;
+  manifest?: BurstCommandPackManifest;
   errors: string[];
 };
 
 export const burstCommandManifestSchema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
-  $id: 'https://burst.dev/schemas/burst.command.schema.json',
-  title: 'Burst command manifest',
+  $id: 'https://burst.dev/schemas/burst.command-pack.schema.json',
+  title: 'Burst command pack manifest',
   type: 'object',
   required: [
     'schemaVersion',
@@ -49,13 +62,13 @@ export const burstCommandManifestSchema = {
     'icon',
     'permissions',
     'source',
-    'runtime',
     'version',
     'risk',
+    'commands',
   ],
   additionalProperties: false,
   properties: {
-    schemaVersion: { const: 1 },
+    schemaVersion: { const: 2 },
     id: { type: 'string', pattern: '^[a-z0-9][a-z0-9-]{2,63}$' },
     title: { type: 'string', minLength: 3, maxLength: 80 },
     description: { type: 'string', minLength: 12, maxLength: 240 },
@@ -111,29 +124,75 @@ export const burstCommandManifestSchema = {
         integrity: { type: 'string' },
       },
     },
-    runtime: {
-      type: 'object',
-      required: ['entrypoint', 'capabilities'],
-      additionalProperties: false,
-      properties: {
-        entrypoint: { type: 'string', minLength: 1 },
-        capabilities: {
-          type: 'array',
-          items: { enum: ['page-dom', 'selection', 'clipboard-write', 'toast', 'list'] },
+    version: { type: 'string', pattern: '^\\d+\\.\\d+\\.\\d+$' },
+    risk: { enum: ['low', 'medium', 'high'] },
+    commands: {
+      type: 'array',
+      minItems: 1,
+      items: {
+        type: 'object',
+        required: ['id', 'title', 'description', 'runtime'],
+        additionalProperties: false,
+        properties: {
+          id: { type: 'string', pattern: '^[a-z0-9][a-z0-9-]{2,63}$' },
+          title: { type: 'string', minLength: 3, maxLength: 80 },
+          description: { type: 'string', minLength: 12, maxLength: 240 },
+          matchPatterns: {
+            type: 'array',
+            minItems: 1,
+            items: { type: 'string', minLength: 1 },
+          },
+          permissions: {
+            type: 'array',
+            items: { type: 'string', minLength: 1 },
+          },
+          icon: {
+            oneOf: [
+              {
+                type: 'object',
+                required: ['type'],
+                additionalProperties: false,
+                properties: { type: { const: 'favicon' }, host: { type: 'string' } },
+              },
+              {
+                type: 'object',
+                required: ['type', 'value'],
+                additionalProperties: false,
+                properties: { type: { enum: ['initials', 'emoji'] }, value: { type: 'string', minLength: 1 } },
+              },
+              {
+                type: 'object',
+                required: ['type', 'src'],
+                additionalProperties: false,
+                properties: { type: { enum: ['url', 'asset'] }, src: { type: 'string', minLength: 1 } },
+              },
+            ],
+          },
+          risk: { enum: ['low', 'medium', 'high'] },
+          runtime: {
+            type: 'object',
+            required: ['entrypoint', 'capabilities'],
+            additionalProperties: false,
+            properties: {
+              entrypoint: { type: 'string', minLength: 1 },
+              capabilities: {
+                type: 'array',
+                items: { enum: ['page-dom', 'selection', 'clipboard-write', 'toast', 'list', 'ai'] },
+              },
+            },
+          },
         },
       },
     },
-    version: { type: 'string', pattern: '^\\d+\\.\\d+\\.\\d+$' },
-    risk: { enum: ['low', 'medium', 'high'] },
   },
 } as const;
 
 export const sampleCommandManifests = [
   {
-    schemaVersion: 1,
-    id: 'copy-github-branch',
-    title: 'Copy GitHub branch name',
-    description: 'Copies the active GitHub branch name to the clipboard.',
+    schemaVersion: 2,
+    id: 'github-workflow-pack',
+    title: 'GitHub Workflow Pack',
+    description: 'A focused set of GitHub commands for branch, pull request, and issue workflows.',
     website: 'github.com',
     matchPatterns: ['github.com/*'],
     publisher: {
@@ -145,16 +204,34 @@ export const sampleCommandManifests = [
     permissions: ['Read page DOM', 'Write clipboard'],
     source: {
       type: 'git',
-      url: 'https://github.com/burst/examples/tree/main/copy-github-branch',
-    },
-    runtime: {
-      entrypoint: 'src/index.ts',
-      capabilities: ['page-dom', 'clipboard-write', 'toast'],
+      url: 'https://github.com/burst/examples/tree/main/github-workflow-pack',
     },
     version: '0.1.0',
     risk: 'medium',
+    commands: [
+      {
+        id: 'copy-github-branch',
+        title: 'Copy GitHub branch name',
+        description: 'Copies the active GitHub branch name to the clipboard.',
+        permissions: ['Read page DOM', 'Write clipboard'],
+        runtime: {
+          entrypoint: 'commands/copy-branch.ts',
+          capabilities: ['page-dom', 'clipboard-write', 'toast'],
+        },
+      },
+      {
+        id: 'summarize-github-pr',
+        title: 'Summarize GitHub pull request',
+        description: 'Summarizes the active GitHub pull request page.',
+        permissions: ['Read page DOM', 'Use AI'],
+        runtime: {
+          entrypoint: 'commands/summarize-pr.ts',
+          capabilities: ['page-dom', 'toast', 'ai'],
+        },
+      },
+    ],
   },
-] satisfies BurstCommandManifest[];
+] satisfies BurstCommandPackManifest[];
 
 export const sampleManifestValidationResults = sampleCommandManifests.map((manifest) => ({
   id: manifest.id,
@@ -168,7 +245,7 @@ export function validateCommandManifest(value: unknown): ManifestValidationResul
     return { ok: false, errors: ['Manifest must be a JSON object.'] };
   }
 
-  expectLiteral(value.schemaVersion, 1, 'schemaVersion', errors);
+  expectLiteral(value.schemaVersion, 2, 'schemaVersion', errors);
   expectSlug(value.id, 'id', errors);
   expectText(value.title, 'title', errors, 3, 80);
   expectText(value.description, 'description', errors, 12, 240);
@@ -178,13 +255,44 @@ export function validateCommandManifest(value: unknown): ManifestValidationResul
   validateIcon(value.icon, errors);
   expectStringArray(value.permissions, 'permissions', errors);
   validateSource(value.source, errors);
-  validateRuntime(value.runtime, errors);
   expectSemver(value.version, 'version', errors);
   expectOneOf(value.risk, ['low', 'medium', 'high'], 'risk', errors);
+  validateManifestCommands(value.commands, errors);
   validatePackageFields(value, errors);
 
   if (errors.length > 0) return { ok: false, errors };
-  return { ok: true, manifest: value as BurstCommandManifest, errors: [] };
+  return { ok: true, manifest: value as BurstCommandPackManifest, errors: [] };
+}
+
+function validateManifestCommands(value: unknown, errors: string[]) {
+  if (!Array.isArray(value)) {
+    errors.push('commands must be an array.');
+    return;
+  }
+
+  if (value.length === 0) errors.push('commands must include at least 1 item.');
+  const commandIds = new Set<string>();
+
+  value.forEach((command, index) => {
+    const prefix = `commands[${index}]`;
+    if (!isRecord(command)) {
+      errors.push(`${prefix} must be an object.`);
+      return;
+    }
+
+    expectSlug(command.id, `${prefix}.id`, errors);
+    if (typeof command.id === 'string') {
+      if (commandIds.has(command.id)) errors.push(`${prefix}.id must be unique within the pack.`);
+      commandIds.add(command.id);
+    }
+    expectText(command.title, `${prefix}.title`, errors, 3, 80);
+    expectText(command.description, `${prefix}.description`, errors, 12, 240);
+    if ('matchPatterns' in command) expectStringArray(command.matchPatterns, `${prefix}.matchPatterns`, errors, { minItems: 1 });
+    if ('permissions' in command) expectStringArray(command.permissions, `${prefix}.permissions`, errors);
+    if ('icon' in command) validateIcon(command.icon, errors, `${prefix}.icon`);
+    if ('risk' in command) expectOneOf(command.risk, ['low', 'medium', 'high'], `${prefix}.risk`, errors);
+    validateRuntime(command.runtime, errors, `${prefix}.runtime`);
+  });
 }
 
 function validatePublisher(value: unknown, errors: string[]) {
@@ -198,28 +306,28 @@ function validatePublisher(value: unknown, errors: string[]) {
   expectText(value.avatarInitials, 'publisher.avatarInitials', errors, 1, 3);
 }
 
-function validateIcon(value: unknown, errors: string[]) {
+function validateIcon(value: unknown, errors: string[], field = 'icon') {
   if (!isRecord(value)) {
-    errors.push('icon must be an object.');
+    errors.push(`${field} must be an object.`);
     return;
   }
 
   if (value.type === 'favicon') {
-    if ('host' in value && typeof value.host !== 'string') errors.push('icon.host must be a string.');
+    if ('host' in value && typeof value.host !== 'string') errors.push(`${field}.host must be a string.`);
     return;
   }
 
   if (value.type === 'initials' || value.type === 'emoji') {
-    expectText(value.value, 'icon.value', errors, 1);
+    expectText(value.value, `${field}.value`, errors, 1);
     return;
   }
 
   if (value.type === 'url' || value.type === 'asset') {
-    expectText(value.src, 'icon.src', errors, 1);
+    expectText(value.src, `${field}.src`, errors, 1);
     return;
   }
 
-  errors.push('icon.type must be favicon, initials, emoji, url, or asset.');
+  errors.push(`${field}.type must be favicon, initials, emoji, url, or asset.`);
 }
 
 function validateSource(value: unknown, errors: string[]) {
@@ -233,18 +341,18 @@ function validateSource(value: unknown, errors: string[]) {
   if ('integrity' in value) expectIntegrity(value.integrity, 'source.integrity', errors);
 }
 
-function validateRuntime(value: unknown, errors: string[]) {
+function validateRuntime(value: unknown, errors: string[], field = 'runtime') {
   if (!isRecord(value)) {
-    errors.push('runtime must be an object.');
+    errors.push(`${field} must be an object.`);
     return;
   }
 
-  expectText(value.entrypoint, 'runtime.entrypoint', errors, 1);
-  if (typeof value.entrypoint === 'string') expectEntrypoint(value.entrypoint, 'runtime.entrypoint', errors);
-  expectStringArray(value.capabilities, 'runtime.capabilities', errors);
+  expectText(value.entrypoint, `${field}.entrypoint`, errors, 1);
+  if (typeof value.entrypoint === 'string') expectEntrypoint(value.entrypoint, `${field}.entrypoint`, errors);
+  expectStringArray(value.capabilities, `${field}.capabilities`, errors);
   if (Array.isArray(value.capabilities)) {
     value.capabilities.forEach((capability, index) => {
-      expectOneOf(capability, ['page-dom', 'selection', 'clipboard-write', 'toast', 'list'], `runtime.capabilities[${index}]`, errors);
+      expectOneOf(capability, ['page-dom', 'selection', 'clipboard-write', 'toast', 'list', 'ai'], `${field}.capabilities[${index}]`, errors);
     });
   }
 }

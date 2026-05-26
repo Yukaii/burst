@@ -39,6 +39,8 @@ export type BurstCustomList = {
 
 export type BurstCommand = {
   id: string;
+  packId?: string;
+  packTitle?: string;
   title: string;
   description: string;
   subtitle?: string;
@@ -67,9 +69,41 @@ export type BurstCommand = {
   registryCommandId?: string;
 };
 
-import { registryCommandsData } from './registryApi';
+export type BurstCommandPack = {
+  id: string;
+  title: string;
+  description: string;
+  website: string;
+  matchPatterns: string[];
+  publisher: BurstCommand['publisher'];
+  trustLevel: CommandTrustLevel;
+  risk: CommandRisk;
+  permissions: string[];
+  sourceUrl: string;
+  installs: number;
+  rating: number;
+  icon: CommandIcon;
+  version: string;
+  commands: BurstCommand[];
+  status?: 'enabled' | 'disabled';
+  pinnedCommandIds?: string[];
+};
 
-export const registryCommands: BurstCommand[] = registryCommandsData;
+export function commandPackToCommands(pack: BurstCommandPack): BurstCommand[] {
+  return pack.commands.map((command) => ({
+    ...command,
+    packId: pack.id,
+    packTitle: pack.title,
+    publisher: command.publisher ?? pack.publisher,
+    trustLevel: command.trustLevel ?? pack.trustLevel,
+    risk: command.risk ?? pack.risk,
+    website: command.website ?? pack.website,
+    sourceUrl: command.sourceUrl ?? pack.sourceUrl,
+    version: command.version ?? pack.version,
+    icon: command.icon ?? pack.icon,
+    registryInstalled: command.registryInstalled ?? pack.status === 'enabled',
+  }));
+}
 
 export const managementCommands: BurstCommand[] = [
   {

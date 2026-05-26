@@ -74,11 +74,27 @@ export default defineContentScript({
             window.postMessage({ type: 'burst:installed-commands-response', ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
           })
           .catch((err) => postBridgeError(type, err, bridgeMeta));
+      } else if (type === 'burst:install-command-pack') {
+        const { pack } = data as { pack: any };
+        browser.runtime.sendMessage({ type, pack })
+          .then((response) => {
+            window.postMessage({ type: 'burst:install-pack-success', packId: pack.id, ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
+            window.postMessage({ type: 'burst:installed-commands-response', ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
+          })
+          .catch((err) => postBridgeError(type, err, bridgeMeta));
       } else if (type === 'burst:uninstall-command') {
         const { commandId } = data as { commandId: string };
         browser.runtime.sendMessage({ type, commandId })
           .then((response) => {
             window.postMessage({ type: 'burst:uninstall-success', commandId, ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
+            window.postMessage({ type: 'burst:installed-commands-response', ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
+          })
+          .catch((err) => postBridgeError(type, err, bridgeMeta));
+      } else if (type === 'burst:uninstall-command-pack') {
+        const { packId } = data as { packId: string };
+        browser.runtime.sendMessage({ type, packId })
+          .then((response) => {
+            window.postMessage({ type: 'burst:uninstall-pack-success', packId, ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
             window.postMessage({ type: 'burst:installed-commands-response', ...response, bridgeSender: 'burst-extension', ...bridgeMeta }, '*');
           })
           .catch((err) => postBridgeError(type, err, bridgeMeta));
@@ -110,7 +126,9 @@ function isBridgeResponseType(type: string) {
     'burst:installed-commands-response',
     'burst:local-scripts-response',
     'burst:install-success',
+    'burst:install-pack-success',
     'burst:uninstall-success',
+    'burst:uninstall-pack-success',
     'burst:pin-success',
     'burst:unpin-success',
   ].includes(type);

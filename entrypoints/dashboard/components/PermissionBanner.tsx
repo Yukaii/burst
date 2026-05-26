@@ -1,18 +1,26 @@
 import React from 'react';
 
+function isChromeLikeBrowser() {
+  if (typeof navigator === 'undefined') return false;
+  const userAgent = navigator.userAgent;
+  return /\b(Chrome|Chromium|Edg|OPR|Brave)\b/i.test(userAgent) && !/Firefox/i.test(userAgent);
+}
+
 export function PermissionBanner() {
   async function handleEnableUserScripts() {
     if (typeof browser === 'undefined') return;
 
-    try {
-      const granted = await browser.permissions?.request?.({ permissions: ['userScripts'] });
-      if (granted) {
-        await browser.runtime.sendMessage({ type: 'burst:sync-local-scripts' }).catch(() => undefined);
-        window.location.reload();
-        return;
+    if (!isChromeLikeBrowser()) {
+      try {
+        const granted = await browser.permissions?.request?.({ permissions: ['userScripts'] });
+        if (granted) {
+          await browser.runtime.sendMessage({ type: 'burst:sync-local-scripts' }).catch(() => undefined);
+          window.location.reload();
+          return;
+        }
+      } catch {
+        // Chrome exposes userScripts through extension details instead of permissions.request().
       }
-    } catch {
-      // Chrome exposes userScripts through extension details instead of permissions.request().
     }
 
     if (browser.tabs?.create) {
@@ -46,8 +54,8 @@ export function PermissionBanner() {
           <div>
             <h4 className="text-[11px] font-bold text-foreground uppercase tracking-wider">Chrome / Chromium</h4>
             <ol className="list-decimal pl-4 mt-1.5 space-y-1 text-xs text-muted-foreground">
-              <li>Open extension details.</li>
-              <li>Switch <strong>&quot;Allow user scripts&quot;</strong> to <strong>ON</strong>.</li>
+              <li>Open Burst in <strong>chrome://extensions</strong>.</li>
+              <li>Manually switch <strong>&quot;Allow user scripts&quot;</strong> to <strong>ON</strong>.</li>
             </ol>
           </div>
         </div>
@@ -58,10 +66,10 @@ export function PermissionBanner() {
           type="button"
           className="inline-flex items-center justify-center rounded-md text-xs font-semibold px-3 py-1.5 bg-amber-500 text-black shadow hover:bg-amber-400 cursor-pointer transition-colors"
         >
-          Enable User Scripts
+          {isChromeLikeBrowser() ? 'Open Extension Page' : 'Enable User Scripts'}
         </button>
         <div className="text-[10px] text-center text-muted-foreground font-medium italic">
-          Will auto-detect on return
+          Return after enabling
         </div>
       </div>
     </div>

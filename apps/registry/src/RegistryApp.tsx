@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import type { BurstCommand } from '@/src/lib/commands';
+import type { BurstCommand, BurstCommandPack } from '@/src/lib/commands';
 import type { LocalScript } from '@/src/lib/localScripts';
 import { CheckCircle2 } from 'lucide-react';
 import logoUrl from '@/assets/logo.svg';
@@ -8,6 +8,7 @@ import {
   getAuthConfig,
   getCurrentUser,
   getRegistryCommands,
+  getRegistryCommandPacks,
   getRegistryCommand,
   getAuditReport,
   getPublisherProfile,
@@ -119,6 +120,7 @@ export function RegistryApp() {
 
   const [query, setQuery] = useState('');
   const [commands, setCommands] = useState<BurstCommand[]>([]);
+  const [packs, setPacks] = useState<BurstCommandPack[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCommandId, setActiveCommandId] = useState<string | null>(null);
 
@@ -263,9 +265,13 @@ export function RegistryApp() {
 
     async function fetchCommands() {
       try {
-        const results = await getRegistryCommands(query);
+        const [results, packResults] = await Promise.all([
+          getRegistryCommands(query),
+          getRegistryCommandPacks(query),
+        ]);
         if (!active) return;
         setCommands(results);
+        setPacks(packResults);
         if (results.length > 0) {
           if (!activeCommandId || !results.some((c) => c.id === activeCommandId)) {
             setActiveCommandId(results[0].id);
@@ -436,8 +442,16 @@ export function RegistryApp() {
     sendBridgeMessage({ type: 'burst:install-command', command });
   };
 
+  const handleInstallPack = (pack: BurstCommandPack) => {
+    sendBridgeMessage({ type: 'burst:install-command-pack', pack });
+  };
+
   const handleUninstall = (commandId: string) => {
     sendBridgeMessage({ type: 'burst:uninstall-command', commandId });
+  };
+
+  const handleUninstallPack = (packId: string) => {
+    sendBridgeMessage({ type: 'burst:uninstall-command-pack', packId });
   };
 
   const handlePin = (commandId: string) => {
@@ -637,6 +651,7 @@ export function RegistryApp() {
             setQuery={setQuery}
             loading={loading}
             filteredCommands={filteredCommands}
+            packs={packs}
             activeCommandId={activeCommandId}
             setActiveCommandId={setActiveCommandId}
             installedCommandIds={installedCommandIds}
@@ -648,7 +663,9 @@ export function RegistryApp() {
             inspectorTab={inspectorTab}
             setInspectorTab={setInspectorTab}
             handleInstall={handleInstall}
+            handleInstallPack={handleInstallPack}
             handleUninstall={handleUninstall}
+            handleUninstallPack={handleUninstallPack}
             handlePin={handlePin}
             handleUnpin={handleUnpin}
             filterCategory={filterCategory}
@@ -669,9 +686,15 @@ export function RegistryApp() {
                 setNavTab('Discover');
                 setPublishSuccessToast(`Successfully published "${newCmd.title}"!`);
               }}
+              onPackPublishSuccess={(newPack) => {
+                setPacks((prev) => [newPack, ...prev]);
+                setNavTab('Discover');
+                setPublishSuccessToast(`Successfully published pack "${newPack.title}"!`);
+              }}
               setNavTab={setNavTab}
               bridgeConnected={bridgeConnected}
               localScripts={localScripts}
+              availableCommands={commands}
               onRefreshLocalScripts={handleRefreshLocalScripts}
             />
           </Suspense>
