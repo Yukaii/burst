@@ -3,6 +3,15 @@ import { linter, type Diagnostic } from '@codemirror/lint';
 import { burstAiApiNames, burstApiCompletions } from '@/src/lib/burstApiDocs';
 import { validateLocalScriptCode } from './utils';
 
+const contextHelpers = [
+  { name: 'ai', pattern: /\bai\./ },
+  { name: 'clipboard', pattern: /\bclipboard\./ },
+  { name: 'list', pattern: /\blist\s*\(/ },
+  { name: 'navigate', pattern: /\bnavigate\./ },
+  { name: 'page', pattern: /\bpage\./ },
+  { name: 'toast', pattern: /\btoast\s*\(/ },
+];
+
 const completionSource = (context: CompletionContext) => {
   const word = context.matchBefore(/[\w.]+/);
   if (!word || (word.from === word.to && !context.explicit)) return null;
@@ -25,6 +34,17 @@ export function createBurstApiAutocomplete() {
     activateOnTyping: true,
     defaultKeymap: true,
   });
+}
+
+function getRunDestructuredParams(code: string) {
+  const match = /export\s+default\s+async\s+function\s+run\s*\(\s*\{([^)]*)\}/.exec(code);
+  if (!match) return null;
+  return new Set(
+    match[1]
+      .split(',')
+      .map((part) => part.split(':')[0]?.trim())
+      .filter(Boolean),
+  );
 }
 
 export function createBurstApiLinter() {
@@ -71,6 +91,21 @@ export function createBurstApiLinter() {
         severity: 'warning',
         message: `Prefer Burst's ai helper over direct ${apiName} access so availability and capability checks stay consistent.`,
       });
+    }
+
+    const destructuredParams = getRunDestructuredParams(code);
+    if (destructuredParams) {
+      for (const helper of contextHelpers) {
+        if (destructuredParams.has(helper.name)) continue;
+        const match = helper.pattern.exec(code);
+        if (!match || code.slice(Math.max(0, match.index - 8), match.index) === 'context.') continue;
+        diagnostics.push({
+          from: match.index,
+          to: match.index + helper.name.length,
+          severity: 'warning',
+          message: `Add ${helper.name} to run({ ... }) before using this Burst helper.`,
+        });
+      }
     }
 
     const aiCall = /\bai\.(prompt|summarize|detectLanguage|translate|write|rewrite|proofread)\s*\(/.exec(code);

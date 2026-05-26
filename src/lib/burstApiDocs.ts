@@ -9,6 +9,51 @@ export type BurstApiCompletion = {
 
 export const burstApiCompletions: BurstApiCompletion[] = [
   {
+    label: 'script:quickList',
+    type: 'function',
+    detail: 'Starter script with list actions',
+    info: 'Inserts a complete local script that renders a command palette list with an action.',
+    apply: `export default async function run({ list, navigate }) {
+  list({
+    id: 'quick-links',
+    title: 'Quick Links',
+    items: [
+      {
+        id: 'overview',
+        title: 'Overview',
+        actions: [
+          {
+            id: 'open',
+            title: 'Open',
+            async onAction() {
+              await navigate.open('/?nav=overview');
+            },
+          },
+        ],
+      },
+    ],
+  });
+}`,
+    category: 'Feedback',
+  },
+  {
+    label: 'script:fetch',
+    type: 'function',
+    detail: 'Starter script with same-origin fetch',
+    info: 'Inserts a complete local script that fetches same-origin JSON and reports the result.',
+    apply: `export default async function run({ fetch, toast }) {
+  const response = await fetch('/api/me');
+  const data = await response.json();
+
+  toast({
+    title: 'Fetch complete',
+    message: JSON.stringify(data),
+    variant: 'success',
+  });
+}`,
+    category: 'Network',
+  },
+  {
     label: 'ai',
     type: 'property',
     detail: 'Burst AI helper',
