@@ -1,10 +1,14 @@
-import type { BurstCommand } from '@/src/lib/commands';
+import type { BurstCommand, BurstCommandPack } from '@/src/lib/commands';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
 import type { AuditReport, PublisherProfile } from '@/src/lib/registryApi';
-import { getMockScriptCode, registryCommandsData } from '@/src/lib/registryApi';
+import { getMockScriptCode, registryCommandPacksData, registryCommandsData } from '@/src/lib/registryApi';
 
 export type StoredRegistryCommand = BurstCommand & {
   code: string;
+  version: string;
+};
+
+export type StoredRegistryCommandPack = BurstCommandPack & {
   version: string;
 };
 
@@ -30,6 +34,19 @@ export type PublishCommandInput = {
   sourceUrl: string;
   icon: BurstCommand['icon'];
   code: string;
+  version?: string;
+};
+
+export type PublishCommandPackInput = {
+  id: string;
+  title: string;
+  description: string;
+  website: string;
+  matchPatterns: string[];
+  publisherHandle: string;
+  sourceUrl: string;
+  icon: BurstCommand['icon'];
+  commandIds: string[];
   version?: string;
 };
 
@@ -68,6 +85,9 @@ export type RegistryStore = {
   listCommands(query: string, host?: string): Promise<StoredRegistryCommand[]>;
   getCommand(id: string): Promise<StoredRegistryCommand | undefined>;
   createCommand(input: PublishCommandInput): Promise<StoredRegistryCommand>;
+  listPacks(query: string, host?: string): Promise<StoredRegistryCommandPack[]>;
+  getPack(id: string): Promise<StoredRegistryCommandPack | undefined>;
+  createPack(input: PublishCommandPackInput): Promise<StoredRegistryCommandPack>;
   getPublisherProfile(handle: string): Promise<StoredPublisherRecord | undefined>;
   listUsers(query: string): Promise<StoredPublisherRecord[]>;
   getUser(handle: string): Promise<StoredPublisherRecord | undefined>;
@@ -149,6 +169,33 @@ function matchesHost(command: StoredRegistryCommand, host: string | undefined): 
   });
 }
 
+function packMatchesSearch(pack: StoredRegistryCommandPack, query: string): boolean {
+  const normalized = normalizeQuery(query);
+  if (!normalized) return true;
+  return [
+    pack.title,
+    pack.description,
+    pack.website,
+    pack.publisher.name,
+    pack.publisher.handle,
+    pack.trustLevel,
+    pack.risk,
+    ...pack.permissions,
+    ...pack.commands.flatMap((command) => [command.title, command.description, ...command.permissions]),
+  ].join(' ').toLowerCase().includes(normalized);
+}
+
+function packMatchesHost(pack: StoredRegistryCommandPack, host: string | undefined): boolean {
+  const normalizedHost = normalizeHost(host);
+  if (!normalizedHost) return true;
+  if (pack.matchPatterns.includes('<all_urls>')) return true;
+  return pack.matchPatterns.some((pattern) => {
+    const normalizedPattern = pattern.trim().toLowerCase().replace(/^(\*:\/\/)?(https?:\/\/)?(www\.)?/, '');
+    const [patternHost] = normalizedPattern.split('/');
+    return normalizedHost === patternHost || normalizedHost.endsWith(`.${patternHost}`);
+  });
+}
+
 function getSeedPublisherProfile(handle: string): StoredPublisherRecord | undefined {
   return seedPublishers.find((profile) => profile.handle === handle);
 }
@@ -184,6 +231,35 @@ function buildStoredCommand(input: PublishCommandInput, publisher: StoredPublish
     icon: input.icon,
     code: input.code,
     version: input.version || '1.0.0',
+  };
+}
+
+function buildStoredPack(input: PublishCommandPackInput, publisher: StoredPublisherRecord, commands: StoredRegistryCommand[]): StoredRegistryCommandPack {
+  return {
+    id: input.id,
+    title: input.title,
+    description: input.description,
+    website: input.website,
+    matchPatterns: input.matchPatterns,
+    publisher: {
+      name: publisher.name,
+      handle: publisher.handle,
+      avatarInitials: publisher.avatarInitials,
+    },
+    trustLevel: commands.every((command) => command.trustLevel === 'verified') ? 'verified' : 'community',
+    risk: commands.some((command) => command.risk === 'high') ? 'high' : commands.some((command) => command.risk === 'medium') ? 'medium' : 'low',
+    permissions: [...new Set(commands.flatMap((command) => command.permissions))],
+    sourceUrl: input.sourceUrl,
+    installs: 0,
+    rating: 5.0,
+    icon: input.icon,
+    version: input.version || '1.0.0',
+    commands: commands.map((command) => ({
+      ...command,
+      packId: input.id,
+      packTitle: input.title,
+      sourceUrl: input.sourceUrl,
+    })),
   };
 }
 
@@ -223,6 +299,7 @@ function normalizeStoredPublisher(profile: StoredPublisherRecord): StoredPublish
 class MemoryRegistryStore implements RegistryStore {
   private readonly publishers = new Map<string, StoredPublisherRecord>();
   private readonly commands = new Map<string, StoredRegistryCommand>();
+  private readonly packs = new Map<string, StoredRegistryCommandPack>();
   private readonly sessions = new Map<string, string>();
   private readonly apiTokens = new Map<string, RegistryApiToken & { tokenHash: string }>();
 
@@ -232,6 +309,12 @@ class MemoryRegistryStore implements RegistryStore {
     }
     for (const command of seedCommands) {
       this.commands.set(command.id, { ...command });
+    }
+    for (const pack of registryCommandPacksData) {
+      this.packs.set(pack.id, {
+        ...pack,
+        commands: pack.commands.map((command) => this.commands.get(command.id) ?? { ...command, code: getMockScriptCode(command.id), version: command.version || pack.version }),
+      });
     }
   }
 
@@ -278,6 +361,29 @@ class MemoryRegistryStore implements RegistryStore {
     const command = buildStoredCommand(input, publisher);
     this.commands.set(command.id, command);
     return { ...command };
+  }
+
+  async listPacks(query: string, host?: string): Promise<StoredRegistryCommandPack[]> {
+    return [...this.packs.values()].filter((pack) => packMatchesSearch(pack, query) && packMatchesHost(pack, host));
+  }
+
+  async getPack(id: string): Promise<StoredRegistryCommandPack | undefined> {
+    const pack = this.packs.get(id);
+    return pack ? { ...pack, commands: [...pack.commands] } : undefined;
+  }
+
+  async createPack(input: PublishCommandPackInput): Promise<StoredRegistryCommandPack> {
+    if (this.packs.has(input.id)) throw new Error('Pack ID is already taken.');
+    const publisher = this.publishers.get(input.publisherHandle);
+    if (!publisher) throw new Error('Publisher profile not found');
+    const commands = input.commandIds.map((id) => this.commands.get(id));
+    if (commands.some((command) => !command)) throw new Error('One or more selected commands were not found');
+    if (commands.some((command) => command!.publisher.handle !== publisher.handle)) {
+      throw new Error('Packs can only include commands published by the current user');
+    }
+    const pack = buildStoredPack(input, publisher, commands as StoredRegistryCommand[]);
+    this.packs.set(pack.id, pack);
+    return { ...pack, commands: [...pack.commands] };
   }
 
   async getPublisherProfile(handle: string): Promise<StoredPublisherRecord | undefined> {
@@ -602,6 +708,306 @@ class D1RegistryStore implements RegistryStore {
     const command = await this.getCommand(input.id);
     if (!command) throw new Error('Failed to load created command');
     return command;
+  }
+
+  async listPacks(query: string, host?: string): Promise<StoredRegistryCommandPack[]> {
+    await this.initPromise;
+
+    const rows = await this.db
+      .prepare(`
+        SELECT
+          p.id,
+          p.title,
+          p.description,
+          p.website,
+          p.match_patterns,
+          p.publisher_handle,
+          p.trust_level,
+          p.risk,
+          p.permissions,
+          p.source_url,
+          p.installs,
+          p.rating,
+          p.icon,
+          p.version,
+          pub.name AS pub_name,
+          pub.avatar_initials AS pub_initials
+        FROM packs p
+        JOIN publishers pub ON p.publisher_handle = pub.handle
+      `)
+      .all<{
+        id: string;
+        title: string;
+        description: string;
+        website: string;
+        match_patterns: string;
+        publisher_handle: string;
+        trust_level: string;
+        risk: string;
+        permissions: string;
+        source_url: string;
+        installs: number;
+        rating: number;
+        icon: string;
+        version: string;
+        pub_name: string;
+        pub_initials: string;
+      }>();
+
+    const packsWithoutCommands = rows.results.map((row) => this.mapPackRow(row, []));
+    const filteredPacks = packsWithoutCommands.filter((pack) => packMatchesSearch(pack, query) && packMatchesHost(pack, host));
+
+    const hydratedPacks = await Promise.all(
+      filteredPacks.map(async (pack) => {
+        const commandRows = await this.db
+          .prepare(`
+            SELECT
+              c.id,
+              c.title,
+              c.description,
+              c.website,
+              c.match_patterns,
+              c.publisher_handle,
+              c.trust_level,
+              c.risk,
+              c.permissions,
+              c.source_url,
+              c.installs,
+              c.rating,
+              c.icon,
+              c.code,
+              c.version,
+              pub.name AS pub_name,
+              pub.avatar_initials AS pub_initials
+            FROM pack_commands pc
+            JOIN commands c ON pc.command_id = c.id
+            JOIN publishers pub ON c.publisher_handle = pub.handle
+            WHERE pc.pack_id = ?
+          `)
+          .bind(pack.id)
+          .all<{
+            id: string;
+            title: string;
+            description: string;
+            website: string;
+            match_patterns: string;
+            publisher_handle: string;
+            trust_level: string;
+            risk: string;
+            permissions: string;
+            source_url: string;
+            installs: number;
+            rating: number;
+            icon: string;
+            code: string;
+            version: string;
+            pub_name: string;
+            pub_initials: string;
+          }>();
+
+        const commands = commandRows.results.map((row) => ({
+          ...this.mapCommandRow(row),
+          packId: pack.id,
+          packTitle: pack.title,
+          sourceUrl: pack.sourceUrl,
+        }));
+
+        return {
+          ...pack,
+          commands,
+        };
+      })
+    );
+
+    return hydratedPacks;
+  }
+
+  async getPack(id: string): Promise<StoredRegistryCommandPack | undefined> {
+    await this.initPromise;
+
+    const row = await this.db
+      .prepare(`
+        SELECT
+          p.id,
+          p.title,
+          p.description,
+          p.website,
+          p.match_patterns,
+          p.publisher_handle,
+          p.trust_level,
+          p.risk,
+          p.permissions,
+          p.source_url,
+          p.installs,
+          p.rating,
+          p.icon,
+          p.version,
+          pub.name AS pub_name,
+          pub.avatar_initials AS pub_initials
+        FROM packs p
+        JOIN publishers pub ON p.publisher_handle = pub.handle
+        WHERE p.id = ?
+      `)
+      .bind(id)
+      .first<{
+        id: string;
+        title: string;
+        description: string;
+        website: string;
+        match_patterns: string;
+        publisher_handle: string;
+        trust_level: string;
+        risk: string;
+        permissions: string;
+        source_url: string;
+        installs: number;
+        rating: number;
+        icon: string;
+        version: string;
+        pub_name: string;
+        pub_initials: string;
+      }>();
+
+    if (!row) return undefined;
+
+    const commandRows = await this.db
+      .prepare(`
+        SELECT
+          c.id,
+          c.title,
+          c.description,
+          c.website,
+          c.match_patterns,
+          c.publisher_handle,
+          c.trust_level,
+          c.risk,
+          c.permissions,
+          c.source_url,
+          c.installs,
+          c.rating,
+          c.icon,
+          c.code,
+          c.version,
+          pub.name AS pub_name,
+          pub.avatar_initials AS pub_initials
+        FROM pack_commands pc
+        JOIN commands c ON pc.command_id = c.id
+        JOIN publishers pub ON c.publisher_handle = pub.handle
+        WHERE pc.pack_id = ?
+      `)
+      .bind(id)
+      .all<{
+        id: string;
+        title: string;
+        description: string;
+        website: string;
+        match_patterns: string;
+        publisher_handle: string;
+        trust_level: string;
+        risk: string;
+        permissions: string;
+        source_url: string;
+        installs: number;
+        rating: number;
+        icon: string;
+        code: string;
+        version: string;
+        pub_name: string;
+        pub_initials: string;
+      }>();
+
+    const commands = commandRows.results.map((r) => ({
+      ...this.mapCommandRow(r),
+      packId: id,
+      packTitle: row.title,
+      sourceUrl: row.source_url,
+    }));
+
+    return this.mapPackRow(row, commands);
+  }
+
+  async createPack(input: PublishCommandPackInput): Promise<StoredRegistryCommandPack> {
+    await this.initPromise;
+
+    const existing = await this.db
+      .prepare('SELECT id FROM packs WHERE id = ?')
+      .bind(input.id)
+      .first<{ id: string }>();
+    if (existing) throw new Error('Pack ID is already taken.');
+
+    const publisher = await this.db
+      .prepare('SELECT handle, name, avatar_initials FROM publishers WHERE handle = ?')
+      .bind(input.publisherHandle)
+      .first<{ handle: string; name: string; avatar_initials: string }>();
+    if (!publisher) throw new Error('Publisher profile not found');
+
+    const commands = await Promise.all(
+      input.commandIds.map(async (cmdId) => {
+        const cmd = await this.getCommand(cmdId);
+        return cmd;
+      })
+    );
+
+    if (commands.some((cmd) => !cmd)) {
+      throw new Error('One or more selected commands were not found');
+    }
+
+    if (commands.some((cmd) => cmd!.publisher.handle !== publisher.handle)) {
+      throw new Error('Packs can only include commands published by the current user');
+    }
+
+    const trustLevel = commands.every((cmd) => cmd!.trustLevel === 'verified') ? 'verified' : 'community';
+    const risk = commands.some((cmd) => cmd!.risk === 'high') ? 'high' : commands.some((cmd) => cmd!.risk === 'medium') ? 'medium' : 'low';
+    const permissions = [...new Set(commands.flatMap((cmd) => cmd!.permissions))];
+
+    await this.db
+      .prepare(`
+        INSERT INTO packs (
+          id,
+          title,
+          description,
+          website,
+          match_patterns,
+          publisher_handle,
+          trust_level,
+          risk,
+          permissions,
+          source_url,
+          installs,
+          rating,
+          icon,
+          version
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      .bind(
+        input.id,
+        input.title,
+        input.description,
+        input.website,
+        JSON.stringify(input.matchPatterns),
+        input.publisherHandle,
+        trustLevel,
+        risk,
+        JSON.stringify(permissions),
+        input.sourceUrl,
+        0,
+        5.0,
+        JSON.stringify(input.icon),
+        input.version || '1.0.0'
+      )
+      .run();
+
+    for (const cmdId of input.commandIds) {
+      await this.db
+        .prepare('INSERT INTO pack_commands (pack_id, command_id) VALUES (?, ?)')
+        .bind(input.id, cmdId)
+        .run();
+    }
+
+    const pack = await this.getPack(input.id);
+    if (!pack) throw new Error('Failed to load created pack');
+    return pack;
   }
 
   async getPublisherProfile(handle: string): Promise<StoredPublisherRecord | undefined> {
@@ -938,6 +1344,36 @@ class D1RegistryStore implements RegistryStore {
         FOREIGN KEY(user_handle) REFERENCES publishers(handle)
       )
     `).run();
+
+    await this.db.prepare(`
+      CREATE TABLE IF NOT EXISTS packs (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        website TEXT NOT NULL,
+        match_patterns TEXT NOT NULL,
+        publisher_handle TEXT NOT NULL,
+        trust_level TEXT NOT NULL,
+        risk TEXT NOT NULL,
+        permissions TEXT NOT NULL,
+        source_url TEXT NOT NULL,
+        installs INTEGER NOT NULL DEFAULT 0,
+        rating REAL NOT NULL DEFAULT 5.0,
+        icon TEXT NOT NULL,
+        version TEXT NOT NULL DEFAULT '1.0.0',
+        FOREIGN KEY(publisher_handle) REFERENCES publishers(handle)
+      )
+    `).run();
+
+    await this.db.prepare(`
+      CREATE TABLE IF NOT EXISTS pack_commands (
+        pack_id TEXT NOT NULL,
+        command_id TEXT NOT NULL,
+        PRIMARY KEY(pack_id, command_id),
+        FOREIGN KEY(pack_id) REFERENCES packs(id) ON DELETE CASCADE,
+        FOREIGN KEY(command_id) REFERENCES commands(id) ON DELETE CASCADE
+      )
+    `).run();
   }
 
   private mapCommandRow(row: {
@@ -979,6 +1415,50 @@ class D1RegistryStore implements RegistryStore {
       icon: parseJsonObject<BurstCommand['icon']>(row.icon, { type: 'initials', value: '??' }),
       code: row.code,
       version: row.version,
+    };
+  }
+
+  private mapPackRow(
+    row: {
+      id: string;
+      title: string;
+      description: string;
+      website: string;
+      match_patterns: string;
+      publisher_handle: string;
+      trust_level: string;
+      risk: string;
+      permissions: string;
+      source_url: string;
+      installs: number;
+      rating: number;
+      icon: string;
+      version: string;
+      pub_name: string;
+      pub_initials: string;
+    },
+    commands: BurstCommand[]
+  ): StoredRegistryCommandPack {
+    return {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      website: row.website,
+      matchPatterns: parseJsonArray<string>(row.match_patterns, []),
+      publisher: {
+        name: row.pub_name,
+        handle: row.publisher_handle,
+        avatarInitials: row.pub_initials,
+      },
+      trustLevel: row.trust_level as StoredRegistryCommandPack['trustLevel'],
+      risk: row.risk as StoredRegistryCommandPack['risk'],
+      permissions: parseJsonArray<string>(row.permissions, []),
+      sourceUrl: row.source_url,
+      installs: row.installs,
+      rating: row.rating,
+      icon: parseJsonObject<StoredRegistryCommandPack['icon']>(row.icon, { type: 'initials', value: '??' }),
+      version: row.version,
+      commands,
     };
   }
 

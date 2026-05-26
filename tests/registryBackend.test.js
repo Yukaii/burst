@@ -77,7 +77,7 @@ describe('registry backend auth endpoints', () => {
     expect(response.status).toBe(302);
     const cookies = response.headers.getSetCookie?.() ?? [];
     const returnCookie = cookies.find((cookie) => cookie.startsWith('burst_github_return_to='));
-    expect(returnCookie).toContain('%2Fdashboard');
+    expect(returnCookie).toContain('%2Fhome');
   });
 
   test('promotes configured GitHub admin logins during OAuth callback', async () => {
@@ -391,6 +391,86 @@ describe('registry backend permissions', () => {
     }));
     expect(duplicate.status).toBe(409);
     expect((await duplicate.json()).error).toContain('Command ID is already taken');
+  });
+
+  test('creates, gets, and lists command packs through the store and handler', async () => {
+    const store = createMemoryRegistryStore();
+    const handler = createRegistryHandler(store);
+    const publisher = await createSession(store, 'pack-publisher');
+
+    const cmd1 = await handler(jsonRequest('/api/commands', {
+      method: 'POST',
+      headers: { Cookie: `session_id=${publisher.sessionId}` },
+      body: JSON.stringify(commandPayload('@pack-publisher', { id: 'cmd-1', title: 'Command One' })),
+    }));
+    const cmd2 = await handler(jsonRequest('/api/commands', {
+      method: 'POST',
+      headers: { Cookie: `session_id=${publisher.sessionId}` },
+      body: JSON.stringify(commandPayload('@pack-publisher', { id: 'cmd-2', title: 'Command Two' })),
+    }));
+    expect(cmd1.status).toBe(200);
+    expect(cmd2.status).toBe(200);
+
+    const createPackResp = await handler(jsonRequest('/api/packs', {
+      method: 'POST',
+      headers: { Cookie: `session_id=${publisher.sessionId}` },
+      body: JSON.stringify({
+        id: 'test-pack-id',
+        title: 'Test Pack',
+        description: 'A test command pack.',
+        website: 'example.com',
+        matchPatterns: ['example.com/*'],
+        publisherHandle: '@pack-publisher',
+        sourceUrl: 'https://github.com/example/test-pack',
+        commandIds: ['cmd-1', 'cmd-2'],
+      }),
+    }));
+    expect(createPackResp.status).toBe(201);
+    const createdPack = await createPackResp.json();
+    expect(createdPack.id).toBe('test-pack-id');
+    expect(createdPack.commands.length).toBe(2);
+    expect(createdPack.commands[0].id).toBe('cmd-1');
+    expect(createdPack.commands[1].id).toBe('cmd-2');
+
+    const getPackResp = await handler(new Request('http://registry.test/api/packs/test-pack-id'));
+    expect(getPackResp.status).toBe(200);
+    const fetchedPack = await getPackResp.json();
+    expect(fetchedPack.title).toBe('Test Pack');
+    expect(fetchedPack.commands.length).toBe(2);
+
+    const listPackResp = await handler(new Request('http://registry.test/api/packs?q=Test'));
+    expect(listPackResp.status).toBe(200);
+    const packsList = await listPackResp.json();
+    expect(packsList.some((p) => p.id === 'test-pack-id')).toBe(true);
+
+    const emptyListResp = await handler(new Request('http://registry.test/api/packs?q=NonexistentQuery'));
+    expect(emptyListResp.status).toBe(200);
+    const emptyList = await emptyListResp.json();
+    expect(emptyList.some((p) => p.id === 'test-pack-id')).toBe(false);
+
+    const otherPublisher = await createSession(store, 'other-pub');
+    await handler(jsonRequest('/api/commands', {
+      method: 'POST',
+      headers: { Cookie: `session_id=${otherPublisher.sessionId}` },
+      body: JSON.stringify(commandPayload('@other-pub', { id: 'other-cmd', title: 'Other Command' })),
+    }));
+
+    const badPackResp = await handler(jsonRequest('/api/packs', {
+      method: 'POST',
+      headers: { Cookie: `session_id=${publisher.sessionId}` },
+      body: JSON.stringify({
+        id: 'bad-pack-id',
+        title: 'Bad Pack',
+        description: 'Should fail.',
+        website: 'example.com',
+        matchPatterns: ['example.com/*'],
+        publisherHandle: '@pack-publisher',
+        sourceUrl: 'https://github.com/example/bad-pack',
+        commandIds: ['cmd-1', 'other-cmd'],
+      }),
+    }));
+    expect(badPackResp.status).toBe(403);
+    expect((await badPackResp.json()).error).toContain('commands published by the current user');
   });
 
   test('returns dynamic audit reports from both audit routes', async () => {
