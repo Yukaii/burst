@@ -31,15 +31,29 @@ import {
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
 import { getMockScriptCode } from '@/src/lib/registryApi';
 import { ExtensionSettings, DEFAULT_SETTINGS, loadSettings } from '@/src/lib/settings';
-import { loadCommandPaletteTheme, resolveCommandPaletteThemeMeta, type CommandPaletteTheme } from '@/src/lib/paletteThemes';
-import { captureSelectionSnapshot, restoreSelectionSnapshot, type SelectionSnapshot } from '@/src/ui/selection';
+import {
+  loadCommandPaletteTheme,
+  resolveCommandPaletteThemeMeta,
+  type CommandPaletteTheme,
+} from '@/src/lib/paletteThemes';
+import {
+  captureSelectionSnapshot,
+  restoreSelectionSnapshot,
+  type SelectionSnapshot,
+} from '@/src/ui/selection';
 
 type BurstPaletteProps = {
   pageUrl: string;
   pageTitle: string;
 };
 
-type ToastPosition = 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
+type ToastPosition =
+  | 'top-left'
+  | 'top-center'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-center'
+  | 'bottom-right';
 type ToastAnimation = 'slide' | 'fade' | 'pop' | 'none';
 type ToastVariant = 'default' | 'info' | 'success' | 'warning' | 'error';
 
@@ -75,7 +89,8 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   const [toast, setToast] = useState<BurstToast>();
   const [consentPendingCommand, setConsentPendingCommand] = useState<BurstCommand | null>(null);
   const [capturedSelection, setCapturedSelection] = useState('');
-  const [capturedSelectionSnapshot, setCapturedSelectionSnapshot] = useState<SelectionSnapshot | null>(null);
+  const [capturedSelectionSnapshot, setCapturedSelectionSnapshot] =
+    useState<SelectionSnapshot | null>(null);
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const [paletteTheme, setPaletteTheme] = useState<CommandPaletteTheme | null>(null);
   const [customList, setCustomList] = useState<BurstCustomList | null>(null);
@@ -92,17 +107,20 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
 
   const consentAnalysis = useMemo(() => {
     if (!consentPendingCommand) return null;
-    const code = consentPendingCommand.code || getMockScriptCode(consentPendingCommand.registryCommandId ?? consentPendingCommand.id);
+    const code =
+      consentPendingCommand.code ||
+      getMockScriptCode(consentPendingCommand.registryCommandId ?? consentPendingCommand.id);
     return analyzeScriptCode(code, consentPendingCommand.matchPatterns);
   }, [consentPendingCommand]);
 
   const siteCommands = useMemo(
-    () => isRegistryStoreOpen
-      ? registryDiscoveryCommands
-      : [
-          ...localCommands.filter((command) => commandMatchesHost(command, host)),
-          ...managementCommands,
-        ],
+    () =>
+      isRegistryStoreOpen
+        ? registryDiscoveryCommands
+        : [
+            ...localCommands.filter((command) => commandMatchesHost(command, host)),
+            ...managementCommands,
+          ],
     [host, isRegistryStoreOpen, localCommands, registryDiscoveryCommands],
   );
 
@@ -205,19 +223,25 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
         ...current.filter((item) => item.id !== result.command.id),
         { ...result.command, action: 'run-registry-script' as const },
       ]);
-      setRegistryDiscoveryCommands((current) => current.map((item) => item.registryCommandId === result.command.id
-        ? {
-            ...result.command,
-            id: result.command.id,
-            registryCommandId: result.command.id,
-            registryInstalled: true,
-            subtitle: `Installed · ${result.command.publisher.handle} · ${result.command.website}`,
-            action: 'run-registry-script' as const,
-          }
-        : item));
-      setStatusMessage(result.syncOk === false && result.message
-        ? `Installed "${result.command.title}". ${result.message}`
-        : `Installed "${result.command.title}". Reload this page if it does not run immediately.`);
+      setRegistryDiscoveryCommands((current) =>
+        current.map((item) =>
+          item.registryCommandId === result.command.id
+            ? {
+                ...result.command,
+                id: result.command.id,
+                registryCommandId: result.command.id,
+                registryInstalled: true,
+                subtitle: `Installed · ${result.command.publisher.handle} · ${result.command.website}`,
+                action: 'run-registry-script' as const,
+              }
+            : item,
+        ),
+      );
+      setStatusMessage(
+        result.syncOk === false && result.message
+          ? `Installed "${result.command.title}". ${result.message}`
+          : `Installed "${result.command.title}". Reload this page if it does not run immediately.`,
+      );
       return;
     }
 
@@ -231,7 +255,10 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     }
 
     if (command.action) {
-      void browser.runtime.sendMessage({ type: 'burst:run-management-command', action: command.action });
+      void browser.runtime.sendMessage({
+        type: 'burst:run-management-command',
+        action: command.action,
+      });
     }
 
     closePalette();
@@ -324,18 +351,14 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
       const registryCmds = await loadInstalledRegistryCommands();
       const pinnedIds = await loadPinnedRegistryCommandIds();
 
-      const mappedRegistryCmds = registryCmds
-        .filter(isRegistryCommandEnabled)
-        .map((cmd) => ({
-          ...cmd,
-          action: 'run-registry-script' as const,
-          pinned: pinnedIds.includes(cmd.id),
-        }));
+      const mappedRegistryCmds = registryCmds.filter(isRegistryCommandEnabled).map((cmd) => ({
+        ...cmd,
+        action: 'run-registry-script' as const,
+        pinned: pinnedIds.includes(cmd.id),
+      }));
 
       setLocalCommands([
-        ...scripts
-          .filter((script) => script.status === 'enabled')
-          .map(localScriptToCommand),
+        ...scripts.filter((script) => script.status === 'enabled').map(localScriptToCommand),
         ...mappedRegistryCmds,
       ]);
     }
@@ -369,7 +392,9 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
             return;
           }
 
-          setRegistryDiscoveryCommands(mapRegistryStoreCommands(response.commands, response.installedIds));
+          setRegistryDiscoveryCommands(
+            mapRegistryStoreCommands(response.commands, response.installedIds),
+          );
           setRegistryDiscoveryOffset(response.nextOffset);
           setRegistryDiscoveryHasMore(response.hasMore);
         })
@@ -414,7 +439,8 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
           setRegistryDiscoveryCommands((current) => [
             ...current,
             ...mapRegistryStoreCommands(response.commands, response.installedIds).filter(
-              (next) => !current.some((existing) => existing.registryCommandId === next.registryCommandId),
+              (next) =>
+                !current.some((existing) => existing.registryCommandId === next.registryCommandId),
             ),
           ]);
           setRegistryDiscoveryOffset(response.nextOffset);
@@ -426,7 +452,16 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
 
     node.addEventListener('scroll', handleScroll);
     return () => node.removeEventListener('scroll', handleScroll);
-  }, [customList, host, isOpen, isRegistryStoreOpen, query, registryDiscoveryHasMore, registryDiscoveryLoading, registryDiscoveryOffset]);
+  }, [
+    customList,
+    host,
+    isOpen,
+    isRegistryStoreOpen,
+    query,
+    registryDiscoveryHasMore,
+    registryDiscoveryLoading,
+    registryDiscoveryOffset,
+  ]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -461,8 +496,10 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
         return;
       }
 
-      const isDown = event.key === 'ArrowDown' || (event.ctrlKey && (event.key === 'n' || event.key === 'j'));
-      const isUp = event.key === 'ArrowUp' || (event.ctrlKey && (event.key === 'p' || event.key === 'k'));
+      const isDown =
+        event.key === 'ArrowDown' || (event.ctrlKey && (event.key === 'n' || event.key === 'j'));
+      const isUp =
+        event.key === 'ArrowUp' || (event.ctrlKey && (event.key === 'p' || event.key === 'k'));
 
       if (isDown) {
         event.preventDefault();
@@ -484,6 +521,12 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
             setStatusMessage(result.message);
             return;
           }
+          if (result.list) {
+            setCustomList(result.list);
+            setQuery('');
+            setActiveIndex(0);
+            return;
+          }
           closePalette();
         });
         return;
@@ -497,7 +540,17 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
 
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [activeCommand, activeListItem, customList, filteredCommands.length, filteredListItems.length, isOpen, isRegistryStoreOpen, listCommand, consentPendingCommand]);
+  }, [
+    activeCommand,
+    activeListItem,
+    customList,
+    filteredCommands.length,
+    filteredListItems.length,
+    isOpen,
+    isRegistryStoreOpen,
+    listCommand,
+    consentPendingCommand,
+  ]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -559,10 +612,17 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
     activeOption?.scrollIntoView({ block: 'nearest' });
   }, [activeIndex, customList, filteredCommands.length, filteredListItems.length, isOpen]);
 
-  const activeTheme = settings.theme === 'system'
-    ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
-    : settings.theme;
-  const paletteThemeMeta = resolveCommandPaletteThemeMeta(settings.commandPaletteTheme, pageUrl, activeTheme);
+  const activeTheme =
+    settings.theme === 'system'
+      ? window.matchMedia('(prefers-color-scheme: light)').matches
+        ? 'light'
+        : 'dark'
+      : settings.theme;
+  const paletteThemeMeta = resolveCommandPaletteThemeMeta(
+    settings.commandPaletteTheme,
+    pageUrl,
+    activeTheme,
+  );
   const activePaletteTheme = paletteTheme?.id === paletteThemeMeta.id ? paletteTheme : null;
 
   useEffect(() => {
@@ -578,235 +638,293 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
   return (
     <>
       <div
-          className={`burst-overlay position-${settings.position} theme-${activeTheme} palette-theme-${paletteThemeMeta.id} ${isOpen ? '' : 'is-hidden'}`}
-          style={(activePaletteTheme?.variables ?? {}) as React.CSSProperties}
-          hidden={!isOpen}
-          aria-hidden={!isOpen}
-          role="presentation"
-          onClick={handleOverlayClick}
-        >
-          <section className="burst-shell" aria-label="Burst command palette">
-            {consentPendingCommand ? (
-              <div className="burst-consent-modal">
-                <div className="burst-consent-header">
-                  <span className={`burst-risk-badge risk-${consentPendingCommand.risk}`}>
-                    {consentPendingCommand.risk.toUpperCase()} RISK
-                  </span>
-                  <h2>Security Consent Required</h2>
-                  <p className="burst-consent-subtitle">
-                    The command <strong>{consentPendingCommand.title}</strong> by <code>{consentPendingCommand.publisher.handle}</code> requests permission to run on this site.
-                  </p>
+        className={`burst-overlay position-${settings.position} theme-${activeTheme} palette-theme-${paletteThemeMeta.id} ${isOpen ? '' : 'is-hidden'}`}
+        style={(activePaletteTheme?.variables ?? {}) as React.CSSProperties}
+        hidden={!isOpen}
+        aria-hidden={!isOpen}
+        role="presentation"
+        onClick={handleOverlayClick}
+      >
+        <section className="burst-shell" aria-label="Burst command palette">
+          {consentPendingCommand ? (
+            <div className="burst-consent-modal">
+              <div className="burst-consent-header">
+                <span className={`burst-risk-badge risk-${consentPendingCommand.risk}`}>
+                  {consentPendingCommand.risk.toUpperCase()} RISK
+                </span>
+                <h2>Security Consent Required</h2>
+                <p className="burst-consent-subtitle">
+                  The command <strong>{consentPendingCommand.title}</strong> by{' '}
+                  <code>{consentPendingCommand.publisher.handle}</code> requests permission to run
+                  on this site.
+                </p>
+              </div>
+
+              <div className="burst-consent-body">
+                <div className="burst-consent-info-grid">
+                  <div className="info-item">
+                    <span className="info-label">Publisher</span>
+                    <span className="info-value text-glow">
+                      {consentPendingCommand.publisher.name} (
+                      {consentPendingCommand.publisher.handle})
+                    </span>
+                  </div>
+                  {consentPendingCommand.sourceUrl && (
+                    <div className="info-item">
+                      <span className="info-label">Source URL</span>
+                      <a
+                        href={consentPendingCommand.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="info-value link"
+                      >
+                        {consentPendingCommand.sourceUrl.replace('https://github.com/', '')}
+                      </a>
+                    </div>
+                  )}
+                  <div className="info-item">
+                    <span className="info-label">Trust Status</span>
+                    <span className={`trust-badge trust-${consentPendingCommand.trustLevel}`}>
+                      {trustLabels[consentPendingCommand.trustLevel]}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="burst-consent-body">
-                  <div className="burst-consent-info-grid">
-                    <div className="info-item">
-                      <span className="info-label">Publisher</span>
-                      <span className="info-value text-glow">
-                        {consentPendingCommand.publisher.name} ({consentPendingCommand.publisher.handle})
-                      </span>
-                    </div>
-                    {consentPendingCommand.sourceUrl && (
-                      <div className="info-item">
-                        <span className="info-label">Source URL</span>
-                        <a
-                          href={consentPendingCommand.sourceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="info-value link"
-                        >
-                          {consentPendingCommand.sourceUrl.replace('https://github.com/', '')}
-                        </a>
-                      </div>
-                    )}
-                    <div className="info-item">
-                      <span className="info-label">Trust Status</span>
-                      <span className={`trust-badge trust-${consentPendingCommand.trustLevel}`}>
-                        {trustLabels[consentPendingCommand.trustLevel]}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="burst-consent-permissions">
-                    <h3>Declared Capabilities</h3>
-                    <ul>
-                      {consentPendingCommand.permissions.length > 0 ? (
-                        consentPendingCommand.permissions.map((perm) => (
-                          <li key={perm}>
-                            <span className="checkbox-icon">✓</span>
-                            <span>{perm}</span>
-                          </li>
-                        ))
-                      ) : (
-                        <li>
+                <div className="burst-consent-permissions">
+                  <h3>Declared Capabilities</h3>
+                  <ul>
+                    {consentPendingCommand.permissions.length > 0 ? (
+                      consentPendingCommand.permissions.map((perm) => (
+                        <li key={perm}>
                           <span className="checkbox-icon">✓</span>
-                          <span>No special permissions requested</span>
+                          <span>{perm}</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li>
+                        <span className="checkbox-icon">✓</span>
+                        <span>No special permissions requested</span>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+
+                {consentAnalysis && (
+                  <div className="burst-consent-audit">
+                    <h3>Static Security Audit</h3>
+                    <div className="burst-audit-summary-box">
+                      <span className={`audit-badge is-${consentAnalysis.status}`}>
+                        {consentAnalysis.status}
+                      </span>
+                      <p>{consentAnalysis.summary}</p>
+                    </div>
+                    <ul className="burst-audit-checklist">
+                      {Object.entries(consentAnalysis.checks).map(([key, check]) => {
+                        if (check.status === 'pass') return null;
+                        return (
+                          <li key={key} className={`audit-item is-${check.status}`}>
+                            <span className="check-icon">
+                              {check.status === 'warning' ? '⚠' : '✗'}
+                            </span>
+                            <div className="check-text">
+                              <strong>
+                                {key === 'hostScope'
+                                  ? 'Host Scope'
+                                  : key === 'permissions'
+                                    ? 'Sensitive APIs'
+                                    : key === 'remoteCode'
+                                      ? 'Remote Code'
+                                      : key === 'networkAccess'
+                                        ? 'Network Access'
+                                        : 'Obfuscation Heuristics'}
+                              </strong>
+                              <span>{check.detail}</span>
+                            </div>
+                          </li>
+                        );
+                      })}
+                      {Object.values(consentAnalysis.checks).every((c) => c.status === 'pass') && (
+                        <li className="audit-item is-pass">
+                          <span className="check-icon">✓</span>
+                          <div className="check-text">
+                            <strong>All Checks Passed</strong>
+                            <span>Static analysis found no risk signals.</span>
+                          </div>
                         </li>
                       )}
                     </ul>
                   </div>
+                )}
 
-                  {consentAnalysis && (
-                    <div className="burst-consent-audit">
-                      <h3>Static Security Audit</h3>
-                      <div className="burst-audit-summary-box">
-                        <span className={`audit-badge is-${consentAnalysis.status}`}>
-                          {consentAnalysis.status}
-                        </span>
-                        <p>{consentAnalysis.summary}</p>
-                      </div>
-                      <ul className="burst-audit-checklist">
-                        {Object.entries(consentAnalysis.checks).map(([key, check]) => {
-                          if (check.status === 'pass') return null;
-                          return (
-                            <li key={key} className={`audit-item is-${check.status}`}>
-                              <span className="check-icon">{check.status === 'warning' ? '⚠' : '✗'}</span>
-                              <div className="check-text">
-                                <strong>
-                                  {key === 'hostScope'
-                                    ? 'Host Scope'
-                                    : key === 'permissions'
-                                    ? 'Sensitive APIs'
-                                    : key === 'remoteCode'
-                                    ? 'Remote Code'
-                                    : key === 'networkAccess'
-                                    ? 'Network Access'
-                                    : 'Obfuscation Heuristics'}
-                                </strong>
-                                <span>{check.detail}</span>
-                              </div>
-                            </li>
-                          );
-                        })}
-                        {Object.values(consentAnalysis.checks).every((c) => c.status === 'pass') && (
-                          <li className="audit-item is-pass">
-                            <span className="check-icon">✓</span>
-                            <div className="check-text">
-                              <strong>All Checks Passed</strong>
-                              <span>Static analysis found no risk signals.</span>
-                            </div>
-                          </li>
-                        )}
-                      </ul>
-                    </div>
-                  )}
-
-                  <div className="burst-consent-warning-box">
-                    <span className="warning-icon">⚠</span>
-                    <p>
-                      Running commands from external sources can access sensitive page details, read inputs, and execute actions on your behalf. Ensure you trust the publisher.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="burst-consent-footer">
-                  <button className="btn-cancel" onClick={() => setConsentPendingCommand(null)} type="button">
-                    Cancel
-                  </button>
-                  <button className="btn-grant" onClick={handleConfirmConsent} type="button">
-                    Grant & Run
-                  </button>
+                <div className="burst-consent-warning-box">
+                  <span className="warning-icon">⚠</span>
+                  <p>
+                    Running commands from external sources can access sensitive page details, read
+                    inputs, and execute actions on your behalf. Ensure you trust the publisher.
+                  </p>
                 </div>
               </div>
-            ) : (
-              <>
-                <label className="burst-search">
-                  <span>{customList ? customList.subtitle ?? listCommand?.title ?? host : isRegistryStoreOpen ? 'Burst Store' : host}</span>
-                  <input
-                    ref={searchInputRef}
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder={customList?.searchPlaceholder ?? (isRegistryStoreOpen ? 'Search registry commands' : `Search ${pageTitle || host}`)}
-                  />
-                </label>
 
-                <div
-                  ref={resultsRef}
-                  className="burst-results"
-                  role="listbox"
-                  aria-label={customList ? customList.title : 'Available commands'}
+              <div className="burst-consent-footer">
+                <button
+                  className="btn-cancel"
+                  onClick={() => setConsentPendingCommand(null)}
+                  type="button"
                 >
-                  {statusMessage ? <div className="burst-status">{statusMessage}</div> : null}
-                  {registryDiscoveryLoading && isRegistryStoreOpen && !customList ? <div className="burst-status">Searching registry...</div> : null}
-                  {customList ? (
-                    filteredListItems.length > 0 ? (
-                      filteredListItems.map((item, index) => {
-                        const shortcutHint = getShortcutHint(index, activeIndex, showNumberHints, isMacPlatform);
+                  Cancel
+                </button>
+                <button className="btn-grant" onClick={handleConfirmConsent} type="button">
+                  Grant & Run
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <label className="burst-search">
+                <span>
+                  {customList
+                    ? (customList.subtitle ?? listCommand?.title ?? host)
+                    : isRegistryStoreOpen
+                      ? 'Burst Store'
+                      : host}
+                </span>
+                <input
+                  ref={searchInputRef}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={
+                    customList?.searchPlaceholder ??
+                    (isRegistryStoreOpen
+                      ? 'Search registry commands'
+                      : `Search ${pageTitle || host}`)
+                  }
+                />
+              </label>
 
-                        return (
-                          <button
-                            className={`burst-command burst-list-item ${index === activeIndex ? 'is-active' : ''}`}
-                            key={item.id}
-                            type="button"
-                            role="option"
-                            aria-selected={index === activeIndex}
-                            onMouseEnter={() => setActiveIndex(index)}
-                            onClick={() => {
-                              if (!listCommand || !customList) return;
-                              void runListItemAction(listCommand, customList, item, setToast).then((result) => {
-                                if (!result.ok) {
-                                  setStatusMessage(result.message);
-                                  return;
-                                }
-                                closePalette();
-                              });
-                            }}
-                          >
-                            <CommandIcon icon={item.icon} fallbackLabel={item.title.slice(0, 2).toUpperCase()} />
-                            <span className="burst-command-copy">
-                              <span className="burst-command-title">
-                                <strong>{item.title}</strong>
-                                {item.subtitle ? <span className="burst-command-subtitle">{item.subtitle}</span> : null}
-                              </span>
-                            </span>
-                            <span className="burst-list-accessory">
-                              {item.accessories?.[0] ?? item.actions?.[0]?.title ?? ''}
-                            </span>
-                            <kbd className={shortcutHint ? '' : 'is-hidden'} aria-hidden={!shortcutHint}>
-                              {shortcutHint ?? '↵'}
-                            </kbd>
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <div className="burst-empty">{customList.emptyState ?? 'No items found.'}</div>
-                    )
-                  ) : filteredCommands.length > 0 ? (
-                    filteredCommands.map((command, index) => {
-                      const shortcutHint = getShortcutHint(index, activeIndex, showNumberHints, isMacPlatform);
+              <div
+                ref={resultsRef}
+                className="burst-results"
+                role="listbox"
+                aria-label={customList ? customList.title : 'Available commands'}
+              >
+                {statusMessage ? <div className="burst-status">{statusMessage}</div> : null}
+                {registryDiscoveryLoading && isRegistryStoreOpen && !customList ? (
+                  <div className="burst-status">Searching registry...</div>
+                ) : null}
+                {customList ? (
+                  filteredListItems.length > 0 ? (
+                    filteredListItems.map((item, index) => {
+                      const shortcutHint = getShortcutHint(
+                        index,
+                        activeIndex,
+                        showNumberHints,
+                        isMacPlatform,
+                      );
 
                       return (
                         <button
-                          className={`burst-command ${index === activeIndex ? 'is-active' : ''}`}
-                          key={command.id}
+                          className={`burst-command burst-list-item ${index === activeIndex ? 'is-active' : ''}`}
+                          key={item.id}
                           type="button"
                           role="option"
                           aria-selected={index === activeIndex}
                           onMouseEnter={() => setActiveIndex(index)}
-                          onClick={() => void runCommand(command)}
+                          onClick={() => {
+                            if (!listCommand || !customList) return;
+                            void runListItemAction(listCommand, customList, item, setToast).then(
+                              (result) => {
+                                if (!result.ok) {
+                                  setStatusMessage(result.message);
+                                  return;
+                                }
+                                if (result.list) {
+                                  setCustomList(result.list);
+                                  setQuery('');
+                                  setActiveIndex(0);
+                                  return;
+                                }
+                                closePalette();
+                              },
+                            );
+                          }}
                         >
-                          <CommandIcon command={command} />
+                          <CommandIcon
+                            icon={item.icon}
+                            fallbackLabel={item.title.slice(0, 2).toUpperCase()}
+                          />
                           <span className="burst-command-copy">
                             <span className="burst-command-title">
-                              <strong>{command.title}</strong>
-                              {command.registryInstalled ? <span className="burst-installed-check" aria-label="Installed">✓</span> : null}
-                              {command.subtitle ? <span className="burst-command-subtitle">{command.subtitle}</span> : null}
+                              <strong>{item.title}</strong>
+                              {item.subtitle ? (
+                                <span className="burst-command-subtitle">{item.subtitle}</span>
+                              ) : null}
                             </span>
                           </span>
-                          <kbd className={shortcutHint ? '' : 'is-hidden'} aria-hidden={!shortcutHint}>
+                          <span className="burst-list-accessory">
+                            {item.accessories?.[0] ?? item.actions?.[0]?.title ?? ''}
+                          </span>
+                          <kbd
+                            className={shortcutHint ? '' : 'is-hidden'}
+                            aria-hidden={!shortcutHint}
+                          >
                             {shortcutHint ?? '↵'}
                           </kbd>
                         </button>
                       );
                     })
                   ) : (
-                    <div className="burst-empty">No commands found.</div>
-                  )}
-                </div>
-              </>
-            )}
-          </section>
-        </div>
+                    <div className="burst-empty">{customList.emptyState ?? 'No items found.'}</div>
+                  )
+                ) : filteredCommands.length > 0 ? (
+                  filteredCommands.map((command, index) => {
+                    const shortcutHint = getShortcutHint(
+                      index,
+                      activeIndex,
+                      showNumberHints,
+                      isMacPlatform,
+                    );
+
+                    return (
+                      <button
+                        className={`burst-command ${index === activeIndex ? 'is-active' : ''}`}
+                        key={command.id}
+                        type="button"
+                        role="option"
+                        aria-selected={index === activeIndex}
+                        onMouseEnter={() => setActiveIndex(index)}
+                        onClick={() => void runCommand(command)}
+                      >
+                        <CommandIcon command={command} />
+                        <span className="burst-command-copy">
+                          <span className="burst-command-title">
+                            <strong>{command.title}</strong>
+                            {command.registryInstalled ? (
+                              <span className="burst-installed-check" aria-label="Installed">
+                                ✓
+                              </span>
+                            ) : null}
+                            {command.subtitle ? (
+                              <span className="burst-command-subtitle">{command.subtitle}</span>
+                            ) : null}
+                          </span>
+                        </span>
+                        <kbd
+                          className={shortcutHint ? '' : 'is-hidden'}
+                          aria-hidden={!shortcutHint}
+                        >
+                          {shortcutHint ?? '↵'}
+                        </kbd>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="burst-empty">No commands found.</div>
+                )}
+              </div>
+            </>
+          )}
+        </section>
+      </div>
       {toast ? (
         <div
           className={`burst-toast theme-${activeTheme} position-${toast.position} variant-${toast.variant} animation-${toast.animation}`}
@@ -831,7 +949,9 @@ export function BurstPalette({ pageUrl, pageTitle }: BurstPaletteProps) {
               <LucideIcons.X size={14} />
             </button>
           ) : null}
-          {toast.showProgress && toast.duration > 0 ? <span className="burst-toast-progress" /> : null}
+          {toast.showProgress && toast.duration > 0 ? (
+            <span className="burst-toast-progress" />
+          ) : null}
         </div>
       ) : null}
     </>
@@ -845,49 +965,62 @@ async function runLocalScript(
 ): Promise<{ ok: boolean; message?: string; list?: BurstCustomList }> {
   const resultEventName = getLocalScriptResultEventName(scriptId);
 
-  const result = new Promise<{ ok: boolean; message?: string; list?: BurstCustomList }>((resolve) => {
-    const timeout = window.setTimeout(() => {
-      document.removeEventListener(resultEventName, handleResult);
-      resolve({
-        ok: false,
-        message: 'Local script is registered for future page loads. Reload this page, then run it again.',
-      });
-    }, 700);
+  const result = new Promise<{ ok: boolean; message?: string; list?: BurstCustomList }>(
+    (resolve) => {
+      const timeout = window.setTimeout(() => {
+        document.removeEventListener(resultEventName, handleResult);
+        resolve({
+          ok: false,
+          message:
+            'Local script is registered for future page loads. Reload this page, then run it again.',
+        });
+      }, 700);
 
-    function handleResult(event: Event) {
-      const detail = parseBurstEventDetail(event) as { status?: string; message?: unknown; toast?: unknown; list?: unknown; url?: unknown };
-      if (detail.status === 'started') return;
+      function handleResult(event: Event) {
+        const detail = parseBurstEventDetail(event) as {
+          status?: string;
+          message?: unknown;
+          toast?: unknown;
+          list?: unknown;
+          url?: unknown;
+        };
+        if (detail.status === 'started') return;
 
-      if (detail.status === 'toast') {
-        onToast(normalizeToastPayload(detail.toast ?? detail.message));
-        return;
-      }
+        if (detail.status === 'toast') {
+          onToast(normalizeToastPayload(detail.toast ?? detail.message));
+          return;
+        }
 
-      if (detail.status === 'navigate-open') {
-        void openNavigationTab(detail.url, onToast);
-        return;
-      }
+        if (detail.status === 'navigate-open') {
+          void openNavigationTab(detail.url, onToast);
+          return;
+        }
 
-      if (detail.status === 'list' && isBurstCustomList(detail.list)) {
+        if (detail.status === 'list' && isBurstCustomList(detail.list)) {
+          document.removeEventListener(resultEventName, handleResult);
+          window.clearTimeout(timeout);
+          resolve({ ok: true, list: detail.list });
+          return;
+        }
+
         document.removeEventListener(resultEventName, handleResult);
         window.clearTimeout(timeout);
-        resolve({ ok: true, list: detail.list });
-        return;
+        resolve({
+          ok: detail.status === 'complete',
+          message: typeof detail.message === 'string' ? detail.message : 'Local script failed.',
+        });
       }
 
-      document.removeEventListener(resultEventName, handleResult);
-      window.clearTimeout(timeout);
-      resolve({
-        ok: detail.status === 'complete',
-        message: typeof detail.message === 'string' ? detail.message : 'Local script failed.',
-      });
-    }
-
-    document.addEventListener(resultEventName, handleResult);
-  });
+      document.addEventListener(resultEventName, handleResult);
+    },
+  );
 
   const CustomEventConstructor = document.defaultView?.CustomEvent ?? CustomEvent;
-  document.dispatchEvent(new CustomEventConstructor(getLocalScriptEventName(scriptId), { detail: JSON.stringify({ selection }) }));
+  document.dispatchEvent(
+    new CustomEventConstructor(getLocalScriptEventName(scriptId), {
+      detail: JSON.stringify({ selection }),
+    }),
+  );
   return result;
 }
 
@@ -898,49 +1031,62 @@ async function runRegistryScript(
 ): Promise<{ ok: boolean; message?: string; list?: BurstCustomList }> {
   const resultEventName = getRegistryScriptResultEventName(commandId);
 
-  const result = new Promise<{ ok: boolean; message?: string; list?: BurstCustomList }>((resolve) => {
-    const timeout = window.setTimeout(() => {
-      document.removeEventListener(resultEventName, handleResult);
-      resolve({
-        ok: false,
-        message: 'Registry script is registered for future page loads. Reload this page, then run it again.',
-      });
-    }, 700);
+  const result = new Promise<{ ok: boolean; message?: string; list?: BurstCustomList }>(
+    (resolve) => {
+      const timeout = window.setTimeout(() => {
+        document.removeEventListener(resultEventName, handleResult);
+        resolve({
+          ok: false,
+          message:
+            'Registry script is registered for future page loads. Reload this page, then run it again.',
+        });
+      }, 700);
 
-    function handleResult(event: Event) {
-      const detail = parseBurstEventDetail(event) as { status?: string; message?: unknown; toast?: unknown; list?: unknown; url?: unknown };
-      if (detail.status === 'started') return;
+      function handleResult(event: Event) {
+        const detail = parseBurstEventDetail(event) as {
+          status?: string;
+          message?: unknown;
+          toast?: unknown;
+          list?: unknown;
+          url?: unknown;
+        };
+        if (detail.status === 'started') return;
 
-      if (detail.status === 'toast') {
-        onToast(normalizeToastPayload(detail.toast ?? detail.message));
-        return;
-      }
+        if (detail.status === 'toast') {
+          onToast(normalizeToastPayload(detail.toast ?? detail.message));
+          return;
+        }
 
-      if (detail.status === 'navigate-open') {
-        void openNavigationTab(detail.url, onToast);
-        return;
-      }
+        if (detail.status === 'navigate-open') {
+          void openNavigationTab(detail.url, onToast);
+          return;
+        }
 
-      if (detail.status === 'list' && isBurstCustomList(detail.list)) {
+        if (detail.status === 'list' && isBurstCustomList(detail.list)) {
+          document.removeEventListener(resultEventName, handleResult);
+          window.clearTimeout(timeout);
+          resolve({ ok: true, list: detail.list });
+          return;
+        }
+
         document.removeEventListener(resultEventName, handleResult);
         window.clearTimeout(timeout);
-        resolve({ ok: true, list: detail.list });
-        return;
+        resolve({
+          ok: detail.status === 'complete',
+          message: typeof detail.message === 'string' ? detail.message : 'Registry script failed.',
+        });
       }
 
-      document.removeEventListener(resultEventName, handleResult);
-      window.clearTimeout(timeout);
-      resolve({
-        ok: detail.status === 'complete',
-        message: typeof detail.message === 'string' ? detail.message : 'Registry script failed.',
-      });
-    }
-
-    document.addEventListener(resultEventName, handleResult);
-  });
+      document.addEventListener(resultEventName, handleResult);
+    },
+  );
 
   const CustomEventConstructor = document.defaultView?.CustomEvent ?? CustomEvent;
-  document.dispatchEvent(new CustomEventConstructor(getRegistryScriptEventName(commandId), { detail: JSON.stringify({ selection }) }));
+  document.dispatchEvent(
+    new CustomEventConstructor(getRegistryScriptEventName(commandId), {
+      detail: JSON.stringify({ selection }),
+    }),
+  );
   return result;
 }
 
@@ -949,7 +1095,7 @@ async function runListItemAction(
   list: BurstCustomList,
   item: BurstListItem,
   onToast: (toast: BurstToast) => void,
-): Promise<{ ok: boolean; message?: string }> {
+): Promise<{ ok: boolean; message?: string; list?: BurstCustomList }> {
   const action = item.actions?.[0];
   if (!action) return { ok: false, message: 'This list item has no action.' };
 
@@ -957,55 +1103,73 @@ async function runListItemAction(
   const resultEventName = isRegistry
     ? getRegistryScriptResultEventName(command.id)
     : command.localScriptId
-    ? getLocalScriptResultEventName(command.localScriptId)
-    : '';
+      ? getLocalScriptResultEventName(command.localScriptId)
+      : '';
   const eventName = isRegistry
     ? getRegistryScriptEventName(command.id)
     : command.localScriptId
-    ? getLocalScriptEventName(command.localScriptId)
-    : '';
+      ? getLocalScriptEventName(command.localScriptId)
+      : '';
 
-  if (!eventName || !resultEventName) return { ok: false, message: 'List action source is unavailable.' };
+  if (!eventName || !resultEventName)
+    return { ok: false, message: 'List action source is unavailable.' };
 
-  const result = new Promise<{ ok: boolean; message?: string }>((resolve) => {
-    const timeout = window.setTimeout(() => {
-      document.removeEventListener(resultEventName, handleResult);
-      resolve({ ok: false, message: 'List action timed out. Try running the command again.' });
-    }, 1200);
+  const result = new Promise<{ ok: boolean; message?: string; list?: BurstCustomList }>(
+    (resolve) => {
+      const timeout = window.setTimeout(() => {
+        document.removeEventListener(resultEventName, handleResult);
+        resolve({ ok: false, message: 'List action timed out. Try running the command again.' });
+      }, 1200);
 
-    function handleResult(event: Event) {
-      const detail = parseBurstEventDetail(event) as { status?: string; message?: unknown; toast?: unknown; url?: unknown };
+      function handleResult(event: Event) {
+        const detail = parseBurstEventDetail(event) as {
+          status?: string;
+          message?: unknown;
+          toast?: unknown;
+          list?: unknown;
+          url?: unknown;
+        };
 
-      if (detail.status === 'toast') {
-        onToast(normalizeToastPayload(detail.toast ?? detail.message));
-        return;
+        if (detail.status === 'toast') {
+          onToast(normalizeToastPayload(detail.toast ?? detail.message));
+          return;
+        }
+
+        if (detail.status === 'navigate-open') {
+          void openNavigationTab(detail.url, onToast);
+          return;
+        }
+
+        if (detail.status === 'list' && isBurstCustomList(detail.list)) {
+          document.removeEventListener(resultEventName, handleResult);
+          window.clearTimeout(timeout);
+          resolve({ ok: true, list: detail.list });
+          return;
+        }
+
+        document.removeEventListener(resultEventName, handleResult);
+        window.clearTimeout(timeout);
+        resolve({
+          ok: detail.status === 'action-complete' || detail.status === 'complete',
+          message: typeof detail.message === 'string' ? detail.message : 'List action failed.',
+        });
       }
 
-      if (detail.status === 'navigate-open') {
-        void openNavigationTab(detail.url, onToast);
-        return;
-      }
-
-      document.removeEventListener(resultEventName, handleResult);
-      window.clearTimeout(timeout);
-      resolve({
-        ok: detail.status === 'action-complete' || detail.status === 'complete',
-        message: typeof detail.message === 'string' ? detail.message : 'List action failed.',
-      });
-    }
-
-    document.addEventListener(resultEventName, handleResult);
-  });
+      document.addEventListener(resultEventName, handleResult);
+    },
+  );
 
   const CustomEventConstructor = document.defaultView?.CustomEvent ?? CustomEvent;
-  document.dispatchEvent(new CustomEventConstructor(eventName, {
-    detail: JSON.stringify({
-      kind: 'list-action',
-      listId: list.id,
-      itemId: item.id,
-      actionId: action.id,
+  document.dispatchEvent(
+    new CustomEventConstructor(eventName, {
+      detail: JSON.stringify({
+        kind: 'list-action',
+        listId: list.id,
+        itemId: item.id,
+        actionId: action.id,
+      }),
     }),
-  }));
+  );
 
   return result;
 }
@@ -1032,44 +1196,60 @@ async function openNavigationTab(url: unknown, onToast: (toast: BurstToast) => v
 
   const result = await browser.runtime
     .sendMessage({ type: 'burst:navigate-open', url })
-    .catch((error) => ({ ok: false, message: error instanceof Error ? error.message : 'Failed to open tab.' }));
+    .catch((error) => ({
+      ok: false,
+      message: error instanceof Error ? error.message : 'Failed to open tab.',
+    }));
 
   if (!isRecord(result) || result.ok !== true) {
-    onToast(normalizeToastPayload({
-      variant: 'error',
-      message: typeof result?.message === 'string' ? result.message : 'Failed to open tab.',
-    }));
+    onToast(
+      normalizeToastPayload({
+        variant: 'error',
+        message: typeof result?.message === 'string' ? result.message : 'Failed to open tab.',
+      }),
+    );
   }
 }
 
 function normalizeToastPayload(payload: unknown): BurstToast {
   const options = isRecord(payload) ? payload : {};
-  const message = typeof payload === 'string'
-    ? payload
-    : typeof options.message === 'string'
-    ? options.message
-    : typeof options.description === 'string'
-    ? options.description
-    : 'Command finished';
+  const message =
+    typeof payload === 'string'
+      ? payload
+      : typeof options.message === 'string'
+        ? options.message
+        : typeof options.description === 'string'
+          ? options.description
+          : 'Command finished';
 
   return {
     id: Date.now(),
     title: typeof options.title === 'string' ? truncateText(options.title, 80) : undefined,
     message: truncateText(message, 240),
-    variant: readOneOf(options.variant, ['default', 'info', 'success', 'warning', 'error'], 'default'),
-    position: readOneOf(options.position, ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'], 'bottom-right'),
+    variant: readOneOf(
+      options.variant,
+      ['default', 'info', 'success', 'warning', 'error'],
+      'default',
+    ),
+    position: readOneOf(
+      options.position,
+      ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'],
+      'bottom-right',
+    ),
     animation: readOneOf(options.animation, ['slide', 'fade', 'pop', 'none'], 'slide'),
     duration: readDuration(options.duration),
-    dismissible: typeof options.dismissible === 'boolean'
-      ? options.dismissible
-      : typeof options.closeButton === 'boolean'
-      ? options.closeButton
-      : true,
-    showProgress: typeof options.showProgress === 'boolean'
-      ? options.showProgress
-      : typeof options.progress === 'boolean'
-      ? options.progress
-      : true,
+    dismissible:
+      typeof options.dismissible === 'boolean'
+        ? options.dismissible
+        : typeof options.closeButton === 'boolean'
+          ? options.closeButton
+          : true,
+    showProgress:
+      typeof options.showProgress === 'boolean'
+        ? options.showProgress
+        : typeof options.progress === 'boolean'
+          ? options.progress
+          : true,
   };
 }
 
@@ -1077,7 +1257,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function mapRegistryStoreCommands(commands: BurstCommand[], installedIdsValue: string[]): BurstCommand[] {
+function mapRegistryStoreCommands(
+  commands: BurstCommand[],
+  installedIdsValue: string[],
+): BurstCommand[] {
   const installedIds = new Set(installedIdsValue);
   return commands.map((command) => {
     const registryInstalled = installedIds.has(command.id);
@@ -1088,7 +1271,9 @@ function mapRegistryStoreCommands(commands: BurstCommand[], installedIdsValue: s
       registryInstalled,
       title: registryInstalled ? command.title : `Install: ${command.title}`,
       subtitle: `${registryInstalled ? 'Installed · ' : ''}${command.publisher.handle} · ${command.website}`,
-      action: registryInstalled ? 'run-registry-script' as const : 'install-registry-command' as const,
+      action: registryInstalled
+        ? ('run-registry-script' as const)
+        : ('install-registry-command' as const),
     };
   });
 }
@@ -1102,10 +1287,16 @@ function isRegistrySearchResponse(value: unknown): value is {
   hasMore: boolean;
   nextOffset: number;
 } {
-  if (!isRecord(value) || !Array.isArray(value.commands) || !Array.isArray(value.installedIds)) return false;
-  return typeof value.nextOffset === 'number'
-    && typeof value.hasMore === 'boolean'
-    && value.commands.every((command) => isRecord(command) && typeof command.id === 'string' && typeof command.title === 'string');
+  if (!isRecord(value) || !Array.isArray(value.commands) || !Array.isArray(value.installedIds))
+    return false;
+  return (
+    typeof value.nextOffset === 'number' &&
+    typeof value.hasMore === 'boolean' &&
+    value.commands.every(
+      (command) =>
+        isRecord(command) && typeof command.id === 'string' && typeof command.title === 'string',
+    )
+  );
 }
 
 function isInstallRegistryResponse(value: unknown): value is {
@@ -1116,24 +1307,30 @@ function isInstallRegistryResponse(value: unknown): value is {
   installedIds: string[];
   pinnedIds: string[];
 } {
-  return isRecord(value)
-    && isRecord(value.command)
-    && typeof value.command.id === 'string'
-    && typeof value.command.title === 'string'
-    && Array.isArray(value.installedIds)
-    && Array.isArray(value.pinnedIds);
+  return (
+    isRecord(value) &&
+    isRecord(value.command) &&
+    typeof value.command.id === 'string' &&
+    typeof value.command.title === 'string' &&
+    Array.isArray(value.installedIds) &&
+    Array.isArray(value.pinnedIds)
+  );
 }
 
 function isBurstCustomList(value: unknown): value is BurstCustomList {
   if (!isRecord(value)) return false;
-  return typeof value.id === 'string'
-    && typeof value.title === 'string'
-    && Array.isArray(value.items)
-    && value.items.every((item) => isRecord(item) && typeof item.id === 'string' && typeof item.title === 'string');
+  return (
+    typeof value.id === 'string' &&
+    typeof value.title === 'string' &&
+    Array.isArray(value.items) &&
+    value.items.every(
+      (item) => isRecord(item) && typeof item.id === 'string' && typeof item.title === 'string',
+    )
+  );
 }
 
 function readOneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
-  return typeof value === 'string' && allowed.includes(value as T) ? value as T : fallback;
+  return typeof value === 'string' && allowed.includes(value as T) ? (value as T) : fallback;
 }
 
 function readDuration(value: unknown): number {
@@ -1208,7 +1405,11 @@ function CommandIcon({
     );
   }
 
-  const iconUrl = command ? getCommandIconUrl(command) : icon && (icon.type === 'url' || icon.type === 'asset') ? icon.src : undefined;
+  const iconUrl = command
+    ? getCommandIconUrl(command)
+    : icon && (icon.type === 'url' || icon.type === 'asset')
+      ? icon.src
+      : undefined;
 
   if (iconUrl) {
     return (
@@ -1219,22 +1420,27 @@ function CommandIcon({
   }
 
   if (command) return <span className="burst-command-icon">{getCommandIconLabel(command)}</span>;
-  if (icon?.type === 'emoji' || icon?.type === 'initials') return <span className="burst-command-icon">{icon.value}</span>;
+  if (icon?.type === 'emoji' || icon?.type === 'initials')
+    return <span className="burst-command-icon">{icon.value}</span>;
   return <span className="burst-command-icon">{fallbackLabel ?? 'LI'}</span>;
 }
 
 function isToggleMessage(message: unknown): message is { type: 'burst:toggle-palette' } {
-  return typeof message === 'object' && message !== null && 'type' in message
-    && message.type === 'burst:toggle-palette';
+  return (
+    typeof message === 'object' &&
+    message !== null &&
+    'type' in message &&
+    message.type === 'burst:toggle-palette'
+  );
 }
 
-function isLocalScriptSyncError(
-  value: unknown,
-): value is { ok: false; message: string } {
-  return typeof value === 'object'
-    && value !== null
-    && 'ok' in value
-    && value.ok === false
-    && 'message' in value
-    && typeof value.message === 'string';
+function isLocalScriptSyncError(value: unknown): value is { ok: false; message: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'ok' in value &&
+    value.ok === false &&
+    'message' in value &&
+    typeof value.message === 'string'
+  );
 }

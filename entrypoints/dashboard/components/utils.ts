@@ -128,7 +128,34 @@ export function validateLocalScriptCode(code: string): { ok: true } | { ok: fals
   }
 }
 
-export function formatLocalScriptCode(code: string): string {
+const OXFMT_FORMAT_ENDPOINT = '/api/editor/format-local-script';
+
+async function formatLocalScriptCodeWithOxfmt(registryServerBaseUrl: string, code: string): Promise<string | null> {
+  const controller = new AbortController();
+  const timeout = globalThis.setTimeout(() => controller.abort(), 1200);
+
+  try {
+    const response = await fetch(new URL(OXFMT_FORMAT_ENDPOINT, registryServerBaseUrl).toString(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ code }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) return null;
+
+    const payload = await response.json().catch(() => null) as { code?: unknown } | null;
+    return typeof payload?.code === 'string' ? payload.code : null;
+  } catch {
+    return null;
+  } finally {
+    globalThis.clearTimeout(timeout);
+  }
+}
+
+function formatLocalScriptCodeFallback(code: string): string {
   compileLocalScript(code);
 
   const lines = code.replace(/\r\n?/g, '\n').split('\n');
@@ -159,6 +186,17 @@ export function formatLocalScriptCode(code: string): string {
   }
 
   return `${formatted.join('\n').trim()}\n`;
+}
+
+export async function formatLocalScriptCode(code: string, registryServerBaseUrl: string): Promise<string> {
+  compileLocalScript(code);
+
+  const formattedWithOxfmt = await formatLocalScriptCodeWithOxfmt(registryServerBaseUrl, code);
+  if (formattedWithOxfmt) {
+    return formattedWithOxfmt.endsWith('\n') ? formattedWithOxfmt : `${formattedWithOxfmt}\n`;
+  }
+
+  return formatLocalScriptCodeFallback(code);
 }
 
 class LocalScriptSyntaxError extends Error {

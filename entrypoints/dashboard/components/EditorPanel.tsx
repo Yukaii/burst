@@ -64,7 +64,7 @@ export function EditorPanel({
   saveState: string;
   hasUnsavedChanges: boolean;
   onSave: () => void;
-  onFormat: () => void;
+  onFormat: () => void | Promise<void>;
   onDelete: () => void;
   onUpdateScript: (patch: Partial<LocalScript>) => void;
   onResetFork: () => void;

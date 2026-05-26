@@ -344,10 +344,13 @@ export function useDashboard() {
     await persistScripts(nextScripts, successMessage); setHasUnsavedChanges(false);
   }
 
-  function formatSelectedScript() {
+  async function formatSelectedScript() {
     if (!selectedScript) return;
     try {
-      const code = formatLocalScriptCode(selectedScript.code);
+      const code = await formatLocalScriptCode(
+        selectedScript.code,
+        getRegistryServerBaseUrl(settings),
+      );
       setScripts(current => current.map(s => s.id === selectedScript.id ? { ...s, code } : s));
       setHasUnsavedChanges(true);
       setSaveState('Formatted');
