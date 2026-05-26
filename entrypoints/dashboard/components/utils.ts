@@ -1,6 +1,6 @@
 import { EditorView } from '@codemirror/view';
+import { javascriptLanguage } from '@codemirror/lang-javascript';
 import type { LocalScript } from '@/src/lib/localScripts';
-import { stripDefaultExport } from '@/src/lib/localScripts';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
 import { getFaviconUrl, type CommandIcon } from '@/src/lib/commands';
 import { GIT_REGISTRIES_STORAGE_KEY } from './types';
@@ -109,12 +109,8 @@ export function compileLocalScript(code: string) {
   if (!/^\s*export\s+default\s+(async\s+)?function\b/.test(code)) {
     throw new Error('Local scripts must use: export default function run(context) { ... }');
   }
-  const functionSource = stripDefaultExport(code);
-  try {
-    new Function(`return (${functionSource});`);
-  } catch (error) {
-    throw new Error(formatSyntaxError(error));
-  }
+  const error = getFirstSyntaxError(code);
+  if (error) throw new Error(error);
 }
 
 export function validateLocalScriptCode(code: string): { ok: true } | { ok: false; message: string } {
@@ -162,10 +158,30 @@ export function formatLocalScriptCode(code: string): string {
   return `${formatted.join('\n').trim()}\n`;
 }
 
-function formatSyntaxError(error: unknown): string {
-  if (!(error instanceof Error)) return String(error);
-  const message = error.message || 'Invalid JavaScript syntax.';
-  return message.startsWith('SyntaxError:') ? message : `SyntaxError: ${message}`;
+function getFirstSyntaxError(code: string): string | undefined {
+  let errorPosition: number | undefined;
+  javascriptLanguage.parser.parse(code).iterate({
+    enter(node) {
+      if (node.type.isError) {
+        errorPosition = node.from;
+        return false;
+      }
+      return undefined;
+    },
+  });
+
+  if (errorPosition === undefined) return undefined;
+  const { line, column } = getLineColumn(code, errorPosition);
+  return `SyntaxError: invalid JavaScript near line ${line}, column ${column}`;
+}
+
+function getLineColumn(code: string, position: number): { line: number; column: number } {
+  const prefix = code.slice(0, position);
+  const lines = prefix.split('\n');
+  return {
+    line: lines.length,
+    column: lines[lines.length - 1].length + 1,
+  };
 }
 
 function countUnquoted(line: string, pattern: RegExp): number {
