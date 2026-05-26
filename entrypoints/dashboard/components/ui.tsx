@@ -38,7 +38,31 @@ export function Tooltip({
   );
 }
 
-export function LocalScriptIcon({ icon }: { icon: CommandIcon }) {
+export function LocalScriptIcon({
+  icon,
+  matchPatterns = [],
+  website = 'all sites',
+  fallbackLabel,
+}: {
+  icon: CommandIcon;
+  matchPatterns?: string[];
+  website?: string;
+  fallbackLabel?: string;
+}) {
+  return <LocalScriptIconBase icon={icon} matchPatterns={matchPatterns} website={website} fallbackLabel={fallbackLabel} />;
+}
+
+export function LocalScriptIconBase({
+  icon,
+  matchPatterns = [],
+  website = 'all sites',
+  fallbackLabel,
+}: {
+  icon: CommandIcon;
+  matchPatterns?: string[];
+  website?: string;
+  fallbackLabel?: string;
+}) {
   if (icon.type === 'lucide') {
     const IconComponent = (LucideIcons as any)[icon.name];
     return (
@@ -48,11 +72,11 @@ export function LocalScriptIcon({ icon }: { icon: CommandIcon }) {
     );
   }
 
-  const iconUrl = getLocalIconUrl(icon);
+  const iconUrl = getLocalIconUrl(icon, matchPatterns, website);
 
   return (
     <span className="w-7 h-7 flex items-center justify-center rounded-md bg-secondary text-secondary-foreground border border-border text-xs font-bold shrink-0 overflow-hidden">
-      {iconUrl ? <img src={iconUrl} alt="" className="w-full h-full object-cover" /> : getLocalIconLabel(icon)}
+      {iconUrl ? <img src={iconUrl} alt="" className="w-full h-full object-cover" /> : fallbackLabel ?? getLocalIconLabel(icon)}
     </span>
   );
 }
@@ -74,10 +98,14 @@ export function IconSelect({
   value,
   onChange,
   variant = 'field',
+  matchPatterns = [],
+  website = 'all sites',
 }: {
   value: CommandIcon;
   onChange: (value: CommandIcon) => void;
   variant?: 'field' | 'toolbar';
+  matchPatterns?: string[];
+  website?: string;
 }) {
   const [open, setOpen] = useState(false);
   const selectedOption = iconOptions.find((option) => iconsMatch(option.icon, value)) ?? iconOptions[2];
@@ -97,7 +125,7 @@ export function IconSelect({
           aria-label="Choose script icon"
           onClick={() => setOpen((current) => !current)}
         >
-          <LocalScriptIcon icon={selectedOption.icon} />
+          <LocalScriptIconBase icon={selectedOption.icon} matchPatterns={matchPatterns} website={website} />
           {isToolbar ? null : (
             <>
               <span className="min-w-0 flex-1 flex flex-col justify-center">
@@ -128,7 +156,7 @@ export function IconSelect({
                       setOpen(false);
                     }}
                   >
-                    <LocalScriptIcon icon={option.icon} />
+                    <LocalScriptIconBase icon={option.icon} />
                     <span className="min-w-0 flex-1 flex flex-col justify-center">
                       <strong className="text-xs font-semibold text-foreground truncate block">{option.label}</strong>
                       <em className="text-[9px] text-muted-foreground truncate block not-italic font-normal mt-0.5">{option.hint}</em>

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   commandMatchesHost,
   commandPackToCommands,
+  getCommandIconUrl,
   managementCommands,
   orderPaletteCommands,
   searchCommands,
@@ -45,6 +46,7 @@ import {
 } from '../src/lib/registryStorage.ts';
 import { loadCommandPaletteTheme, resolveCommandPaletteTheme, resolveCommandPaletteThemeMeta } from '../src/lib/paletteThemes.ts';
 import { formatLocalScriptCode, validateLocalScriptCode } from '../entrypoints/dashboard/components/utils.ts';
+import { getLocalIconUrl } from '../entrypoints/dashboard/components/utils.ts';
 
 const baseCommand = {
   id: 'base-command',
@@ -85,6 +87,18 @@ describe('command matching', () => {
     expect(commandMatchesHost(baseCommand, 'other.com')).toBe(false);
   });
 
+  test('derives favicon urls from match patterns when icon host is omitted', () => {
+    expect(getCommandIconUrl({ ...baseCommand, icon: { type: 'favicon' } })).toBe('https://example.com/favicon.ico');
+    expect(
+      getCommandIconUrl({
+        ...baseCommand,
+        website: 'all sites',
+        matchPatterns: ['https://docs.example.com/*'],
+        icon: { type: 'favicon' },
+      })
+    ).toBe('https://docs.example.com/favicon.ico');
+  });
+
   test('normalizes local script match patterns for userScripts registration', () => {
     expect(getLocalScriptMatchPatterns(localScript)).toEqual(['*://github.com/*']);
     expect(getLocalScriptMatchPatterns({ ...localScript, matchPatterns: ['<all_urls>'] })).toEqual(['<all_urls>']);
@@ -93,6 +107,7 @@ describe('command matching', () => {
       '*://github.com/*',
       '*://docs.example.com/*',
     ]);
+    expect(getLocalIconUrl({ type: 'favicon' }, ['https://docs.example.com/*'])).toBe('https://docs.example.com/favicon.ico');
   });
 });
 
@@ -168,6 +183,23 @@ describe('palette ordering and search', () => {
 describe('command manifest validation', () => {
   test('accepts sample command pack manifests', () => {
     expect(sampleCommandManifests.map((manifest) => validateCommandManifest(manifest).ok)).toEqual([true]);
+  });
+
+  test('accepts lucide icons in manifests', () => {
+    const manifest = {
+      ...sampleCommandManifests[0],
+      icon: { type: 'lucide', name: 'Search' },
+      commands: [
+        {
+          ...sampleCommandManifests[0].commands[0],
+          icon: { type: 'lucide', name: 'Folder' },
+        },
+      ],
+    };
+
+    const result = validateCommandManifest(manifest);
+
+    expect(result.ok).toBe(true);
   });
 
   test('requires safe pack source and per-command entrypoint metadata', () => {

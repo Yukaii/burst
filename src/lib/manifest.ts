@@ -104,6 +104,12 @@ export const burstCommandManifestSchema = {
         },
         {
           type: 'object',
+          required: ['type', 'name'],
+          additionalProperties: false,
+          properties: { type: { const: 'lucide' }, name: { type: 'string', minLength: 1 } },
+        },
+        {
+          type: 'object',
           required: ['type', 'src'],
           additionalProperties: false,
           properties: { type: { enum: ['url', 'asset'] }, src: { type: 'string', minLength: 1 } },
@@ -159,6 +165,12 @@ export const burstCommandManifestSchema = {
                 required: ['type', 'value'],
                 additionalProperties: false,
                 properties: { type: { enum: ['initials', 'emoji'] }, value: { type: 'string', minLength: 1 } },
+              },
+              {
+                type: 'object',
+                required: ['type', 'name'],
+                additionalProperties: false,
+                properties: { type: { const: 'lucide' }, name: { type: 'string', minLength: 1 } },
               },
               {
                 type: 'object',
@@ -327,7 +339,12 @@ function validateIcon(value: unknown, errors: string[], field = 'icon') {
     return;
   }
 
-  errors.push(`${field}.type must be favicon, initials, emoji, url, or asset.`);
+  if (value.type === 'lucide') {
+    expectText(value.name, `${field}.name`, errors, 1);
+    return;
+  }
+
+  errors.push(`${field}.type must be favicon, initials, emoji, lucide, url, or asset.`);
 }
 
 function validateSource(value: unknown, errors: string[]) {

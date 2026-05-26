@@ -1,6 +1,7 @@
 import { Box, PackagePlus, Plus, RefreshCw, Search } from 'lucide-react';
 import type { BurstCommand, BurstCommandPack } from '@/src/lib/commands';
 import type { AuditReport, PublisherProfile } from '@/src/lib/registryApi';
+import { CommandIcon } from './CommandIcon';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -158,11 +159,21 @@ export function DiscoverPanel({
                       }}
                     >
                       <div className="flex min-w-0 items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <strong className="block truncate text-sm font-semibold text-foreground">{pack.title}</strong>
-                          <span className="mt-1 block truncate text-[11px] font-medium text-muted-foreground">
-                            {pack.website} · {pack.commands.length} commands
-                          </span>
+                        <div className="flex min-w-0 items-start gap-2.5">
+                          <CommandIcon
+                            icon={pack.icon}
+                            website={pack.website}
+                            matchPatterns={pack.matchPatterns}
+                            fallbackLabel={pack.publisher.avatarInitials}
+                            className="grid size-8 shrink-0 place-items-center rounded-lg border border-border bg-background text-[11px] font-extrabold text-sky-500"
+                            imageClassName="rounded-[7px]"
+                          />
+                          <div className="min-w-0">
+                            <strong className="block truncate text-sm font-semibold text-foreground">{pack.title}</strong>
+                            <span className="mt-1 block truncate text-[11px] font-medium text-muted-foreground">
+                              {pack.website} · {pack.commands.length} commands
+                            </span>
+                          </div>
                         </div>
                         <Badge variant={pack.trustLevel === 'verified' ? 'secondary' : 'outline'} className="shrink-0 text-[9px] uppercase">
                           {trustCopy[pack.trustLevel]}
@@ -272,18 +283,28 @@ export function DiscoverPanel({
                       setIsInspectorOpen(true);
                     }}
                   >
-                    <span className="flex flex-col min-w-0 pr-2">
-                      <strong className="text-[13px] font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 leading-tight truncate">
-                        {command.title}
-                        {installedCommandIds.includes(command.id) && (
-                          <Badge variant="secondary" className="px-2 py-1 rounded text-[9px] font-extrabold uppercase bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shrink-0">Installed</Badge>
-                        )}
-                        {pinnedCommandIds.includes(command.id) && (
-                          <span className="text-[10px] text-sky-500 shrink-0" title="Pinned">📌</span>
-                        )}
-                      </strong>
-                      <span className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
-                        by {command.publisher.name} <span className="text-[10px] text-slate-500">{command.publisher.handle.startsWith('@') ? command.publisher.handle : `@${command.publisher.handle}`}</span>
+                    <span className="flex min-w-0 items-start gap-2.5 pr-2">
+                      <CommandIcon
+                        icon={command.icon}
+                        website={command.website}
+                        matchPatterns={command.matchPatterns}
+                        fallbackLabel={command.publisher.avatarInitials}
+                        className="grid size-7 shrink-0 place-items-center rounded-md border border-border bg-background text-[10px] font-extrabold text-sky-500"
+                        imageClassName="rounded-[5px]"
+                      />
+                      <span className="flex min-w-0 flex-col">
+                        <strong className="text-[13px] font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 leading-tight truncate">
+                          {command.title}
+                          {installedCommandIds.includes(command.id) && (
+                            <Badge variant="secondary" className="px-2 py-1 rounded text-[9px] font-extrabold uppercase bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shrink-0">Installed</Badge>
+                          )}
+                          {pinnedCommandIds.includes(command.id) && (
+                            <span className="text-[10px] text-sky-500 shrink-0" title="Pinned">📌</span>
+                          )}
+                        </strong>
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                          by {command.publisher.name} <span className="text-[10px] text-slate-500">{command.publisher.handle.startsWith('@') ? command.publisher.handle : `@${command.publisher.handle}`}</span>
+                        </span>
                       </span>
                     </span>
                     <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 truncate pr-2">{command.website}</span>

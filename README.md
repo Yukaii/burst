@@ -25,7 +25,7 @@ For developers and power users, Burst is a lightweight way to ship live website 
 - Popup surface for sign-in direction, local registry posture, and publishing entry points.
 - Options page explaining keyboard shortcut configuration.
 - Extension dashboard page for local script creation, testing, and management with CodeMirror 6 editing and font controls.
-- Command icon metadata for favicon, initials, emoji, URL, or packaged assets.
+- Command icon metadata for favicon, initials, emoji, Lucide icons, URL, or packaged assets.
 - Registry website in `apps/registry` for command discovery, audit review, publisher profiles, and publishing entry points.
 
 ## Development

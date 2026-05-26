@@ -227,7 +227,7 @@ export function LeftSidebar({
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <span className="relative shrink-0">
-                          <LocalScriptIcon icon={script.icon} />
+                          <LocalScriptIcon icon={script.icon} matchPatterns={script.matchPatterns} />
                           <AuditIssueDot status={auditStatus} />
                         </span>
                         <span className="min-w-0 flex-1 flex flex-col gap-0.5">

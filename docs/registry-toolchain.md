@@ -33,7 +33,7 @@ For a multi-command repository, `burst.commands.json` should have this structure
     },
     "icon": {
       "type": "emoji",
-      "host": "🔌"
+      "value": "🔌"
     },
     "permissions": ["Read page DOM", "Read selected text"],
     "source": {

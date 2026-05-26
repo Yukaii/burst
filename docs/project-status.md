@@ -21,7 +21,7 @@ The registry website should live outside WXT entrypoints because it is a normal 
 - Minimal dark command palette with no injected floating launcher button.
 - Site-aware command discovery for enabled local scripts and built-in management commands.
 - Local management commands in the palette for opening the dashboard, creating scripts, and listing installed scripts.
-- Command icon metadata for website favicons, initials, emoji, URLs, and packaged assets.
+- Command icon metadata for website favicons, initials, emoji, Lucide icons, URLs, and packaged assets.
 - Command details for publisher, trust level, risk, permissions, installs, rating, and source URL.
 - Popup status panel for account/registry posture.
 - Extension dashboard page with CodeMirror-based local script editing/testing/management and editor font controls.

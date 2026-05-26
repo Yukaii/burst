@@ -46,6 +46,10 @@ export function EditorPanel({
   onUnlinkFork,
   onOpenTestHarness,
   onOpenEditorPrefs,
+  isEditingName,
+  setIsEditingName,
+  isEditingMatchPatterns,
+  setIsEditingMatchPatterns,
   editorFontFamily,
   editorFontSize,
   editorTheme,
@@ -71,6 +75,10 @@ export function EditorPanel({
   onUnlinkFork: () => void;
   onOpenTestHarness: () => void;
   onOpenEditorPrefs: () => void;
+  isEditingName: boolean;
+  setIsEditingName: (value: boolean) => void;
+  isEditingMatchPatterns: boolean;
+  setIsEditingMatchPatterns: (value: boolean) => void;
   editorFontFamily: string;
   editorFontSize: number;
   editorTheme: string;
@@ -88,6 +96,7 @@ export function EditorPanel({
   const [isGeneratingScript, setIsGeneratingScript] = React.useState(false);
   const nameMeasureRef = React.useRef<HTMLSpanElement>(null);
   const [nameInputWidth, setNameInputWidth] = React.useState(180);
+  const [matchPatternsInput, setMatchPatternsInput] = React.useState(selectedScript.matchPatterns.join('\n'));
 
   const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
   const isRegistryFork = selectedScript.originRegistryKind === 'official' && Boolean(selectedScript.originCommandId);
@@ -99,6 +108,11 @@ export function EditorPanel({
     const measuredWidth = nameMeasureRef.current?.offsetWidth ?? 0;
     setNameInputWidth(Math.min(Math.max(measuredWidth + 18, 160), 520));
   }, [selectedScript.name]);
+
+  React.useEffect(() => {
+    if (isEditingMatchPatterns) return;
+    setMatchPatternsInput(selectedScript.matchPatterns.join('\n'));
+  }, [selectedScript.matchPatterns, isEditingMatchPatterns]);
 
   const activeTheme = React.useMemo(() => {
     return settings.theme === 'system'
@@ -230,13 +244,20 @@ export function EditorPanel({
               </>
             )}
           </div>
-          <IconSelect value={selectedScript.icon} onChange={(icon) => onUpdateScript({ icon })} variant="toolbar" />
+          <IconSelect
+            value={selectedScript.icon}
+            onChange={(icon) => onUpdateScript({ icon })}
+            variant="toolbar"
+            matchPatterns={selectedScript.matchPatterns}
+          />
           <span ref={nameMeasureRef} className="pointer-events-none invisible absolute whitespace-pre text-base font-semibold tracking-tight" aria-hidden="true">
             {selectedScript.name || 'Untitled local command'}
           </span>
           <input
             aria-label="Script name"
             value={selectedScript.name}
+            onFocus={() => setIsEditingName(true)}
+            onBlur={() => setIsEditingName(false)}
             onChange={(e) => onUpdateScript({ name: e.target.value })}
             style={{ width: `${nameInputWidth}px` }}
             className="h-9 min-w-0 max-w-full bg-transparent text-base font-semibold tracking-tight text-foreground outline-none rounded-md px-1.5 focus:bg-background focus:ring-1 focus:ring-ring"
@@ -270,6 +291,12 @@ export function EditorPanel({
             >
               Save
             </button>
+          )}
+          {isEditingName && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-500">
+              <span className="size-1.5 rounded-full bg-amber-500" />
+              Editing name
+            </span>
           )}
           <Tooltip content="Editor Preferences">
             <button
@@ -388,12 +415,25 @@ export function EditorPanel({
             <label className="flex flex-col gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               Match Patterns
               <textarea
-                value={selectedScript.matchPatterns.join('\n')}
-                onChange={(e) => onUpdateScript({ matchPatterns: parseMatchPatternsInput(e.target.value) })}
+                value={isEditingMatchPatterns ? matchPatternsInput : selectedScript.matchPatterns.join('\n')}
+                onFocus={() => {
+                  setIsEditingMatchPatterns(true);
+                  setMatchPatternsInput(selectedScript.matchPatterns.join('\n'));
+                }}
+                onChange={(e) => setMatchPatternsInput(e.target.value)}
+                onBlur={(e) => {
+                  setIsEditingMatchPatterns(false);
+                  onUpdateScript({ matchPatterns: parseMatchPatternsInput(e.currentTarget.value) });
+                }}
                 rows={3}
                 placeholder={'github.com/*\nhttps://docs.example.com/*\n<all_urls>'}
                 className="flex w-full resize-none rounded-md border border-input bg-background px-3 py-2 font-mono text-xs text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
+              {isEditingMatchPatterns && (
+                <span className="text-[10px] normal-case tracking-normal font-medium text-muted-foreground">
+                  Editing match patterns
+                </span>
+              )}
               <span className="text-[10px] normal-case tracking-normal font-medium text-muted-foreground">
                 One pattern per line. Commas are also accepted.
               </span>

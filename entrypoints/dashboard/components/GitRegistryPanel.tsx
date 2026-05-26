@@ -74,7 +74,7 @@ export function GitRegistryPanel({
               return (
                 <div className="flex items-start justify-between p-4 rounded-xl border border-border bg-card/40 shadow-sm gap-4" key={cmd.id}>
                   <div className="flex items-start gap-3 min-w-0">
-                    <LocalScriptIcon icon={cmd.icon} />
+                    <LocalScriptIcon icon={cmd.icon} website={cmd.website} matchPatterns={cmd.matchPatterns} />
                     <div className="min-w-0">
                       <h4 className="text-xs font-semibold text-foreground truncate block">{cmd.title}</h4>
                       <p className="text-[11px] text-muted-foreground font-medium mt-1 line-clamp-2 leading-relaxed">

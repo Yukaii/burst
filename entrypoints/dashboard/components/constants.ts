@@ -6,12 +6,17 @@ export const iconOptions: Array<{ icon: CommandIcon; label: string; hint: string
   { icon: { type: 'lucide', name: 'Terminal' }, label: 'Terminal', hint: 'Lucide Terminal icon' },
   { icon: { type: 'lucide', name: 'Database' }, label: 'Database', hint: 'Lucide Database icon' },
   { icon: { type: 'lucide', name: 'Shield' }, label: 'Shield', hint: 'Lucide Shield icon' },
+  { icon: { type: 'lucide', name: 'Folder' }, label: 'Folder', hint: 'Lucide Folder icon' },
   { icon: { type: 'lucide', name: 'Play' }, label: 'Play', hint: 'Lucide Play icon' },
   { icon: { type: 'lucide', name: 'Globe' }, label: 'Globe', hint: 'Lucide Globe icon' },
   { icon: { type: 'lucide', name: 'Sparkles' }, label: 'Sparkles', hint: 'Lucide Sparkles icon' },
   { icon: { type: 'lucide', name: 'Activity' }, label: 'Activity', hint: 'Lucide Activity icon' },
   { icon: { type: 'lucide', name: 'FileText' }, label: 'FileText', hint: 'Lucide FileText icon' },
+  { icon: { type: 'lucide', name: 'WandSparkles' }, label: 'Magic', hint: 'Lucide WandSparkles icon' },
+  { icon: { type: 'favicon' }, label: 'Favicon', hint: 'Infer from match patterns' },
   { icon: { type: 'favicon', host: 'github.com' }, label: 'GitHub', hint: 'github.com favicon' },
+  { icon: { type: 'emoji', value: '🔗' }, label: 'Link', hint: 'Link emoji' },
+  { icon: { type: 'emoji', value: '✨' }, label: 'Sparkle', hint: 'Sparkle emoji' },
   { icon: { type: 'initials', value: 'JS' }, label: 'Script', hint: 'JS initials' },
 ];
 

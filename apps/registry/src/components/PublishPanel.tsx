@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { CommandIcon as CommandIconPreview } from './CommandIcon';
 import { Eraser, FileCode2, Lock, PlugZap, RefreshCw, RotateCcw, Save } from 'lucide-react';
 
 interface PublishPanelProps {
@@ -29,6 +30,134 @@ interface PublishPanelProps {
   localScripts: LocalScript[];
   availableCommands: BurstCommand[];
   onRefreshLocalScripts: () => void;
+}
+
+type IconType = BurstCommand['icon']['type'];
+
+function deriveIconInitials(value: string): string {
+  const letters = value
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  return letters || '??';
+}
+
+function buildIconPayload(type: IconType, value: string, host: string, title: string): BurstCommand['icon'] {
+  if (type === 'favicon') {
+    const normalizedHost = host.trim();
+    return normalizedHost ? { type: 'favicon', host: normalizedHost } : { type: 'favicon' };
+  }
+
+  if (type === 'initials') {
+    return { type: 'initials', value: value.trim() || deriveIconInitials(title) };
+  }
+
+  if (type === 'emoji') {
+    return { type: 'emoji', value: value.trim() };
+  }
+
+  if (type === 'lucide') {
+    return { type: 'lucide', name: value.trim() };
+  }
+
+  return { type, src: value.trim() } as Extract<BurstCommand['icon'], { type: 'url' | 'asset' }>;
+}
+
+function IconField({
+  label,
+  iconType,
+  iconValue,
+  setIconValue,
+  iconHost,
+  setIconHost,
+  previewIcon,
+  previewWebsite,
+  previewMatchPatterns,
+  onIconTypeChange,
+  valuePlaceholder,
+  valueHelp,
+  error,
+}: {
+  label: string;
+  iconType: IconType;
+  iconValue: string;
+  setIconValue: (value: string) => void;
+  iconHost: string;
+  setIconHost: (value: string) => void;
+  previewIcon: BurstCommand['icon'];
+  previewWebsite: string;
+  previewMatchPatterns: string[];
+  onIconTypeChange: (type: IconType) => void;
+  valuePlaceholder: string;
+  valueHelp: string;
+  error?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-4">
+      <div className="flex items-center justify-between gap-3">
+        <label className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">{label}</label>
+        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-2 py-1 text-[10px] font-semibold text-muted-foreground">
+          <CommandIconPreview
+            icon={previewIcon}
+            website={previewWebsite}
+            matchPatterns={previewMatchPatterns}
+            className="size-4 rounded-[4px] bg-transparent text-current"
+            imageClassName="rounded-[4px]"
+            fallbackLabel={deriveIconInitials(previewIcon.type === 'initials' ? previewIcon.value : label)}
+          />
+          Preview
+        </span>
+      </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[160px_minmax(0,1fr)]">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type</label>
+          <Select value={iconType} onValueChange={(value) => onIconTypeChange(value as IconType)}>
+            <SelectTrigger className="w-full bg-background">
+              <SelectValue placeholder="Select icon type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="initials">Initials</SelectItem>
+              <SelectItem value="emoji">Emoji</SelectItem>
+              <SelectItem value="lucide">Lucide</SelectItem>
+              <SelectItem value="favicon">Favicon</SelectItem>
+              <SelectItem value="url">URL</SelectItem>
+              <SelectItem value="asset">Asset</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {iconType === 'favicon' ? (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Host override</label>
+            <Input
+              value={iconHost}
+              onChange={(event) => setIconHost(event.target.value)}
+              placeholder="github.com or docs.example.com"
+            />
+            <span className="text-[10px] font-medium leading-relaxed text-muted-foreground">
+              Leave this empty to infer the host from the match pattern, or enter a host explicitly.
+            </span>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Value</label>
+            <Input
+              value={iconValue}
+              onChange={(event) => setIconValue(event.target.value)}
+              placeholder={valuePlaceholder}
+            />
+            <span className="text-[10px] font-medium leading-relaxed text-muted-foreground">{valueHelp}</span>
+            {error && <span className="text-[10px] font-bold text-rose-500">{error}</span>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function PublishPanel({
@@ -51,6 +180,9 @@ export function PublishPanel({
   const [matchPattern, setMatchPattern] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [code, setCode] = useState(`export default async function run({ page, toast }) {\n  // Write your command code here\n  toast("Hello from " + page.title);\n}`);
+  const [iconType, setIconType] = useState<IconType>('initials');
+  const [iconValue, setIconValue] = useState('');
+  const [iconHost, setIconHost] = useState('');
   const [permissions, setPermissions] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [draftStatus, setDraftStatus] = useState<'idle' | 'saved' | 'restored'>('idle');
@@ -63,6 +195,9 @@ export function PublishPanel({
   const [packMatchPattern, setPackMatchPattern] = useState('');
   const [packSourceUrl, setPackSourceUrl] = useState('');
   const [selectedPackCommandIds, setSelectedPackCommandIds] = useState<string[]>([]);
+  const [packIconType, setPackIconType] = useState<IconType>('initials');
+  const [packIconValue, setPackIconValue] = useState('');
+  const [packIconHost, setPackIconHost] = useState('');
 
   const editorExtensions = useMemo(() => [
     javascript({ jsx: true, typescript: true }),
@@ -96,6 +231,9 @@ export function PublishPanel({
         sourceUrl?: string;
         code?: string;
         permissions?: string[];
+        iconType?: IconType;
+        iconValue?: string;
+        iconHost?: string;
       };
       setTitle(draft.title ?? '');
       setId(draft.id ?? '');
@@ -104,6 +242,9 @@ export function PublishPanel({
       setMatchPattern(draft.matchPattern ?? '');
       setSourceUrl(draft.sourceUrl ?? '');
       setCode(draft.code ?? code);
+      setIconType(draft.iconType ?? 'initials');
+      setIconValue(draft.iconValue ?? '');
+      setIconHost(draft.iconHost ?? '');
       setPermissions(Array.isArray(draft.permissions) ? draft.permissions : []);
       setDraftStatus('restored');
     } catch {
@@ -122,13 +263,16 @@ export function PublishPanel({
         matchPattern,
         sourceUrl,
         code,
+        iconType,
+        iconValue,
+        iconHost,
         permissions,
       }));
       setDraftStatus('saved');
     }, 350);
 
     return () => window.clearTimeout(timeout);
-  }, [draftKey, isGuest, title, id, description, website, matchPattern, sourceUrl, code, permissions]);
+  }, [draftKey, isGuest, title, id, description, website, matchPattern, sourceUrl, code, iconType, iconValue, iconHost, permissions]);
 
   const clearDraft = () => {
     if (draftKey) localStorage.removeItem(draftKey);
@@ -143,6 +287,9 @@ export function PublishPanel({
     setMatchPattern('');
     setSourceUrl('');
     setCode(`export default async function run({ page, toast }) {\n  // Write your command code here\n  toast("Hello from " + page.title);\n}`);
+    setIconType('initials');
+    setIconValue('');
+    setIconHost('');
     setPermissions([]);
     setErrors({});
     setDraftStatus('idle');
@@ -154,6 +301,9 @@ export function PublishPanel({
     setPackMatchPattern('');
     setPackSourceUrl('');
     setSelectedPackCommandIds([]);
+    setPackIconType('initials');
+    setPackIconValue('');
+    setPackIconHost('');
   };
 
   if (isGuest) {
@@ -205,6 +355,15 @@ export function PublishPanel({
     setDescription(`Publishes the local Burst command "${script.name}" for reuse from the registry.`);
     setSourceUrl(script.originRegistryUrl?.startsWith('https://') ? script.originRegistryUrl : '');
     setCode(script.code);
+    setIconType(script.icon.type);
+    setIconValue(script.icon.type === 'initials' || script.icon.type === 'emoji'
+      ? script.icon.value
+      : script.icon.type === 'lucide'
+        ? script.icon.name
+        : script.icon.type === 'url' || script.icon.type === 'asset'
+          ? script.icon.src
+          : '');
+    setIconHost(script.icon.type === 'favicon' ? script.icon.host ?? '' : '');
     setPermissions([]);
     setErrors({});
     setDraftStatus('saved');
@@ -218,10 +377,16 @@ export function PublishPanel({
   const selectedLocalScript = localScripts.find((script) => script.id === selectedLocalScriptId);
   const publishableCommands = availableCommands.filter((command) => command.publisher.handle === currentUser.handle);
   const selectedPackCommands = publishableCommands.filter((command) => selectedPackCommandIds.includes(command.id));
+  const commandPreviewIcon = buildIconPayload(iconType, iconValue, iconHost, title);
+  const packPreviewIcon = buildIconPayload(packIconType, packIconValue, packIconHost, packTitle);
 
   const parsedMatchPatterns = matchPattern
     .split(',')
     .map((p) => p.trim())
+    .filter(Boolean);
+  const parsedPackMatchPatterns = packMatchPattern
+    .split(',')
+    .map((pattern) => pattern.trim())
     .filter(Boolean);
 
   const auditResult = analyzeScriptCode(code, parsedMatchPatterns);
@@ -241,6 +406,9 @@ export function PublishPanel({
     } else if (!packSourceUrl.startsWith('https://')) {
       newErrors.packSourceUrl = 'Source URL must begin with https://';
     }
+    if (packIconType !== 'initials' && packIconType !== 'favicon' && !packIconValue.trim()) {
+      newErrors.packIconValue = 'Icon value is required';
+    }
     if (selectedPackCommandIds.length === 0) newErrors.packCommands = 'Select at least one command';
 
     if (Object.keys(newErrors).length > 0) {
@@ -257,7 +425,7 @@ export function PublishPanel({
         matchPatterns: packPatterns,
         publisherHandle: currentUser.handle,
         sourceUrl: packSourceUrl,
-        icon: { type: 'initials' as const, value: packTitle.substring(0, 2).toUpperCase() },
+        icon: buildIconPayload(packIconType, packIconValue, packIconHost, packTitle),
         commandIds: selectedPackCommandIds,
         version: '1.0.0',
       });
@@ -281,6 +449,9 @@ export function PublishPanel({
       newErrors.sourceUrl = 'Source URL is required';
     } else if (!sourceUrl.startsWith('https://')) {
       newErrors.sourceUrl = 'Source URL must begin with https:// (secured origin)';
+    }
+    if (iconType !== 'initials' && iconType !== 'favicon' && !iconValue.trim()) {
+      newErrors.iconValue = 'Icon value is required';
     }
     if (!code.trim()) newErrors.code = 'Source code is required';
 
@@ -337,7 +508,7 @@ export function PublishPanel({
         risk: riskLevel,
         permissions: finalPermissions.length > 0 ? finalPermissions : ['None'],
         sourceUrl,
-        icon: { type: 'initials' as const, value: title.substring(0, 2).toUpperCase() },
+        icon: buildIconPayload(iconType, iconValue, iconHost, title),
         code,
         version: '1.0.0',
       };
@@ -447,6 +618,22 @@ export function PublishPanel({
               <Input value={packSourceUrl} onChange={(event) => setPackSourceUrl(event.target.value)} placeholder="https://github.com/username/repo" />
               {errors.packSourceUrl && <span className="text-[10px] font-bold text-rose-500">{errors.packSourceUrl}</span>}
             </div>
+
+            <IconField
+              label="Pack icon"
+              iconType={packIconType}
+              iconValue={packIconValue}
+              setIconValue={setPackIconValue}
+              iconHost={packIconHost}
+              setIconHost={setPackIconHost}
+              previewIcon={packPreviewIcon}
+              previewWebsite={packWebsite || 'all sites'}
+              previewMatchPatterns={parsedPackMatchPatterns}
+              onIconTypeChange={setPackIconType}
+              valuePlaceholder="TW, 🔗, Search, https://..., or icon.svg"
+              valueHelp="Use initials, emoji, Lucide, URL, or asset. Favicon host can be inferred from match patterns."
+              error={errors.packIconValue}
+            />
 
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-3">
@@ -701,6 +888,22 @@ export function PublishPanel({
               <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Used for publisher verification checks. Must match verified sources.</span>
               {errors.sourceUrl && <span className="text-[10px] font-bold text-rose-500">{errors.sourceUrl}</span>}
             </div>
+
+            <IconField
+              label="Command icon"
+              iconType={iconType}
+              iconValue={iconValue}
+              setIconValue={setIconValue}
+              iconHost={iconHost}
+              setIconHost={setIconHost}
+              previewIcon={commandPreviewIcon}
+              previewWebsite={website || 'all sites'}
+              previewMatchPatterns={parsedMatchPatterns}
+              onIconTypeChange={setIconType}
+              valuePlaceholder="CP, 🔗, Search, https://..., or icon.svg"
+              valueHelp="Favicon host can be left blank to infer from match patterns."
+              error={errors.iconValue}
+            />
 
             <div className="flex flex-col gap-2.5">
               <label className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Explicit Permission Declarations</label>

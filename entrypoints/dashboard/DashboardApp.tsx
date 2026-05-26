@@ -136,6 +136,10 @@ export default function DashboardApp() {
             onUnlinkFork={() => void d.unlinkForkedScript(d.selectedScript!.id)}
             onOpenTestHarness={() => d.setTestHarnessOpen(true)}
             onOpenEditorPrefs={() => d.setEditorPrefModalOpen(true)}
+            isEditingName={d.isEditingName}
+            setIsEditingName={d.setIsEditingName}
+            isEditingMatchPatterns={d.isEditingMatchPatterns}
+            setIsEditingMatchPatterns={d.setIsEditingMatchPatterns}
             editorFontFamily={d.editorFontFamily} editorFontSize={d.editorFontSize}
             editorTheme={d.editorTheme} editorKeymap={d.editorKeymap}
             editorWordWrap={d.editorWordWrap} settings={d.settings}

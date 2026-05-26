@@ -198,21 +198,53 @@ export function getCommandIconLabel(command: BurstCommand): string {
   return command.publisher.avatarInitials;
 }
 
-export function getCommandIconUrl(command: BurstCommand): string | undefined {
+export function getCommandIconUrl(command: Pick<BurstCommand, 'icon' | 'website' | 'matchPatterns'>): string | undefined {
   if (command.icon.type === 'url' || command.icon.type === 'asset') return command.icon.src;
   if (command.icon.type === 'favicon') {
-    const host = command.icon.host ?? command.website;
-    if (host === 'all sites' || host === 'Burst') return undefined;
+    const host = getCommandIconHost(command);
+    if (!host) return undefined;
     return getFaviconUrl(host);
   }
 
   return undefined;
 }
 
+export function getCommandIconHost(command: Pick<BurstCommand, 'icon' | 'website' | 'matchPatterns'>): string | undefined {
+  const explicitHost = command.icon.type === 'favicon' ? normalizeFaviconHost(command.icon.host) : undefined;
+  if (explicitHost) return explicitHost;
+
+  const matchPatternHost = command.matchPatterns
+    .map(getHostFromMatchPattern)
+    .find((host): host is string => Boolean(host));
+  if (matchPatternHost) return matchPatternHost;
+
+  return normalizeFaviconHost(command.website);
+}
+
 export function getFaviconUrl(host: string): string | undefined {
-  const normalizedHost = host.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  const normalizedHost = normalizeFaviconHost(host);
   if (!normalizedHost || normalizedHost === 'all sites' || normalizedHost === 'Burst') return undefined;
   return `https://${normalizedHost}/favicon.ico`;
+}
+
+function normalizeFaviconHost(host: string | undefined): string | undefined {
+  if (!host) return undefined;
+
+  const normalizedHost = host.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '').toLowerCase();
+  if (!normalizedHost || normalizedHost === '*' || normalizedHost === '<all_urls>' || normalizedHost.includes('*')) return undefined;
+  if (normalizedHost === 'all sites' || normalizedHost === 'burst') return undefined;
+  return normalizedHost;
+}
+
+function getHostFromMatchPattern(pattern: string): string | undefined {
+  const normalizedPattern = pattern.trim().toLowerCase();
+  if (!normalizedPattern || normalizedPattern === '<all_urls>') return undefined;
+
+  const withoutScheme = normalizedPattern.replace(/^(\*:\/\/)?(https?:\/\/)?/, '');
+  const [rawHost] = withoutScheme.split('/');
+  const host = rawHost.replace(/^www\./, '').replace(/^\*\./, '');
+
+  return host && host !== '*' && !host.includes('*') ? host : undefined;
 }
 
 export function getHostFromUrl(url: string): string {

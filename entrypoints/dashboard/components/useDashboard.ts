@@ -101,6 +101,9 @@ export function useDashboard() {
 
   const [editorPrefModalOpen, setEditorPrefModalOpen] = useState(false);
   const [testHarnessOpen, setTestHarnessOpen] = useState(false);
+  const saveInFlightRef = useRef(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingMatchPatterns, setIsEditingMatchPatterns] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
     title: string;
@@ -288,10 +291,22 @@ export function useDashboard() {
   }, [activeTheme, settings.theme]);
 
   useEffect(() => {
-    if (!hasUnsavedChanges || loadState !== 'ready' || !selectedScript) return;
-    const timeout = window.setTimeout(() => void saveSelectedScript('Autosaved'), 800);
+    if (
+      !hasUnsavedChanges
+      || loadState !== 'ready'
+      || !selectedScript
+      || saveInFlightRef.current
+      || isEditingName
+      || isEditingMatchPatterns
+    ) return;
+    const timeout = window.setTimeout(() => {
+      saveInFlightRef.current = true;
+      void saveSelectedScript('Autosaved').finally(() => {
+        saveInFlightRef.current = false;
+      });
+    }, 800);
     return () => window.clearTimeout(timeout);
-  }, [hasUnsavedChanges, loadState, scripts, selectedScript?.id]);
+  }, [hasUnsavedChanges, loadState, scripts, selectedScript?.id, isEditingName, isEditingMatchPatterns]);
 
   async function persistScripts(nextScripts: LocalScript[], successMessage: string) {
     try {
@@ -790,6 +805,8 @@ export function useDashboard() {
     activeTheme,
     editorPrefModalOpen, setEditorPrefModalOpen,
     testHarnessOpen, setTestHarnessOpen,
+    isEditingName, setIsEditingName,
+    isEditingMatchPatterns, setIsEditingMatchPatterns,
     confirmModal, setConfirmModal,
     createLocalScriptDraft,
   };

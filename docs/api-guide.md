@@ -60,12 +60,14 @@ Supported icon types:
 - `favicon`: Use the matched website favicon. Optional `host` overrides `website`.
 - `initials`: Render a short text mark, usually 1-3 characters.
 - `emoji`: Render a symbolic local action mark.
+- `lucide`: Render a named Lucide icon from the extension icon set.
 - `url`: Render an externally hosted image URL.
 - `asset`: Render an extension-packaged or command-package asset path.
 
 Recommended defaults:
 
 - Website-specific commands should use `favicon`.
+- If `favicon.host` is omitted, Burst will try to infer the host from the command's `matchPatterns` before falling back to `website`.
 - Registry or publisher-neutral commands can use `initials`.
 - Local management commands can use `emoji` or `initials`.
 - User-created local scripts should let the user choose initials first; custom uploaded assets can come later.

@@ -4,6 +4,7 @@ import { Check, Code, Copy, ExternalLink, PackagePlus, RefreshCw, X } from 'luci
 import type { BurstCommand, BurstCommandPack } from '@/src/lib/commands';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { CommandIcon } from './CommandIcon';
 import { highlightJavaScript } from './CommandInspector';
 
 export function PackInspector({
@@ -58,9 +59,14 @@ export function PackInspector({
       onClick={onClick}
     >
       <div className="flex shrink-0 items-start gap-3.5 border-b border-border bg-background p-4">
-        <div className="grid size-11 shrink-0 place-items-center rounded-xl border border-sky-500/20 bg-sky-500/10 text-sm font-extrabold text-sky-500">
-          {pack.publisher.avatarInitials}
-        </div>
+        <CommandIcon
+          icon={pack.icon}
+          website={pack.website}
+          matchPatterns={pack.matchPatterns}
+          fallbackLabel={pack.publisher.avatarInitials}
+          className="grid size-11 shrink-0 place-items-center rounded-xl border border-sky-500/20 bg-sky-500/10 text-sm font-extrabold text-sky-500"
+          imageClassName="rounded-[11px]"
+        />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
             <h2 className="truncate text-base font-bold leading-tight text-foreground">{pack.title}</h2>

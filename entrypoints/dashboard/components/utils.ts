@@ -2,7 +2,7 @@ import { EditorView } from '@codemirror/view';
 import { javascriptLanguage } from '@codemirror/lang-javascript';
 import type { LocalScript } from '@/src/lib/localScripts';
 import { analyzeScriptCode } from '@/src/lib/staticAnalysis';
-import { getFaviconUrl, type CommandIcon } from '@/src/lib/commands';
+import { getCommandIconHost, getFaviconUrl, type CommandIcon } from '@/src/lib/commands';
 import { GIT_REGISTRIES_STORAGE_KEY } from './types';
 import type { GitRegistry } from './types';
 
@@ -285,13 +285,16 @@ export function getScriptAuditStatus(script: LocalScript): 'pass' | 'warning' | 
 
 export function getLocalIconLabel(icon: CommandIcon): string {
   if (icon.type === 'initials' || icon.type === 'emoji') return icon.value;
+  if (icon.type === 'lucide') return icon.name.slice(0, 2).toUpperCase();
+  if (icon.type === 'favicon') return 'F';
   return 'B';
 }
 
-export function getLocalIconUrl(icon: CommandIcon): string | undefined {
+export function getLocalIconUrl(icon: CommandIcon, matchPatterns: string[] = [], website = 'all sites'): string | undefined {
   if (icon.type === 'url' || icon.type === 'asset') return icon.src;
-  if (icon.type === 'favicon' && icon.host) {
-    return getFaviconUrl(icon.host);
+  if (icon.type === 'favicon') {
+    const host = getCommandIconHost({ icon, matchPatterns, website });
+    return host ? getFaviconUrl(host) : undefined;
   }
   return undefined;
 }

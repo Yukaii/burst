@@ -7,6 +7,7 @@ import { sampleManifestValidationResults } from '@/src/lib/manifest';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { CommandIcon } from './CommandIcon';
 import { 
   CheckCircle2, 
   AlertTriangle, 
@@ -232,9 +233,14 @@ export function CommandInspector({
       onClick={onClick}
     >
       <div className="flex items-start gap-3.5 shrink-0 border-b border-border bg-background p-4">
-        <div className="size-11 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center font-extrabold text-sm border border-sky-500/20 shrink-0">
-          {command.publisher.avatarInitials}
-        </div>
+        <CommandIcon
+          icon={command.icon}
+          website={command.website}
+          matchPatterns={command.matchPatterns}
+          fallbackLabel={command.publisher.avatarInitials}
+          className="size-11 rounded-xl border border-sky-500/20 bg-sky-500/10 text-sky-500 font-extrabold text-sm shrink-0"
+          imageClassName="rounded-[11px]"
+        />
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight truncate">{command.title}</h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal mt-1.5">{command.description}</p>
